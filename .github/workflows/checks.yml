@@ -1,0 +1,33 @@
+name: Checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install dependencies
+        run: npm install
+      - name: Core tests, type checking and extension build
+        run: npm run check
+      - name: Install Chromium for browser tests
+        run: npx playwright install --with-deps chromium
+      - name: Browser tests
+        run: npm run test:browser
+      - name: Package extension
+        run: npm run zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mylimits-chrome
+          path: .output/*.zip
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-test-results
+          path: test-results/
