@@ -1,0 +1,17 @@
+node_modules/
+.wxt/
+.output/
+artifacts/
+playwright-report/
+test-results/
+coverage/
+.env
+.npmrc
+.env.*
+!.env.example
+*.log
+*.pem
+*.key
+usage-export*.json
+local-data/
+.DS_Store
