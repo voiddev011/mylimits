@@ -7,6 +7,7 @@ import { command, history, type Command, type PublicStore } from '../platform/me
 import type { HistoryPoint } from '../platform/history';
 import { demoState } from './demo';
 import { age, countdown } from './format';
+import { selectAccounts, type LimitSort } from './overview';
 import './styles.css';
 
 type Page = 'overview' | 'websites' | 'alerts';
@@ -115,6 +116,10 @@ export function App({ view = 'dashboard' }: { view?: View }) {
   const [demo, setDemo] = useState(location.hash === '#demo');
   const [page, setPage] = useState<Page>('overview');
   const [filter, setFilter] = useState<ProviderId | 'all'>('all');
+  const [query, setQuery] = useState('');
+  const [lowOnly, setLowOnly] = useState(false);
+  const [sort, setSort] = useState<LimitSort>('default');
+  const [expanded, setExpanded] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
@@ -152,30 +157,45 @@ export function App({ view = 'dashboard' }: { view?: View }) {
   const safeRun: Run = run;
   const accounts = store?.accounts.filter(account => account.kind === 'account') ?? [];
   const current = accounts.filter(account => account.connection === 'active');
-  const low = current.filter(account => account.meters.some(meter => isFresh(account, meter, now, store!.settings.refreshMinutes) && remainingPercent(meter) !== null && remainingPercent(meter)! <= (account.alertRemaining ?? store!.settings.warningRemaining)));
+  const low = current.filter(account => account.meters.some(meter => meter.evidence === 'reported' && isFresh(account, meter, now, store!.settings.refreshMinutes) && remainingPercent(meter) !== null && remainingPercent(meter)! <= (account.alertRemaining ?? store!.settings.warningRemaining)));
   const resetTimes = current.flatMap(account => account.meters.filter(meter => isFresh(account, meter, now, store!.settings.refreshMinutes) && meter.resetsAt !== null).map(meter => meter.resetsAt!));
-  const visible = (store?.accounts ?? []).filter(account => filter === 'all' || account.provider === filter);
-  const saved = visible.filter(account => account.kind === 'account' && account.connection !== 'active');
-  const active = visible.filter(account => account.kind === 'account' && account.connection === 'active');
+  const visible = store ? selectAccounts(store.accounts.filter(account => filter === 'all' || account.provider === filter), store.settings, now, query, lowOnly, sort) : [];
+  const quotas = visible.filter(account => account.kind === 'account');
   const browserActivity = visible.filter(account => account.kind === 'browser');
   const messages = store ? PROVIDER_IDS.filter(provider => store.providers[provider].enabled && store.providers[provider].message && providers[provider].support === 'prototype') : [];
 
-  return <div className={`app app--${view}`}>
+  return <div className={`app app--${view} ${page === 'overview' ? 'app--compact' : ''}`}>
     <header className="app-header"><a className="brand" href="#" onClick={event => { event.preventDefault(); setPage('overview'); }}><span className="brand-mark"><Gauge size={23} strokeWidth={1.7} /></span><span>MyLimits<span className="brand-caption">A little more headroom.</span></span></a><div className="header-actions">{view === 'popup' && windowId !== undefined && <button className="icon-button" aria-label="Open side panel" onClick={() => void browser.sidePanel.open({ windowId }).catch(() => setToast('Open the full dashboard using the link below.'))}><Layers3 size={17} /></button>}<button className="icon-button" aria-label="Refresh all websites" disabled={busy || !store} onClick={() => void safeRun({ type: 'refresh' })}><RefreshCw size={17} className={busy ? 'spin' : ''} /></button></div></header>
     {demo && <div className="demo-banner"><span>Preview · sample accounts and readings</span><button onClick={() => { location.hash = ''; setDemo(false); setStore(null); }} aria-label="Exit sample preview"><X size={14} /></button></div>}
     <nav className="nav-tabs" aria-label="MyLimits pages">{([{ id: 'overview', label: 'Overview', icon: Gauge }, { id: 'websites', label: 'Websites', icon: Layers3 }, { id: 'alerts', label: 'Preferences', icon: Bell }] as const).map(item => <button key={item.id} className={page === item.id ? 'active' : ''} aria-current={page === item.id ? 'page' : undefined} onClick={() => setPage(item.id)}><item.icon size={15} />{item.label}</button>)}</nav>
     <main>
-      <div className="page-heading"><span className="eyebrow">{page === 'overview' ? 'YOUR USAGE, IN ONE PLACE' : page === 'websites' ? 'MAKE YOURSELF AT HOME' : 'A HEADS-UP, YOUR WAY'}</span><h1>{page === 'overview' ? 'Room to keep going.' : page === 'websites' ? 'Your websites.' : 'Stay ahead of limits.'}</h1><p>{page === 'overview' ? 'Keep an eye on your allowances, without breaking your flow.' : page === 'websites' ? 'Choose what to track. Your existing website login does the rest.' : 'Set the reminders that fit the way you work.'}</p></div>
+      {page !== 'overview' && <div className="page-heading"><span className="eyebrow">{page === 'websites' ? 'MAKE YOURSELF AT HOME' : 'A HEADS-UP, YOUR WAY'}</span><h1>{page === 'websites' ? 'Your websites.' : 'Stay ahead of limits.'}</h1><p>{page === 'websites' ? 'Choose what to track. Your existing website login does the rest.' : 'Set the reminders that fit the way you work.'}</p></div>}
       {error && <div className="error-panel" role="alert">{error}<button className="icon-button" aria-label="Dismiss error" onClick={() => setError('')}><X size={14} /></button></div>}
       {!store ? <div className="loading-state"><LoaderCircle className="spin" size={24} /><p>{error ? 'The extension is not responding.' : 'Getting your local dashboard ready…'}</p>{error && <button className="button" onClick={() => { setDemo(true); setError(''); }}>Preview with sample data</button>}</div> : page === 'websites' ? <Websites store={store} run={run} busy={busy} demo={demo} notify={setToast} /> : page === 'alerts' ? <Alerts store={store} run={run} busy={busy} demo={demo} notify={setToast} /> : <>
         <div className="summary-grid"><div><Layers3 size={16} /><strong>{accounts.length}</strong><span>saved accounts</span></div><div className={low.length ? 'summary-warning' : ''}><Activity size={16} /><strong>{low.length}</strong><span>running low</span></div><div><Clock3 size={16} /><strong className="reset-stat">{resetTimes.length ? countdown(Math.min(...resetTimes), now) : '—'}</strong><span>next reported reset</span></div></div>
-        {messages.map(provider => <div className="provider-message overview-message" key={provider}><ProviderMark provider={provider} /><div><strong>{providers[provider].name}</strong><p>{store.providers[provider].message}</p></div><button className="text-button" disabled={busy} onClick={() => void safeRun({ type: 'refresh', provider })}>Retry</button></div>)}
-        {store.accounts.length > 0 && <div className="filter-row" aria-label="Filter by website"><button className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>All websites</button>{PROVIDER_IDS.filter(provider => store.accounts.some(account => account.provider === provider)).map(provider => <button key={provider} className={filter === provider ? 'active' : ''} onClick={() => setFilter(provider)}>{providers[provider].name}</button>)}</div>}
-        {active.length > 0 && <><div className="section-line"><h2>Current accounts</h2><span>{active.length} active</span></div><div className="account-grid">{active.map(account => <AccountCard key={account.id} account={account} settings={store.settings} now={now} run={safeRun} demo={demo} busy={busy} />)}</div></>}
-        {saved.length > 0 && <><div className="section-line"><h2>Saved accounts</h2><span>Last known readings</span></div><p className="section-description">Nicknames stay with each account when you switch logins. Saved readings update when that account becomes the current website session.</p><div className="account-grid">{saved.map(account => <AccountCard key={account.id} account={account} settings={store.settings} now={now} run={safeRun} demo={demo} busy={busy} />)}</div></>}
-        {browserActivity.length > 0 && <><div className="section-line"><h2>Browser activity</h2><span>Account quotas unknown</span></div><div className="account-grid">{browserActivity.map(account => <AccountCard key={account.id} account={account} settings={store.settings} now={now} run={safeRun} demo={demo} busy={busy} />)}</div></>}
+        {store.accounts.length > 0 && <>
+          <div className="limit-tools">
+            <input type="search" aria-label="Search accounts and limits" placeholder="Find account or limit…" value={query} onChange={event => setQuery(event.target.value)} />
+            <select aria-label="Sort limits" value={sort} onChange={event => setSort(event.target.value as LimitSort)}><option value="default">Current first</option><option value="remaining">Lowest left</option><option value="reset">Next reset</option><option value="name">Name</option></select>
+          </div>
+          <div className="limit-filters"><select aria-label="Filter by website" value={filter} onChange={event => setFilter(event.target.value as ProviderId | 'all')}><option value="all">All websites</option>{PROVIDER_IDS.filter(provider => store.accounts.some(account => account.provider === provider)).map(provider => <option key={provider} value={provider}>{providers[provider].name}</option>)}</select><button className={lowOnly ? 'active' : ''} aria-pressed={lowOnly} onClick={() => setLowOnly(!lowOnly)}><Bell size={12} />Low only</button><span>{quotas.reduce((count, account) => count + account.meters.length, 0)} limits</span></div>
+          <div className="compact-accounts" aria-label="Account limits">{quotas.map(account => <article className="compact-account" key={account.id}>
+            <button className="compact-account-heading" aria-label={`Details for ${accountName(account)}`} aria-expanded={expanded === account.id} onClick={() => setExpanded(expanded === account.id ? null : account.id)}><ProviderMark provider={account.provider} /><strong>{accountName(account)}</strong><span>{account.connection === 'active' ? 'Current' : 'Saved'}</span><ChevronDown size={14} /></button>
+            <div className="compact-meters">{account.meters.map(meter => {
+              const remaining = remainingPercent(meter);
+              const fresh = isFresh(account, meter, now, store.settings.refreshMinutes);
+              const { warning, critical } = alertThresholds(account, store.settings);
+              const level = !fresh ? 'stale' : remaining !== null && remaining <= critical ? 'critical' : remaining !== null && remaining <= warning ? 'warning' : 'healthy';
+              return <div key={meter.id} className={`compact-meter meter--${level}`}><div><span className="compact-meter-label" title={meter.label}>{meter.label}</span><strong>{remaining === null ? 'Unknown' : `${Math.round(remaining)}%`}<small>{remaining === null ? '' : ' left'}</small></strong></div>{remaining !== null && <div className="meter-track" role="progressbar" aria-label={`${accountName(account)}: ${meter.label}, percent remaining${fresh ? '' : ' at last reading'}`} aria-valuenow={Math.round(remaining)} aria-valuemin={0} aria-valuemax={100}><div style={{ width: `${remaining}%` }} /></div>}<div className="compact-meter-meta"><span>{fresh ? 'Reported' : `Last reading · ${age(account.updatedAt, now)}`}</span><span>{meter.resetsAt !== null && meter.resetsAt > now ? `Reset ${countdown(meter.resetsAt, now)}` : countdown(meter.resetsAt, now)}</span></div></div>;
+            })}{account.meters.length === 0 && <p className="small-note">Remaining allowance unknown. Expand for details.</p>}</div>
+          </article>)}</div>
+          {quotas.some(account => account.provider === 'chatgpt') && <p className="compact-note">ChatGPT readings cover Work / Codex. Saved readings may be out of date.</p>}
+          {expanded && visible.some(account => account.id === expanded) && <div className="expanded-account"><div className="section-line"><h2>Account details</h2><button className="text-button" onClick={() => setExpanded(null)}>Close<X size={13} /></button></div><AccountCard key={expanded} account={visible.find(account => account.id === expanded)!} settings={store.settings} now={now} run={safeRun} demo={demo} busy={busy} /></div>}
+          {browserActivity.length > 0 && <details className="activity-details"><summary>Browser activity · {browserActivity.length} websites · quotas unknown</summary><div className="account-grid">{browserActivity.map(account => <AccountCard key={account.id} account={account} settings={store.settings} now={now} run={safeRun} demo={demo} busy={busy} />)}</div></details>}
+        </>}
+        {messages.length > 0 && <details className="activity-details"><summary>Website status · {messages.length} need attention</summary>{messages.map(provider => <div className="provider-message overview-message" key={provider}><ProviderMark provider={provider} /><div><strong>{providers[provider].name}</strong><p>{store.providers[provider].message}</p></div><button className="text-button" disabled={busy} onClick={() => void safeRun({ type: 'refresh', provider })}>Retry</button></div>)}</details>}
         {store.accounts.length === 0 && <div className="empty-state"><div className="empty-illustration"><Gauge size={48} strokeWidth={1.3} /><span className="empty-dot dot-a" /><span className="empty-dot dot-b" /><span className="empty-dot dot-c" /></div><h2>A clear view starts here.</h2><p>Add the websites you use. MyLimits will reuse their existing browser logins and show the usage information they make available.</p><button className="button button--primary" onClick={() => setPage('websites')}>Choose your websites<ArrowRight size={16} /></button><button className="text-button preview-link" onClick={() => { setDemo(true); location.hash = 'demo'; }}>Preview with sample data</button></div>}
-        {visible.length === 0 && store.accounts.length > 0 && <p className="small-note">No saved readings for this filter.</p>}
+        {visible.length === 0 && store.accounts.length > 0 && <p className="small-note">No matching readings. Try clearing search or turning off Low only.</p>}
         {store.accounts.length > 0 && <button className="add-website" onClick={() => setPage('websites')}><Layers3 size={17} /><span>Manage websites</span><ArrowRight size={15} /></button>}
       </>}
     </main>

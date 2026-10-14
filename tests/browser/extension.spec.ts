@@ -36,7 +36,7 @@ test('new install starts empty and sample preview does not write fake accounts t
   await expect(page.getByText('A clear view starts here.')).toBeVisible();
   await page.getByRole('button', { name: 'Preview with sample data' }).click();
   await expect(page.getByText('Preview · sample accounts and readings')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Claude Work', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Details for Claude Work', exact: true })).toBeVisible();
   const count = await worker.evaluate(async () => (await chrome.storage.local.get('mylimits:state:v1'))['mylimits:state:v1'].accounts.length);
   expect(count).toBe(0);
   await page.getByRole('button', { name: 'Exit sample preview' }).click();
@@ -48,14 +48,15 @@ test('two Claude and three ChatGPT records can be renamed independently and pers
   await worker.evaluate(async store => chrome.storage.local.set({ 'mylimits:state:v1': store }), fixture);
   const page = await context.newPage();
   await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
+  await page.getByRole('button', { name: 'Details for Claude Personal', exact: true }).click();
   await page.getByRole('button', { name: 'Rename Claude Personal', exact: true }).click();
   await page.getByLabel('Account nickname').fill('Writing account');
   await page.getByRole('button', { name: 'Save nickname', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Writing account', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Claude Work', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'GPT Work', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Details for Writing account', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Details for Claude Work', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Details for GPT Work', exact: true })).toBeVisible();
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Writing account', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Details for Writing account', exact: true })).toBeVisible();
   const saved = await worker.evaluate(async () => (await chrome.storage.local.get('mylimits:state:v1'))['mylimits:state:v1']);
   expect(saved.accounts).toHaveLength(5);
   expect(saved.accounts.find((account: { id: string }) => account.id === 'demo-claude-personal').alias).toBe('Writing account');
@@ -77,6 +78,7 @@ test('preferences persist and account warnings remain separately configurable', 
   await expect(page.getByLabel('Early warning')).toHaveValue('30');
   await expect(page.getByLabel('Critical warning')).toHaveValue('10');
   await page.getByRole('button', { name: 'Overview', exact: true }).click();
+  await page.getByRole('button', { name: 'Details for Claude Work', exact: true }).click();
   await page.getByRole('button', { name: 'Settings for Claude Work', exact: true }).click();
   await page.getByLabel('Alert threshold for Claude Work').selectOption('15');
   await expect.poll(async () => worker.evaluate(async () => (await chrome.storage.local.get('mylimits:state:v1'))['mylimits:state:v1'].accounts.find((account: { id: string }) => account.id === 'demo-claude-work').alertRemaining)).toBe(15);
@@ -101,11 +103,27 @@ test('capture dashboard preview and reject invalid or foreign UI messages', asyn
   const page = await context.newPage();
   await page.setViewportSize({ width: 1120, height: 920 });
   await page.goto(`chrome-extension://${extensionId}/dashboard.html#demo`);
-  await expect(page.getByRole('heading', { name: 'Room to keep going.' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Details for Claude Work' })).toBeVisible();
   await mkdir('artifacts', { recursive: true });
   await page.screenshot({ path: 'artifacts/dashboard-preview.png', fullPage: true });
   const result = await page.evaluate(() => chrome.runtime.sendMessage({ type: 'rename', accountId: 'x', alias: 'a'.repeat(200) }));
   expect(result.ok).toBe(false);
   const before = await worker.evaluate(async () => (await chrome.storage.local.get('mylimits:state:v1'))['mylimits:state:v1'].accounts.length);
   expect(before).toBe(0);
+});
+
+ test('compact popup shows every sample limit before details, with search and low filtering', async ({ context, extensionId }) => {
+  const page = await context.newPage();
+  await page.setViewportSize({ width: 520, height: 600 });
+  await page.goto(`chrome-extension://${extensionId}/popup.html#demo`);
+  await expect(page.locator('.compact-meter')).toHaveCount(7);
+  const limitsFit = await page.locator('.compact-accounts').evaluate(element => element.getBoundingClientRect().bottom <= 600);
+  expect(limitsFit).toBe(true);
+  await expect(page.locator('.account-card')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Low only', exact: true }).click();
+  await expect(page.locator('.compact-account')).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Details for GPT Work' })).toBeVisible();
+  await page.getByRole('button', { name: 'Low only', exact: true }).click();
+  await page.getByLabel('Search accounts and limits').fill('Personal');
+  await expect(page.locator('.compact-account')).toHaveCount(2);
 });
