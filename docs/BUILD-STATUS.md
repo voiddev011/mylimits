@@ -9,12 +9,13 @@ This file records what has actually been checked in the development environment.
 - Playwright extension browser tests: written; pending build and dependencies.
 - Live provider sessions and actual desktop notifications: not tested.
 - Terminal GitHub identity: verified as `voiddev011`.
-- Private GitHub repository creation/push: blocked by the integration's repository-creation permissions.
+- Private GitHub repository: created by the owner at `voiddev011/mylimits`; private visibility and write access verified.
+- Initial source publication: in progress; build and browser checks are defined in GitHub Actions.
 
 The managed shell cannot currently download npm packages inside its default
 sandbox. The latest approval request for dependency downloads was rejected with
 `denied`; no further reason was returned. The GitHub app and CLI identify the
 requested account, but `gh repo create` returned `Resource not accessible by
 integration (createRepository)`. The app operations do not include repository
-creation. An empty private repo created by the owner and granted to the app,
-or a credential with repository-creation permission, is needed to publish.
+creation. The owner supplied the empty private repo, which the integration can
+write to. The project contains no real account readings or session credentials.
