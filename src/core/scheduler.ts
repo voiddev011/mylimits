@@ -4,6 +4,8 @@ export function shouldRefresh(c:ConnectionRecord,reason:RefreshReason,now:number
  if(!c.enabled)return false;
  if(c.status==='needs-auth'&&!['manual','tab'].includes(reason))return false;
  if(c.lastAttemptAt!==null&&now-c.lastAttemptAt<15000)return false;
+ // A restart or repeated manual click must not bypass a persisted provider wait.
+ if(c.status!=='needs-auth'&&c.nextRetryAt!==null&&now<c.nextRetryAt)return false;
  if(['manual','tab','startup'].includes(reason))return true;
  if(c.nextRetryAt!==null)return now>=c.nextRetryAt;
  if(reason==='open'&&c.status==='active'&&c.lastSuccessAt!==null&&now-c.lastSuccessAt<minutes*60000)return false;

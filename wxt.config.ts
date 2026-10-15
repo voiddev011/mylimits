@@ -3,9 +3,12 @@ import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   modules: ['@wxt-dev/module-react'],
+  zip: { artifactTemplate: '{{name}}-{{packageVersion}}-{{browser}}.zip' },
   vite: () => ({ plugins: [tailwindcss()] }),
   manifest: {
     name: 'MyLimits',
+    version: '2.0.0',
+    version_name: '2.0 Phase 1 preview',
     description: 'Keep your AI accounts, usage limits, and reset times in one place.',
     permissions: ['storage', 'alarms', 'scripting', 'sidePanel'],
     optional_permissions: ['notifications', 'nativeMessaging'],

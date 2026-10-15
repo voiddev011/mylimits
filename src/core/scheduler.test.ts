@@ -19,4 +19,6 @@ test('refresh policy persists throttling, suppresses open storms and pauses auth
  assert.equal(shouldRefresh({...c,status:'needs-auth'},'scheduled',now+900000,5),false);
  assert.equal(shouldRefresh({...c,status:'needs-auth'},'tab',now+16000,5),true);
  const retry=nextRetry(now,1,5,now+1800000);assert.equal(retry,now+1800000);assert.equal(shouldRefresh({...c,nextRetryAt:retry},'scheduled',now+600000,5),false);
+ for(const reason of ['manual','startup','tab'] as const)assert.equal(shouldRefresh({...c,status:'error',nextRetryAt:retry},reason,now+600000,5),false);
+ assert.equal(shouldRefresh({...c,status:'needs-auth',nextRetryAt:retry},'manual',now+600000,5),true);
 });

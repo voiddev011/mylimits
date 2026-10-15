@@ -293,4 +293,35 @@ test('permitted fixture provider updates real history and prunes expired observa
  expect(history.data.points, JSON.stringify({issue:enabled.data.historyIssue,connections:enabled.data.connections})).toHaveLength(1);expect(history.data.points[0].connectionId).toBe('website:claude');expect(history.data.points[0].meters[0].scope).toBe('subscription');
  const old=await page.evaluate(async()=>chrome.runtime.sendMessage({type:'history-page',accountId:'expired'}));expect(old.data.points).toHaveLength(0);
  const wire=JSON.stringify(enabled.data);expect(wire).not.toContain('fictional-org');expect(wire).not.toContain('fictional-user');
+ await worker.evaluate(async()=>{
+  Object.defineProperty(navigator,'onLine',{configurable:true,value:false});
+  const state=(await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store;
+  state.connections.find(c=>c.id==='website:claude')!.lastAttemptAt=null;
+  await chrome.storage.local.set({'mylimits:state:v2':state});
+ });
+ const offline=await page.evaluate(async()=>chrome.runtime.sendMessage({type:'refresh',provider:'claude'}));
+ expect(offline.data.connections.find((c:{id:string})=>c.id==='website:claude').status).toBe('offline');
+ expect(offline.data.accounts[0].updatedAt).toBe(account.updatedAt);
+ const after=await page.evaluate(async id=>chrome.runtime.sendMessage({type:'history-page',accountId:id}),account.id);
+ expect(after.data.points).toHaveLength(1);
+});
+
+test('shared views preserve dark theme, long names and keyboard focus at narrow layouts',async({context,worker,extensionId})=>{
+ const fixture={...emptyStore('layout-fixture'),accounts:demoState().accounts};
+ fixture.settings.theme='dark';fixture.accounts[0]!.alias='A long account nickname to verify narrow extension surfaces';
+ await worker.evaluate(async s=>chrome.storage.local.set({'mylimits:state:v2':s}),fixture);
+ const page=await context.newPage();
+ for(const [surface,width] of [['dashboard',1120],['sidepanel',360],['popup',520]] as const){
+  await page.setViewportSize({width,height:600});await page.goto(`chrome-extension://${extensionId}/${surface}.html`);
+  const details=page.getByRole('button',{name:`Details for ${fixture.accounts[0]!.alias}`,exact:true});
+  await expect(details).toBeVisible();await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+  await details.focus();await page.keyboard.press('Enter');await expect(details).toHaveAttribute('aria-expanded','true');
+  await page.keyboard.press('Escape');await expect(details).toHaveAttribute('aria-expanded','false');await expect(details).toBeFocused();
+  // CSS zoom stresses layout only; this is not a Windows DPI certification.
+  await page.evaluate(()=>{document.querySelector<HTMLElement>('.app')!.style.zoom='1.25'});
+  await expect(page.getByRole('button',{name:'Accounts',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Accounts',exact:true}).click();
+  await expect(page.getByRole('switch',{name:'Track Claude',exact:true})).toBeVisible();
+ }
 });
