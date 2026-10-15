@@ -26,11 +26,14 @@ jobs:
         with:
           name: mylimits-chrome
           path: .output/*.zip
+          include-hidden-files: true
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: browser-test-results
           path: test-results/
+          include-hidden-files: true
 
   windows-logic:
     runs-on: windows-latest

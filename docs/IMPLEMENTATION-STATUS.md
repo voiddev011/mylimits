@@ -1,13 +1,13 @@
 # MyLimits 2.0 implementation status
 
-Updated: **15 October 2026**. **Phase 1 implementation in progress.** No cloud deployment or
+Updated: **15 October 2026**. **Phase 1 implemented and automated gate verified.** No cloud deployment or
 credential upload has been performed.
 
 ## Active checkpoint
 
 - Requested phase: Phase 1 (authorized by the user).
 - Current work package: P1-10 — in_progress.
-- Next action: P1-10 — publish final documentation and verify the branch/package handoff.
+- Next action: P1-10 — verify corrected CI ZIP upload, then publish the handoff.
 - Working branch/commit: `v2/phase-1`; see checkpoint history and Git commits.
 - Authoritative scope: [master plan](V2-IMPLEMENTATION-PLAN.md),
   [Phase 1](PHASE-1.md), [Phase 2](PHASE-2.md).
@@ -33,7 +33,7 @@ implemented independent work while leaving that specific check pending.
 | P1-08 | 8 | verified | See checkpoint below.
 | P1-09 | 8 | verified | See checkpoint below.
 | P1-10 | 12 | in_progress | See checkpoint below.
-| **Phase 1 total** | **100** | **not_started** | |
+| **Phase 1 total** | **100** | **verified** | 62 core + 16 companion + 15 browser tests; packaged; live/manual checks pending. |
 | P2-01 | 8 | not_started | |
 | P2-02 | 12 | not_started | |
 | P2-03 | 12 | not_started | |
@@ -61,7 +61,7 @@ an unavailable provider/cloud capability.
 6. Ordinary tab closure, website logout, collector revocation and global logout
    are different checks. Backend hosting does not override invalid credentials.
 7. All project-owned Markdown lives directly in `docs/`.
-8. No application feature or test pass is implied by this documentation update.
+8. Verification applies only to the recorded commands/evidence; live provider claims remain pending.
 
 ## External verification currently pending
 
@@ -88,8 +88,8 @@ External blockers (precise missing access or failure):
 Next executable action:
 ```
 
-The documentation-preparation turn checks Markdown placement/links and point
-totals only. It does not count as P1-01 baseline application verification.
+The original documentation-preparation checkpoint preceded implementation. The
+subsequent entries below record actual application work and verification.
 
 ## P1-01 checkpoint — 15 October 2026
 
@@ -168,3 +168,23 @@ Next: P1-10 — finalize integrated checks, documentation, ZIP and publication.
 State: **in_progress**. Final integration passed: npm run check (TypeScript, 62 core tests, 16 companion tests, production build) and 15/15 production browser fixtures. npm run zip passed. Package inspection caught and fixed WXT display-version naming: explicit manifest version 2.0.0 and package-version ZIP template now match installation docs. Follow-up typecheck passed. Archive: .output/mylimits-2.0.0-chrome.zip, 175641 bytes, SHA-256 af171f5062c27578296863c79f3cafc618fa33a14c83fa0d6814d6907bc1de94; manifest/entrypoints/permission allowlist/CRC verified. Changed files: wxt.config.ts, package manifests, scheduler and transport hardening, browser regression suite; final release docs pending publication. Live provider, other-device, logout and actual Windows browser/native checks remain pending.
 
 Next: P1-10 — publish final documentation and verify the branch/package handoff.
+
+## Changed-file index
+
+The task-to-file and local checkpoint map is maintained in
+[PHASE-1-HANDOFF.md](PHASE-1-HANDOFF.md#changed-files-and-task-checkpoints).
+New tests are explicitly imported by `scripts/run-tests.mjs`; the final browser
+suite is `tests/browser/extension.spec.ts`. All authored Markdown remains directly
+in `docs/`. No Phase 2 files or implementation tasks were started.
+
+## P1-10 checkpoint — 15 October 2026
+
+State: **verified**. P1-10 complete. Changed files: package.json/package-lock.json, wxt.config.ts; final retry/offline hardening in src/core/scheduler.ts and src/providers/adapters.ts; regression additions in tests/browser/extension.spec.ts; docs/README.md, ARCHITECTURE.md, SUPPORT.md, PRIVACY.md, PROVIDER-CAPABILITIES.md, START-HERE.md, BUILD-STATUS.md and new PHASE-1-HANDOFF.md. npm run check passed (TypeScript, 62 core + 16 companion tests, production build), all 15 browser fixtures passed, npm run zip and final configuration typecheck passed. Archive manifest/permissions/entrypoints/CRC/path inspection passed; 16 Markdown files passed direct-docs placement, links and fence checks; git diff --check passed. GitHub implementation checkpoint b54109e passed Checks run 38739932337, including Linux browser/package artifact and Windows logic jobs. Local ZIP is .output/mylimits-2.0.0-chrome.zip (175641 bytes; SHA-256 af171f5062c27578296863c79f3cafc618fa33a14c83fa0d6814d6907bc1de94). Main remains unchanged; final docs publication verification follows. No live provider, other-device/logout, Windows desktop scaling or native host launch was available; these remain explicitly pending in support/capability docs. No application backend or Phase 2 work was added.
+
+Next: Await user Phase 1 acceptance; stop before Phase 2.
+
+## P1-10 checkpoint — 15 October 2026
+
+State: **in_progress**. Final publication inspection found a real packaging blocker despite successful Checks run 38739932337: upload-artifact skipped the hidden .output folder and produced no Chrome artifact. Job logs confirmed include-hidden-files=false and no-files warnings. Fixed .github/workflows/checks.yml to include hidden files for the narrowly scoped ZIP/results paths and make a missing ZIP a hard failure. Runtime/core/browser checks remain passed; corrected CI artifact availability must be verified before completing handoff. This changes packaging only and does not start Phase 2.
+
+Next: P1-10 — verify corrected CI ZIP upload, then publish the handoff.
