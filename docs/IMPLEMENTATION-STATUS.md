@@ -1,15 +1,14 @@
 # MyLimits 2.0 implementation status
 
-Updated: **15 October 2026**. **Planning/documentation complete; V2 application
-implementation has not started.** Phase 1 is next. No cloud deployment or
+Updated: **15 October 2026**. **Phase 1 implementation in progress.** No cloud deployment or
 credential upload has been performed.
 
 ## Active checkpoint
 
-- Requested phase: Phase 1 when the user supplies the starter prompt.
-- Current work package: none started.
-- Next action: P1-01 — inspect Git/workspace and record actual baseline checks.
-- Working branch/commit: to be recorded at implementation startup.
+- Requested phase: Phase 1 (authorized by the user).
+- Current work package: P1-01 — verified.
+- Next action: P1-02 — implement V2 domain and public contracts.
+- Working branch/commit: `v2/phase-1`; see checkpoint history and Git commits.
 - Authoritative scope: [master plan](V2-IMPLEMENTATION-PLAN.md),
   [Phase 1](PHASE-1.md), [Phase 2](PHASE-2.md).
 
@@ -24,7 +23,7 @@ implemented independent work while leaving that specific check pending.
 
 | Task | Points | State | Evidence / commit / blocker |
 | --- | ---: | --- | --- |
-| P1-01 | 8 | not_started | |
+| P1-01 | 8 | verified | See checkpoint below.
 | P1-02 | 12 | not_started | |
 | P1-03 | 10 | not_started | |
 | P1-04 | 10 | not_started | |
@@ -91,3 +90,9 @@ Next executable action:
 
 The documentation-preparation turn checks Markdown placement/links and point
 totals only. It does not count as P1-01 baseline application verification.
+
+## P1-01 checkpoint — 15 October 2026
+
+State: **verified**. Verified all 73 published baseline blobs match the workspace before preserving them in a local baseline commit. Created local and remote v2/phase-1 branches; main remains unchanged. Node 24.19.0/npm 11.9.0 and dependencies are available. Baseline typecheck, 35 core tests and production WXT build pass. Companion tests: 15/16 pass; the real child-process fixture fails in this sandbox (standalone spawnSync reports EPERM). Browser fixtures cannot launch Chromium: setsockopt is denied and Chromium exits SIGTRAP. These are concrete environment blockers, not live provider evidence. Direct Git fetch fails because the shell proxy is unreachable; publication uses the authorized GitHub connector. Added the capability matrix; all live/provider/Windows checks remain pending.
+
+Next: P1-02 — implement V2 domain and public contracts.
