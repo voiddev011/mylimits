@@ -87,7 +87,7 @@ test('preferences persist and account warnings remain separately configurable', 
 
 test('denying website permission creates no account and popup fits its viewport', async ({ context, worker, extensionId }) => {
   const page = await context.newPage();
-  await page.setViewportSize({ width: 390, height: 650 });
+  await page.setViewportSize({ width: 520, height: 650 });
   await page.goto(`chrome-extension://${extensionId}/popup.html`);
   await page.getByRole('button', { name: 'Websites', exact: true }).click();
   await page.evaluate(() => { chrome.permissions.request = async () => false; });
@@ -179,4 +179,19 @@ test('native snapshots update independent accounts and disconnect without exposi
   expect(saved.accounts.filter(account => account.companionProfile)).toHaveLength(1);
   expect(saved.accounts.find(account => account.companionProfile)?.connection).toBe('active');
   expect(JSON.stringify(saved)).not.toContain('DO-NOT-PERSIST');
+});
+
+ test('popup establishes its own width even when first laid out in a tiny viewport', async ({ context, extensionId }) => {
+  const page = await context.newPage();
+  await page.setViewportSize({ width: 40, height: 600 });
+  await page.goto(`chrome-extension://${extensionId}/popup.html`);
+  await expect(page.getByText('A clear view starts here.')).toBeVisible();
+  const widths = await page.evaluate(() => ({
+    document: document.documentElement.getBoundingClientRect().width,
+    body: document.body.getBoundingClientRect().width,
+    app: document.querySelector('.app')!.getBoundingClientRect().width,
+  }));
+  expect(widths).toEqual({ document: 520, body: 520, app: 520 });
+  await page.getByRole('button', { name: 'Websites', exact: true }).click();
+  expect(await page.locator('.app').evaluate(element => element.getBoundingClientRect().width)).toBe(520);
 });
