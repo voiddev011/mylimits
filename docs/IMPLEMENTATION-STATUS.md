@@ -6,8 +6,8 @@ credential upload has been performed.
 ## Active checkpoint
 
 - Requested phase: Phase 2 (authorized by the user: “Start with next phase”).
-- Current work package: P2-02 — verified.
-- Next action: P2-03 — implement gated durable jobs, credential boundaries and race tests.
+- Current work package: P2-03 — verified.
+- Next action: P2-04 — implement opt-in device pairing, snapshot queues and responsive dashboard.
 - Working branch/commit: `v2/phase-2`; Phase 1 and main preserved.
 - Authoritative scope: [master plan](V2-IMPLEMENTATION-PLAN.md),
   [Phase 1](PHASE-1.md), [Phase 2](PHASE-2.md).
@@ -36,7 +36,7 @@ implemented independent work while leaving that specific check pending.
 | **Phase 1 total** | **100** | **verified** | 62 core + 16 companion + 15 browser tests; packaged; live/manual checks pending. |
 | P2-01 | 8 | verified | See checkpoint below. |
 | P2-02 | 12 | verified | See checkpoint below. |
-| P2-03 | 12 | not_started | |
+| P2-03 | 12 | verified | See checkpoint below. |
 | P2-04 | 8 | not_started | |
 | P2-05 | 12 | not_started | |
 | P2-06 | 10 | not_started | |
@@ -212,3 +212,15 @@ Next: P2-02 — implement schemas, Postgres migrations, authentication and tenan
 State: **verified**. Implemented server/package.json and lockfile, TypeScript config, src/app.ts/auth.ts/oidc.ts/config.ts/db.ts/service.ts/main.ts/migrate.ts, migrations/001_core.sql, tests/api.test.ts, .env.example; shared src/core/sync-contracts.ts and docs/SERVER-SETUP.md. Root TS excludes the separate server; Node loader now preserves normal dependency JS resolution. Real isolated PostgreSQL 17 is running on loopback with synthetic data. Server typecheck and all 11 API/database tests pass; root typecheck and all 62 core regressions pass. Tests include two-tenant isolation, forged owners, device binding, duplicate/old uploads, pagination, revision conflict, deletion tombstones, revocation, callback binding, origins/limits and unconfigured-auth rejection. No OIDC tenant/client or live provider grant is configured. API remains snapshot-only; a cloud refresh returns explicit unavailability rather than a fake quota.
 
 Next: P2-03 — implement gated durable jobs, credential boundaries and race tests.
+
+## P2-03 checkpoint — 15 October 2026
+
+State: **in_progress**. Continue in one workstream. Use PostgreSQL leases, connection generations and provider budgets. Keep the production collector registry empty because P2-01 did not pass; implement credential/KMS and worker behavior with guarded test-only collectors. Do not expose provider OAuth login or pretend hosted authorization is configured.
+
+Next: P2-03 — implement leased jobs and tenant-bound credential rotation fixtures.
+
+## P2-03 checkpoint — 15 October 2026
+
+State: **verified**. Changed server/migrations/002_jobs_credentials.sql, src/jobs.ts/credentials.ts/worker.ts, app/service deletion/refresh paths, package script, tests/jobs.test.ts and docs/SERVER-SETUP.md. Implemented PostgreSQL leases/coalescing, persisted per-provider budgets, six-attempt bounded retry, auth pause, generation/identity validation and redacted failures. Tenant-bound AES-GCM envelopes require an external KMS interface; no production KMS or provider collector is configured. Synthetic-only collectors/KMS are guarded against non-test environments. Revocation cleanup is bounded and cannot remove a replacement credential generation; explicit data deletion removes envelopes. Server typecheck and 22 real PostgreSQL API/job tests pass, including worker crash, rotation race, throttling, late result after disconnect and stale cleanup. Root typecheck passes. Production provider OAuth and live renewal remain gated/unimplemented until P2-01 prerequisites exist.
+
+Next: P2-04 — implement opt-in device pairing, snapshot queues and responsive dashboard.

@@ -83,3 +83,30 @@ cross-tenant reads/writes/deletion, owner forgery, device binding, duplicate/old
 uploads, tied timestamp pagination, preference conflicts, revoked devices,
 tombstones, callback binding, size/origin limits and fail-closed auth. Passing
 these tests does not configure a real OIDC tenant or a hosted AI connection.
+
+## Gated jobs and credentials
+
+`npm run worker --prefix server` runs the durable lease/cleanup loop. It is not
+needed for snapshot-only viewing/upload. The production collector registry is
+empty; an environment flag cannot enable fixture collectors or provider login.
+No provider OAuth client, consent callback or production KMS adapter is configured.
+That remaining provider-specific work is blocked by P2-01, not solved by the queue.
+
+Jobs coalesce refresh/renewal per connection, lease for 30 seconds, expire after
+six failed attempts, honor bounded Retry-After and persist provider-wide budgets
+(default 30 attempts/minute, four concurrent jobs/provider). Auth rejection pauses
+that connection. Identity/workspace/generation/lease checks fence every commit.
+No raw upstream error body enters job diagnostics.
+
+The credential boundary encrypts each value with a random AES-256-GCM data key
+and tenant/connection/generation authenticated context; a configured KMS must
+wrap/unwrap that key. Without KMS, storage/decryption fails closed. Only synthetic
+tests provide an in-memory KMS; there is no hard-coded production key. Optimistic
+credential revisions prevent stale refresh-token rotation. This future mode would
+be worker-decryptable, not zero-knowledge. Snapshot sync never accepts these values.
+
+A managed-source disconnect advances generation and cancels jobs before cleanup.
+Supported revocation can retry at most three times within 24 hours, retaining an
+encrypted credential only for that cleanup. Failure remains explicitly unconfirmed;
+local disconnection is not remote logout. Replaced credential generations are
+protected from old cleanup. Explicit data deletion removes credential envelopes.

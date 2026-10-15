@@ -61,6 +61,7 @@ export async function deleteAccount(pool:pg.Pool,p:Principal,id:string){
   await db.query('UPDATE accounts SET deleted_at=now(),name=$3,plan=NULL WHERE owner_id=$1 AND id=$2',[p.owner,id,'Deleted account']);
   await db.query("UPDATE connections SET enabled=false,generation=generation+1,status='disabled' WHERE owner_id=$1 AND account_id=$2",[p.owner,id]);
   await db.query("DELETE FROM jobs WHERE owner_id=$1 AND connection_id IN (SELECT id FROM connections WHERE owner_id=$1 AND account_id=$2)",[p.owner,id]);
+  for(const table of ['encrypted_credentials','connection_cleanup'])await db.query(`DELETE FROM ${table} WHERE owner_id=$1 AND connection_id IN (SELECT id FROM connections WHERE owner_id=$1 AND account_id=$2)`,[p.owner,id]);
   await db.query('DELETE FROM snapshots WHERE owner_id=$1 AND account_id=$2',[p.owner,id]);
   await db.query('UPDATE preferences SET data=jsonb_set(data,\'{names}\',COALESCE(data->\'names\',\'{}\')-$2::text),revision=revision+1 WHERE owner_id=$1',[p.owner,id]);
  });
