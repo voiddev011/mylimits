@@ -6,8 +6,8 @@ credential upload has been performed.
 ## Active checkpoint
 
 - Requested phase: Phase 2 (authorized by the user: “Start with next phase”).
-- Current work package: P2-04 — verified.
-- Next action: P2-05 — research and implement viable additional quota readers without inventing consumer limits.
+- Current work package: P2-05 — verified.
+- Next action: P2-06 — implement segmented history, reset timeline, retention and conservative pacing.
 - Working branch/commit: `v2/phase-2`; Phase 1 and main preserved.
 - Authoritative scope: [master plan](V2-IMPLEMENTATION-PLAN.md),
   [Phase 1](PHASE-1.md), [Phase 2](PHASE-2.md).
@@ -38,7 +38,7 @@ implemented independent work while leaving that specific check pending.
 | P2-02 | 12 | verified | See checkpoint below. |
 | P2-03 | 12 | verified | See checkpoint below. |
 | P2-04 | 8 | verified | See checkpoint below. |
-| P2-05 | 12 | not_started | |
+| P2-05 | 12 | verified | See checkpoint below. |
 | P2-06 | 10 | not_started | |
 | P2-07 | 10 | not_started | |
 | P2-08 | 8 | not_started | |
@@ -236,3 +236,15 @@ Next: P2-04 — implement pairing, persisted sync, preference conflicts and mobi
 State: **verified**. Changed core sync.ts/sync.test.ts/sync-contracts.ts/sync-origin.ts/remote-view.ts, private platform sync transport/controller/messages, SyncSettings/App UI, WXT fixed-origin configuration and env declaration; server pairing/source-tombstone migrations, pairing/web/OIDC/API/service code, responsive React dashboard, Vite config/dependencies and real phone/API tests; SERVER-SETUP and PRIVACY docs. Sync is off by default with no endpoint/extra host grant unless explicitly configured at build time. Pairing is user-approved, expiring, secret-bound and single-use. Acks/backoff/deletion survive restart; lost acknowledgements are covered by source tombstones. Preferences are explicit/revisioned; server-origin changes cannot receive old tokens. Verification: root typecheck + 70 core tests pass; server typecheck + 25 real PostgreSQL API/job tests pass; phone dashboard real-service browser test passes; production extension build passes (570.91 kB) and all 15 extension browser fixtures pass. Visually reviewed phone UI and fixed setup clutter/button wrapping; repeated phone check passes. Real OIDC/provider sign-in and deployed cross-device service remain unconfigured, not live-verified. No hosted provider collector was enabled.
 
 Next: P2-05 — research and implement viable additional quota readers without inventing consumer limits.
+
+## P2-05 checkpoint — 15 October 2026
+
+State: **in_progress**. Proceed with prioritized quota integrations. Keep the current local activity counters separate. No live consumer accounts are available, so a usable documented or source-backed resource and sanitized response contracts are required; blocked candidates must be named explicitly, not filled with fake cap values. Continue existing fixed-origin/optional-permission/generation boundaries.
+
+Next: P2-05 — inspect primary/source evidence for Grok, Perplexity, Gemini and feasible coding-plan quotas.
+
+## P2-05 checkpoint — 15 October 2026
+
+State: **verified**. Changed providers/additional.ts and tests, reader/transport/catalog, core meter display/model/schema/public/history export, frozen V1 schema and V1/V2 migration tests, controller/messages and account source controls, WXT Cursor origin, web count display and browser fixtures. Implemented Grok subscriptions identity plus default-mode quota POST, Perplexity signed-in identity plus remaining-count quotas, and Cursor stable subject/coding-plan/spend reader. Identity is rechecked after usage to reject mid-read account switches. Count-only/monetary/percentage values remain distinct; unknown totals/reset times are not inferred. Grok/Perplexity activity-only mode remains available; old browser-only bindings preserve that mode. Cursor is the explicit fallback for Gemini’s unverified consumer account/quota path. All three are source/fixture-tested prototypes, not live-verified. Added source evidence and current capability matrix under docs/. Root typecheck and 78 core tests pass; server typecheck and 25 PostgreSQL tests pass; production build passes (580.36 kB); all 16 extension browser fixtures pass, including counts/mode switch and original V1 migration. Connector version tag updated to website-v2.1; final integrated build will include it. Live plan/tab/logout/other-device checks remain pending.
+
+Next: P2-06 — implement segmented history, reset timeline, retention and conservative pacing.

@@ -256,7 +256,8 @@ test('real IndexedDB pagination, safe export and history deletion preserve accou
 });
 
 test('V1 state and IndexedDB history migrate on extension restart without losing nicknames',async({context,worker,extensionId,profilePath})=>{
- const legacy={...emptyStore('legacy-keep-salt'),version:1,accounts:demoState().accounts};legacy.accounts[0]!.alias='Old work nickname';
+ const {cursor:_newProvider,...legacyProviders}=emptyStore('legacy-keep-salt').providers;
+ const legacy={...emptyStore('legacy-keep-salt'),providers:legacyProviders,version:1,accounts:demoState().accounts};legacy.accounts[0]!.alias='Old work nickname';
  await worker.evaluate(async legacy=>{
   await new Promise<void>((resolve,reject)=>{const r=indexedDB.deleteDatabase('mylimits-history');r.onsuccess=()=>resolve();r.onerror=()=>reject(r.error);r.onblocked=()=>reject(new Error('History database still open'));});
   await new Promise<void>((resolve,reject)=>{const r=indexedDB.open('mylimits-history',1);r.onupgradeneeded=()=>{const s=r.result.createObjectStore('readings',{keyPath:'id',autoIncrement:true});s.createIndex('account','accountId');s.createIndex('time','time')};r.onsuccess=()=>{const db=r.result,tx=db.transaction('readings','readwrite');tx.objectStore('readings').add({accountId:legacy.accounts[0]!.id,time:Date.now()-3600000,meters:[{id:'legacy-meter',usedPercent:42}]});tx.oncomplete=()=>{db.close();resolve()};tx.onerror=()=>reject(tx.error)};r.onerror=()=>reject(r.error)});
@@ -324,4 +325,19 @@ test('shared views preserve dark theme, long names and keyboard focus at narrow 
   await page.getByRole('button',{name:'Accounts',exact:true}).click();
   await expect(page.getByRole('switch',{name:'Track Claude',exact:true})).toBeVisible();
  }
+});
+
+test('Perplexity count-only quotas and activity mode preserve names without guessed percentages',async({context,worker,extensionId})=>{
+ await worker.evaluate(()=>{
+  const original=chrome.permissions.contains.bind(chrome.permissions);chrome.permissions.contains=async p=>p.origins?.includes('https://www.perplexity.ai/*')?true:original(p);
+  globalThis.fetch=async input=>new Response(JSON.stringify(new URL(String(input)).pathname==='/api/auth/session'?{user:{id:'fictional-search-user',email:'PRIVATE-SEARCH-EMAIL'}}:{remaining_pro:0,remaining_research:12}),{status:200,headers:{'content-type':'application/json'}});
+ });
+ const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
+ const result=await page.evaluate(async()=>chrome.runtime.sendMessage({type:'enable',provider:'perplexity',enabled:true}));expect(result.ok).toBe(true);expect(JSON.stringify(result.data)).not.toContain('PRIVATE-SEARCH-EMAIL');
+ await expect(page.locator('.meter-chip strong').filter({hasText:'0 left'})).toBeVisible();await expect(page.locator('.meter-chip strong').filter({hasText:'12 left'})).toBeVisible();
+ const account=result.data.accounts.find((a:Account)=>a.provider==='perplexity');expect(account.meters[0].usedPercent).toBeNull();expect(account.meters[0].total).toBeNull();
+ await page.getByRole('button',{name:'Details for Perplexity',exact:true}).click();await page.getByRole('button',{name:'Rename Perplexity',exact:true}).click();await page.getByLabel('Account nickname').fill('Personal search');await page.getByRole('button',{name:'Save nickname',exact:true}).click();
+ await page.getByRole('button',{name:'Accounts',exact:true}).click();await page.getByLabel('Reading source for Perplexity').selectOption('activity');
+ await expect.poll(async()=>worker.evaluate(async()=>{const s=(await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store;return s.accounts.find(a=>a.kind==='browser'&&a.provider==='perplexity')?.connection})).toBe('active');
+ const saved=await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);expect(saved.accounts.find(a=>a.id===account.id)!.alias).toBe('Personal search');expect(saved.accounts.find(a=>a.id===account.id)!.connection).toBe('inactive');expect(saved.providers.perplexity.readingMode).toBe('activity');
 });

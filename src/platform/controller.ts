@@ -74,7 +74,7 @@ export async function refreshProvider(provider: ProviderId, manual = false, reas
       providers: { ...store.providers, [provider]: { ...store.providers[provider], status:'checking',checkedAt:Date.now() } } }, value:undefined }));
     try {
       const selected = before.workspaces.find(w => w.id === connection.workspaceId);
-      const snapshot = await readProvider(provider, { workspaceRemoteId: selected?.remoteId }, signal);
+      const snapshot = await readProvider(provider, { workspaceRemoteId: selected?.remoteId,readingMode:before.providers[provider].readingMode }, signal);
       const meters = snapshot.meters.map(m => MeterSchema.parse(m));
       const id = await accountId(provider, snapshot.identity, before.installSalt);
       const choices = await Promise.all((snapshot.workspaces ?? []).map(async w => ({ id:await accountId(provider,`workspace:${w.identity}`,before.installSalt),provider,remoteId:w.identity,name:w.name })));
@@ -196,6 +196,11 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
   switch (command.type) {
     case 'state': return publicStore();
     case 'opened': void refreshAll(false, 'open').catch(() => {}); return publicStore();
+    case 'reader-mode': {
+      coordinator.cancel(`website:${command.provider}`);
+      const enabled=await updateStore(store=>{const enabled=store.providers[command.provider].enabled,next=enableWebsite(store,command.provider,enabled);next.providers[command.provider].readingMode=command.mode;return {store:next,value:enabled}});
+      if(enabled)await refreshProvider(command.provider,true);break;
+    }
     case 'sync': {
       if(command.action==='status')return snapshotSync.status();
       if(command.action==='start')return snapshotSync.start(command.name);

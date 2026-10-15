@@ -69,3 +69,23 @@ not configured. Consumer quotas cannot be replaced by these products' API limits
 See [HOSTED-FEASIBILITY.md](HOSTED-FEASIBILITY.md) for evidence, per-case pending
 checks and the snapshot-sync-only decision. Local/companion support levels above
 are unchanged. No provider password/cookie/authentication was uploaded.
+
+## Phase 2 website readers — implementation evidence
+
+The current Phase 2 branch adds these **fixture-tested, live-unverified prototypes**.
+No scope here inherits independent hosted authorization from snapshot sync.
+
+| Source | Identity / quota resource | Scope / missing data | Tab / logout | Evidence |
+| --- | --- | --- | --- | --- |
+| Grok website quota mode | Unambiguous subscriptions.xaiUserId; fixed rate-limits POST | Grok 4 default-mode requests; actual remaining/total; rolling length does not establish reset time | Background first / existing tab fallback; session-bound | Published protocol/model sources + synthetic parser/identity tests; real plans pending |
+| Perplexity website quota mode | Signed-in session user.id; rate-limit/all | Returned remaining Pro/Research/Labs/Agentic counts; no fabricated total, percentage or reset | Background first / existing tab fallback; session-bound | Published source + synthetic fixtures; live access pending |
+| Cursor website | auth/me sub; usage-summary | Included coding-plan/model pools and on-demand USD spend; not consumer chat or subscription fee | Background first / existing tab fallback; session-bound | Published response models + fixtures; live account/plan validation pending |
+| Gemini website | Existing local observer only | Consumer quota/account binding still unverified; no CLI/API budget substitution | Existing page required; no independent tracking | Local-observation fixtures only |
+
+Grok/Perplexity keep an explicit activity-only mode. Upgraded existing browser-only
+records retain that mode until the user chooses quota mode. Cursor adds a disabled
+source on V1/Phase 1 upgrade; no extra host access is granted automatically.
+Readers validate identity before and after a quota response to reject account
+changes mid-read. Scope, zero/unknown and partial count/spend data stay distinct.
+See [source/selection notes](PROVIDER-INTEGRATION-NOTES.md). All real-device,
+website logout, renewal and actual plan comparisons remain pending per source.

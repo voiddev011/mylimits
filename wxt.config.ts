@@ -20,6 +20,7 @@ export default defineConfig({
       'https://gemini.google.com/*',
       'https://grok.com/*',
       'https://www.perplexity.ai/*',
+      'https://cursor.com/*',
       ...(syncOrigin?[syncPermission(syncOrigin)]:[]),
     ],
     action: { default_title: 'MyLimits' },

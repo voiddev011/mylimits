@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PROVIDER_IDS, type Account, type Meter, type ProviderState, type Settings, type Store, type ConnectionRecord, type UsageSnapshot, type Workspace } from './model';
+import { emptyStore,websiteConnection,PROVIDER_IDS, type Account, type Meter, type ProviderState, type Settings, type Store, type ConnectionRecord, type UsageSnapshot, type Workspace } from './model';
 const id = z.string().min(1).max(240);
 const time = z.number().finite().min(0).max(8.64e15);
 const clock = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
@@ -8,7 +8,7 @@ export const MeterSchema: z.ZodType<Meter> = z.object({
   id: z.string().min(1).max(120), label: z.string().min(1).max(120),
   scope: z.enum(['subscription', 'work-codex', 'chat', 'api', 'local']), evidence: z.enum(['reported', 'observed', 'estimated']),
   usedPercent: z.number().finite().min(0).max(1000).nullable(), used: z.number().finite().min(0).nullable(),
-  total: z.number().finite().positive().nullable(), unit: z.enum(['percent', 'messages', 'requests', 'searches', 'credits', 'currency']),
+  remaining:z.number().finite().min(0).nullable().optional(), total: z.number().finite().positive().nullable(), unit: z.enum(['percent', 'messages', 'requests', 'searches', 'credits', 'currency']),
   resetsAt: time.positive().nullable(), source: z.string().max(160),
   currency: z.string().regex(/^[A-Z]{3}$/).nullable().optional(), windowId: z.string().max(240).nullable().optional(),
   observedAt: time.optional(), connectionId: id.optional(),
@@ -29,6 +29,7 @@ export const SettingsSchema: z.ZodType<Settings> = z.object({
   quietHours: z.object({ enabled: z.boolean(), start: clock, end: clock }).optional(),
 }).refine(s => s.criticalRemaining <= s.warningRemaining, { message: 'Critical alert must be at or below warning.' });
 export const ProviderStateSchema: z.ZodType<ProviderState> = z.object({
+  readingMode:z.enum(['quota','activity']).optional(),
   enabled: z.boolean(), status: z.enum(['disabled', 'checking', ...ConnectionSchema.options]),
   activeAccountId: id.nullable(), checkedAt: time.nullable(), message: z.string().max(300).nullable(),
   failures: z.number().int().min(0), nextRetryAt: time.nullable(),
@@ -45,7 +46,7 @@ export const UsageSnapshotSchema: z.ZodType<UsageSnapshot> = z.object({
   schemaVersion: z.literal(2), snapshotId: id, providerId: ProviderSchema, accountId: id, connectionId: id,
   workspaceId: id.nullable(), observedAt: time, receivedAt: time, connectorVersion: z.string().min(1).max(60), meters: z.array(MeterSchema).max(60),
 });
-export const StoreSchema: z.ZodType<Store> = z.object({
+const CurrentStoreSchema: z.ZodType<Store> = z.object({
   version: z.literal(2), installSalt: z.string().min(1), accounts: z.array(AccountSchema).max(100),
   connections: z.array(ConnectionRecordSchema).max(200), workspaces: z.array(WorkspaceSchema).max(200), snapshots: z.array(UsageSnapshotSchema).max(400),
   providers: z.record(ProviderSchema, ProviderStateSchema), settings: SettingsSchema, historyIssue: z.string().max(300).nullable(),
@@ -53,3 +54,14 @@ export const StoreSchema: z.ZodType<Store> = z.object({
   alertLedger: z.record(z.string(), z.object({ window: z.string(), sent: z.array(z.number()) })),
   observationLedger: z.array(z.string()).max(300),
 });
+
+// Add only the new provider default. Existing malformed/future data still fails.
+export const StoreSchema:z.ZodType<Store>=z.preprocess(raw=>{
+ if(!raw||typeof raw!=='object'||Array.isArray(raw))return raw;
+ const state=raw as Record<string,unknown>;if(state.version!==2||!state.providers||typeof state.providers!=='object'||Array.isArray(state.providers))return raw;
+ const providers={...state.providers as Record<string,unknown>};
+ for(const id of ['grok','perplexity']){const p=providers[id] as ProviderState|undefined;if(p&&p.readingMode===undefined&&Array.isArray(state.accounts)&&state.accounts.some(a=>a&&a.provider===id&&a.kind==='browser'&&a.id===p.activeAccountId))providers[id]={...p,readingMode:'activity'};}
+ if(!('cursor' in providers))providers.cursor=emptyStore('defaults-only').providers.cursor;
+ const connections=Array.isArray(state.connections)&&!state.connections.some(c=>c?.id==='website:cursor')?[...state.connections,websiteConnection('cursor')]:state.connections;
+ return {...state,providers,connections};
+},CurrentStoreSchema);

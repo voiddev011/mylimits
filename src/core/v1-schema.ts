@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { PROVIDER_IDS } from './model';
+// Frozen legacy provider set; adding a provider must not change the V1 contract.
+const PROVIDER_IDS=['claude','chatgpt','gemini','grok','perplexity'] as const;
 
 export const ProviderSchema = z.enum(PROVIDER_IDS);
 export const MeterSchema = z.object({
