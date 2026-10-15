@@ -13,6 +13,7 @@ export const ConnectionSchema = z.enum(['active', 'inactive', 'signed-out', 'wai
 export const AccountSchema: z.ZodType<Account> = z.object({
   id: z.string().min(1).max(180), provider: ProviderSchema, kind: z.enum(['account', 'browser']),
   alias: z.string().max(60), defaultName: z.string().max(120), plan: z.string().max(80).nullable(),
+  companionProfile: z.string().uuid().optional(),
   connection: ConnectionSchema, meters: z.array(MeterSchema).max(30), createdAt: z.number(), updatedAt: z.number(),
   alertRemaining: z.number().int().min(1).max(95).nullable(), alertsMuted: z.boolean(),
 });

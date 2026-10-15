@@ -6,6 +6,10 @@ import type { HistoryPoint } from './history';
 
 export const CommandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('state') }),
+  z.object({ type: z.literal('companion-status') }),
+  z.object({ type: z.literal('companion-enable'), enabled: z.boolean() }),
+  z.object({ type: z.literal('companion-add') }),
+  z.object({ type: z.literal('companion-remove'), profile: z.string().uuid() }),
   z.object({ type: z.literal('refresh'), provider: ProviderSchema.optional() }),
   z.object({ type: z.literal('enable'), provider: ProviderSchema, enabled: z.boolean() }),
   z.object({ type: z.literal('rename'), accountId: z.string().max(180), alias: z.string().trim().max(60) }),

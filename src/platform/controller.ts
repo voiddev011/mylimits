@@ -7,11 +7,14 @@ import { AdapterError, readProvider } from '../providers/adapters';
 import { readStore, publicStore, updateStore } from './repository';
 import { readHistory, removeHistory, saveHistory } from './history';
 import { CommandSchema, type Command } from './messages';
+import { mergeCompanion } from '../core/companion';
+import { addCompanionAccount, companionRequest, companionStatus, enableCompanion, listenCompanion, refreshCompanion } from './companion';
 
 const running = new Map<ProviderId, Promise<void>>();
 const generation: Record<ProviderId, number> = { claude: 0, chatgpt: 0, gemini: 0, grok: 0, perplexity: 0 };
 const observedProviders: readonly ProviderId[] = ['gemini', 'grok', 'perplexity'];
 const REFRESH_ALARM = 'mylimits:refresh';
+const COMPANION_ALARM = 'mylimits:companion';
 
 async function renderBadge(): Promise<void> {
   const value = badge(await readStore(), Date.now());
@@ -92,7 +95,7 @@ export async function refreshProvider(provider: ProviderId, manual = false): Pro
 }
 
 async function refreshAll(manual = false): Promise<void> {
-  const results = await Promise.allSettled(PROVIDER_IDS.map(provider => refreshProvider(provider, manual)));
+  const results = await Promise.allSettled([...PROVIDER_IDS.map(provider => refreshProvider(provider, manual)), refreshCompanion()]);
   if (results.some(result => result.status === 'rejected')) await renderBadge().catch(() => undefined);
 }
 
@@ -111,10 +114,10 @@ async function setProvider(provider: ProviderId, enabled: boolean): Promise<void
   if (registered.length) await browser.scripting.unregisterContentScripts({ ids: [scriptId] });
   if (enabled && observedProviders.includes(provider)) {
     await browser.scripting.registerContentScripts([{
-      id: scriptId, matches: [origin], js: ['content-scripts/observer.js'], runAt: 'document_start', persistAcrossSessions: true,
+      id: scriptId, matches: [origin], js: ['/content-scripts/observer.js'], runAt: 'document_start', persistAcrossSessions: true,
     }]);
     const tabs = await browser.tabs.query({ url: origin });
-    await Promise.allSettled(tabs.filter(tab => tab.id).map(tab => browser.scripting.executeScript({ target: { tabId: tab.id! }, files: ['content-scripts/observer.js'] })));
+    await Promise.allSettled(tabs.filter(tab => tab.id).map(tab => browser.scripting.executeScript({ target: { tabId: tab.id! }, files: ['/content-scripts/observer.js'] })));
   }
   if (enabled) await refreshProvider(provider, true);
   else {
@@ -185,6 +188,14 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
   if (!sender.url?.startsWith(browser.runtime.getURL('/'))) throw new Error('This action must come from the MyLimits dashboard.');
   switch (command.type) {
     case 'state': return publicStore();
+    case 'companion-status': return companionStatus();
+    case 'companion-enable':
+      if (command.enabled) await browser.alarms.create(COMPANION_ALARM, { periodInMinutes: 1 });
+      else await browser.alarms.clear(COMPANION_ALARM);
+      await enableCompanion(command.enabled);
+      break;
+    case 'companion-add': await addCompanionAccount(); break;
+    case 'companion-remove': await companionRequest('remove', command.profile); await refreshCompanion(); break;
     case 'refresh': command.provider ? await refreshProvider(command.provider, true) : await refreshAll(true); break;
     case 'enable': await setProvider(command.provider, command.enabled); break;
     case 'rename':
@@ -196,7 +207,8 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
     case 'forget': {
       const store = await readStore();
       const account = store.accounts.find(item => item.id === command.accountId);
-      if (account && store.providers[account.provider].activeAccountId === account.id) await setProvider(account.provider, false);
+      if (account?.companionProfile) { await companionRequest('remove', account.companionProfile); await refreshCompanion(); }
+      if (account && !account.companionProfile && store.providers[account.provider].activeAccountId === account.id) await setProvider(account.provider, false);
       await updateStore(current => ({ store: { ...current, accounts: current.accounts.filter(item => item.id !== command.accountId), alertLedger: Object.fromEntries(Object.entries(current.alertLedger).filter(([key]) => !key.startsWith(`${command.accountId}/`))) }, value: undefined }));
       await removeHistory(command.accountId);
       break;
@@ -216,15 +228,27 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
 }
 
 export function startController(): void {
+  listenCompanion(async profiles => {
+    const changes = await updateStore(store => {
+      const next = profiles === null ? { ...store, accounts: store.accounts.map(account => account.companionProfile ? { ...account, connection: 'unavailable' as const } : account) } : mergeCompanion(store, profiles, Date.now());
+      const readings = next.accounts.filter(account => account.companionProfile && account.connection === 'active' && account.updatedAt > (store.accounts.find(prior => prior.id === account.id)?.updatedAt ?? 0));
+      for (const account of next.accounts.filter(account => account.companionProfile)) AccountSchema.parse(account);
+      const removed = store.accounts.filter(account => account.companionProfile && !next.accounts.some(current => current.id === account.id)).map(account => account.id);
+      return { store: next, value: { readings, removed } };
+    });
+    await Promise.allSettled([...changes.readings.map(account => saveHistory({ accountId: account.id, time: account.updatedAt, meters: account.meters.map(meter => ({ id: meter.id, usedPercent: meter.usedPercent })) })), ...changes.removed.map(removeHistory)]);
+    await renderBadge(); await sendAlerts();
+  });
   browser.runtime.onMessage.addListener((raw, sender, sendResponse) => {
     const parsed = CommandSchema.safeParse(raw);
     if (!parsed.success) { sendResponse({ ok: false, error: 'Invalid MyLimits request.' }); return false; }
     void handle(parsed.data, sender).then(data => sendResponse({ ok: true, data }), error => sendResponse({ ok: false, error: error instanceof Error ? error.message : 'The action could not be completed.' }));
     return true;
   });
-  browser.alarms.onAlarm.addListener(alarm => { if (alarm.name === REFRESH_ALARM) void refreshAll().catch(() => undefined); });
+  browser.alarms.onAlarm.addListener(alarm => { if (alarm.name === COMPANION_ALARM) void refreshCompanion().catch(() => {}); if (alarm.name === REFRESH_ALARM) void refreshAll().catch(() => undefined); });
   browser.permissions.onRemoved.addListener(permissions => {
     void (async () => {
+      if (permissions.permissions?.includes('nativeMessaging')) await enableCompanion(false);
       if (permissions.permissions?.includes('notifications')) await updateStore(store => ({ store: { ...store, settings: { ...store.settings, desktopAlerts: false } }, value: undefined }));
       for (const provider of PROVIDER_IDS) {
         const store = await readStore();
@@ -236,6 +260,7 @@ export function startController(): void {
   void (async () => {
     const store = await readStore();
     await browser.alarms.create(REFRESH_ALARM, { periodInMinutes: store.settings.refreshMinutes });
+    if ((await companionStatus()).enabled) await browser.alarms.create(COMPANION_ALARM, { periodInMinutes: 1 });
     await renderBadge();
     await refreshAll();
   })().catch(() => undefined);

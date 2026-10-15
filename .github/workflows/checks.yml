@@ -13,7 +13,7 @@ jobs:
         with:
           node-version: 24
       - name: Install dependencies
-        run: npm install
+        run: npm ci
       - name: Core tests, type checking and extension build
         run: npm run check
       - name: Install Chromium for browser tests
@@ -31,3 +31,13 @@ jobs:
         with:
           name: browser-test-results
           path: test-results/
+
+  windows-logic:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npm run check

@@ -33,7 +33,7 @@ export function applySnapshot(store: Store, provider: ProviderId, id: string, sn
   return {
     ...store,
     accounts: [...store.accounts.filter(item => item.id !== id).map(item => (
-      item.provider === provider ? { ...item, connection: 'inactive' as const } : item
+      item.provider === provider && !item.companionProfile ? { ...item, connection: 'inactive' as const } : item
     )), account],
     providers: { ...store.providers, [provider]: {
       enabled: true, status: 'active', activeAccountId: id, checkedAt: now,
@@ -46,7 +46,7 @@ export function applySnapshot(store: Store, provider: ProviderId, id: string, sn
 export function markProvider(store: Store, provider: ProviderId, status: Exclude<Store['providers'][ProviderId]['status'], 'checking' | 'active'>, message: string, now: number): Store {
   return {
     ...store,
-    accounts: store.accounts.map(account => account.provider === provider && account.connection === 'active'
+    accounts: store.accounts.map(account => account.provider === provider && !account.companionProfile && account.connection === 'active'
       ? { ...account, connection: status === 'disabled' ? 'inactive' as const : status }
       : account),
     providers: { ...store.providers, [provider]: {
