@@ -1,14 +1,14 @@
 # MyLimits 2.0 implementation status
 
-Updated: **15 October 2026**. **Phase 1 implemented and automated gate verified.** No cloud deployment or
+Updated: **15 October 2026**. **Phase 1 verified; Phase 2 implementation in progress.** No cloud deployment or
 credential upload has been performed.
 
 ## Active checkpoint
 
-- Requested phase: Phase 1 (authorized by the user).
-- Current work package: P1-10 — verified.
-- Next action: Stop here. Await user Phase 1 acceptance and explicit Phase 2 instruction.
-- Working branch/commit: `v2/phase-1`; see checkpoint history and Git commits.
+- Requested phase: Phase 2 (authorized by the user: “Start with next phase”).
+- Current work package: P2-01 — verified.
+- Next action: P2-02 — implement the optional authenticated PostgreSQL snapshot API.
+- Working branch/commit: `v2/phase-2`; Phase 1 and main preserved.
 - Authoritative scope: [master plan](V2-IMPLEMENTATION-PLAN.md),
   [Phase 1](PHASE-1.md), [Phase 2](PHASE-2.md).
 
@@ -34,7 +34,7 @@ implemented independent work while leaving that specific check pending.
 | P1-09 | 8 | verified | See checkpoint below.
 | P1-10 | 12 | verified | See checkpoint below.
 | **Phase 1 total** | **100** | **verified** | 62 core + 16 companion + 15 browser tests; packaged; live/manual checks pending. |
-| P2-01 | 8 | not_started | |
+| P2-01 | 8 | verified | See checkpoint below. |
 | P2-02 | 12 | not_started | |
 | P2-03 | 12 | not_started | |
 | P2-04 | 8 | not_started | |
@@ -44,7 +44,7 @@ implemented independent work while leaving that specific check pending.
 | P2-08 | 8 | not_started | |
 | P2-09 | 10 | not_started | |
 | P2-10 | 10 | not_started | |
-| **Phase 2 total** | **100** | **not_started** | |
+| **Phase 2 total** | **100** | **in_progress** | Ordered implementation; external provider gates recorded separately. |
 
 Points are relative estimates, not elapsed time. Record changes to remaining
 estimates and the reason; do not alter completed effort or add filler to disguise
@@ -194,3 +194,9 @@ Next: P1-10 — verify corrected CI ZIP upload, then publish the handoff.
 State: **verified**. Release gate complete after fixing CI delivery. Changed final files: .github/workflows/checks.yml (include hidden output on scoped paths; fail on missing ZIP), docs/README.md, ARCHITECTURE.md, SUPPORT.md, PROVIDER-CAPABILITIES.md, START-HERE.md, BUILD-STATUS.md, PHASE-1-HANDOFF.md and this ledger; privacy was updated in P1-09. Corrected GitHub checkpoint 571b251 passed run 38740486309: both Linux verify/browser/package and Windows logic jobs succeeded. Artifact mylimits-chrome ID 11975222283 exists, is not expired and is linked from README/handoff. Extracted local ZIP smoke passed on all three surfaces at manifest version 2.0.0. Final evidence remains 62 core + 16 companion + 15 browser tests, successful type/build/ZIP and archive inspection; 16 directly stored docs passed links/fences/location checks. Main was verified unchanged at 380125a8cdc411c7c49d6aac8e61e159315950e5. Final docs publish will be verified by full Git tree comparison. Provider/live logout/cross-device and actual Windows browser/native checks remain pending; no Phase 2 implementation or backend was started.
 
 Next: Stop here. Await user Phase 1 acceptance and explicit Phase 2 instruction.
+
+## P2-01 checkpoint — 15 October 2026
+
+State: **verified**. Read repository instructions, Phase 1 handoff, Phase 2 tasks and shared contracts. Clean local Phase 1 tree preserved; local and remote v2/phase-2 branches created from their matching Phase 1 content. Changed docs/HOSTED-FEASIBILITY.md, PROVIDER-CAPABILITIES.md and this ledger. Reviewed current official OpenAI App Server/SIWC, Google, xAI and Perplexity docs; no hosted registration/test account exists. Decision: production independent collection disabled, continue snapshot-only sync and test-only job seams. No live logout/renewal claim. Node 24.19.0/npm 11.9.0; network/Docker access verified using approved process execution; no configured provider secrets or identities. Documentation links checked against the retrieved first-party sources. Next package may build a locally runnable service without deploying it.
+
+Next: P2-02 — implement the optional authenticated PostgreSQL snapshot API.
