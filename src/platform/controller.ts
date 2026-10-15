@@ -7,8 +7,9 @@ import { AdapterError, readProvider } from '../providers/adapters';
 import { enableWebsite, setWorkspace, accountPreferences, orderAccounts, forgetAccount } from '../core/actions';
 import { RefreshCoordinator, shouldRefresh, nextRetry, type RefreshReason } from '../core/scheduler';
 import { changeConnection } from '../core/connections';
-import { readStore, publicStore, updateStore } from './repository';
-import { readHistory, removeHistory, saveHistory } from './history';
+import { historyPoint, exportReadings } from '../core/history-data';
+import { readStore, publicStore, updateStore, forgetLegacyAccount } from './repository';
+import { readHistory, readHistoryPage, historyExport, clearHistory, removeHistory, saveHistory } from './history';
 import { CommandSchema, type Command } from './messages';
 import { mergeCompanion, markCompanionUnavailable } from '../core/companion';
 import { addCompanionAccount, companionRequest, companionStatus, enableCompanion, listenCompanion, refreshCompanion } from './companion';
@@ -22,7 +23,7 @@ async function renderBadge(): Promise<void> {
   const value = badge(await readStore(), Date.now());
   await browser.action.setBadgeText({ text: value.text });
   await browser.action.setBadgeBackgroundColor({ color: value.color });
-  await browser.action.setTitle({ title: value.text ? `MyLimits · ${value.text} left in the most constrained reported allowance` : 'MyLimits · your usage, in one place' });
+  await browser.action.setTitle({ title: value.text ? `MyLimits · ${value.text} ${(await readStore()).settings.displayMode === 'used' ? 'used' : 'left'} in the most constrained reported allowance` : 'MyLimits · your usage, in one place' });
 }
 
 async function sendAlerts(): Promise<void> {
@@ -30,20 +31,32 @@ async function sendAlerts(): Promise<void> {
   // Serialize the decision and delivery, so overlapping refreshes cannot alert twice.
   await updateStore(async store => {
     const result = collectAlerts(store, Date.now());
-    const failedMeters = new Set<string>();
+    const failed: typeof result.alerts = [];
     for (const alert of result.alerts) {
       try {
         await browser.notifications.create(alert.id, {
           type: 'basic', iconUrl: browser.runtime.getURL('/icon/128.png'), title: alert.title, message: alert.message,
         });
-      } catch { failedMeters.add(`${alert.accountId}/${alert.meterId}`); }
+      } catch { failed.push(alert); }
     }
     // Failed deliveries can retry next refresh; a failure must not silently consume an alert.
-    for (const key of failedMeters) {
-      if (store.alertLedger[key]) result.store.alertLedger[key] = store.alertLedger[key];
-      else delete result.store.alertLedger[key];
+    for (const alert of failed) {
+      const key = alert.ledgerKey;
+      if (alert.kind === 'reset') { if(store.resetLedger[key])result.store.resetLedger[key]=store.resetLedger[key]!;else delete result.store.resetLedger[key]; }
+      else { if(store.alertLedger[key])result.store.alertLedger[key]=store.alertLedger[key]!;else delete result.store.alertLedger[key]; }
     }
     return { store: result.store, value: undefined };
+  });
+}
+
+async function saveAcceptedHistory(accountId: string, connectionId: string): Promise<void> {
+  await updateStore(async store => {
+    const connection=store.connections.find(c=>c.id===connectionId&&c.accountId===accountId&&c.enabled);
+    if(!connection)return {store,value:undefined};
+    const snapshot=store.snapshots.filter(s=>s.accountId===accountId&&s.connectionId===connectionId&&s.workspaceId===connection.workspaceId).sort((a,b)=>b.observedAt-a.observedAt)[0];
+    if(!snapshot)return {store,value:undefined};
+    try { await saveHistory(historyPoint(snapshot)); return {store:store.historyIssue?{...store,historyIssue:null}:store,value:undefined}; }
+    catch { return {store:{...store,historyIssue:'A reading was updated, but local history could not be saved.'},value:undefined}; }
   });
 }
 
@@ -71,7 +84,7 @@ export async function refreshProvider(provider: ProviderId, manual = false, reas
         const next=applySnapshot(enriched,provider,id,{...snapshot,meters},Date.now(),{workspaceId,generation:stamp});
         AccountSchema.parse(next.accounts.find(a=>a.id===id));return {store:next,value:true};
       });
-      if(accepted&&meters.length)await saveHistory({accountId:id,time:Date.now(),meters:meters.map(m=>({id:m.id,usedPercent:m.usedPercent}))}).catch(async()=>{await updateStore(store=>({store:{...store,historyIssue:'A reading was updated, but local history could not be saved.'},value:undefined}));});
+      if(accepted&&meters.length)await saveAcceptedHistory(id, connectionId);
     } catch(error) {
       if(signal.aborted)return;
       const status=error instanceof AdapterError?error.status:'error';
@@ -178,7 +191,8 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
   }
   if (!sender.url?.startsWith(browser.runtime.getURL('/'))) throw new Error('This action must come from the MyLimits dashboard.');
   switch (command.type) {
-    case 'state': void refreshAll(false, 'open').catch(() => {}); return publicStore();
+    case 'state': return publicStore();
+    case 'opened': void refreshAll(false, 'open').catch(() => {}); return publicStore();
     case 'account-preferences': {
       const { type: _type, accountId, ...patch } = command;
       await updateStore(store => ({ store: accountPreferences(store, accountId, patch), value: undefined })); break;
@@ -226,8 +240,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
       const account = store.accounts.find(item => item.id === command.accountId);
       if (account?.companionProfile) { await companionRequest('remove', account.companionProfile); await refreshCompanion(); }
       if (account && !account.companionProfile && store.providers[account.provider].activeAccountId === account.id) await setProvider(account.provider, false);
-      await updateStore(current => ({ store: forgetAccount(current, command.accountId), value: undefined }));
-      await removeHistory(command.accountId);
+      await updateStore(async current => { await removeHistory(command.accountId); await forgetLegacyAccount(command.accountId); return { store: forgetAccount(current, command.accountId), value: undefined }; });
       break;
     }
     case 'settings': {
@@ -240,6 +253,15 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
       break;
     }
     case 'history': return readHistory(command.accountId);
+    case 'history-page': return readHistoryPage(command);
+    case 'export-history': {
+      const store=await readStore();const accounts=command.accountId?store.accounts.filter(a=>a.id===command.accountId):store.accounts;
+      if(command.accountId&&!accounts.length)throw new Error('This account is no longer saved.');
+      if(command.from!==undefined&&command.to!==undefined&&command.from>command.to)throw new Error('Choose a valid date range.');
+      return exportReadings(accounts,await historyExport(accounts.map(a=>a.id),command.from,command.to),command.format,Date.now());
+    }
+    case 'clear-history': await updateStore(async store=>{await clearHistory(command.accountId);return {store:{...store,historyIssue:null},value:undefined}}); break;
+
   }
   return publicStore();
 }
@@ -253,7 +275,7 @@ export function startController(): void {
       const removed = store.accounts.filter(account => account.companionProfile && !next.accounts.some(current => current.id === account.id)).map(account => account.id);
       return { store: next, value: { readings, removed } };
     });
-    await Promise.allSettled([...changes.readings.map(account => saveHistory({ accountId: account.id, time: account.updatedAt, meters: account.meters.map(meter => ({ id: meter.id, usedPercent: meter.usedPercent })) })), ...changes.removed.map(removeHistory)]);
+    await Promise.allSettled([...changes.readings.map(account => saveAcceptedHistory(account.id, `companion:${account.companionProfile}`)), ...changes.removed.map(removeHistory)]);
     await renderBadge(); await sendAlerts();
   });
   browser.runtime.onMessage.addListener((raw, sender, sendResponse) => {

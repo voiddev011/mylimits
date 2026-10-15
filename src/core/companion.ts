@@ -9,6 +9,7 @@ export function mergeCompanion(store:Store,profiles:CompanionProfile[],now:numbe
 
  for(const profile of profiles){
   const id=`openai-companion:${profile.id}`,connectionId=`companion:${profile.id}`;
+  if(next.connections.some(c=>c.id===connectionId&&!c.enabled&&c.status==='disabled'))continue;
   let prior=next.accounts.find(a=>a.id===id);
   if(!prior){prior={id,provider:'chatgpt',kind:'account',companionProfile:profile.id,alias:'',defaultName:`OpenAI ${profile.id.slice(0,4)}`,plan:profile.plan,connection:'unavailable',meters:[],createdAt:now,updatedAt:0,alertRemaining:null,alertsMuted:false};next={...next,accounts:[...next.accounts,prior]};}
   if(!next.connections.some(c=>c.id===connectionId))next={...next,connections:[...next.connections,{...websiteConnection('chatgpt'),id:connectionId,kind:'companion',accountId:id,profileId:profile.id,enabled:true,status:'unavailable'}]};

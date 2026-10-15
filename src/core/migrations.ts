@@ -1,5 +1,6 @@
 import { emptyStore, type Store, type ConnectionStatus } from './model';
 import { StoreSchema } from './schema';
+import { projectAccounts } from './connections';
 import { V1StoreSchema } from './v1-schema';
 export const STATE_V1='mylimits:state:v1';
 export const STATE_V2='mylimits:state:v2';
@@ -21,7 +22,7 @@ export function migrateV1(raw: unknown): Store {
   if(a.updatedAt>0)next.snapshots.push({schemaVersion:2,snapshotId:`legacy:${a.id}`,providerId:a.provider,accountId:a.id,connectionId:id,workspaceId:null,
    observedAt:a.updatedAt,receivedAt:a.updatedAt,connectorVersion:'legacy-v1',meters:a.meters.map(m=>({...m,observedAt:a.updatedAt,connectionId:id}))});
  }
- return StoreSchema.parse(next);
+ return StoreSchema.parse(projectAccounts(next));
 }
 // Browser storage and IndexedDB have separate transactions. A durable journal
 // retries each idempotent step; the active pointer is the final commit marker.

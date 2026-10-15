@@ -3,16 +3,17 @@ import { mkdtemp, rm, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { emptyStore, type Store } from '../../src/core/model';
+import { emptyStore, type Store, type Account } from '../../src/core/model';
 import { demoState } from '../../src/ui/demo';
 import type { browser } from 'wxt/browser';
 declare const chrome: typeof browser;
 
 const extensionPath = path.resolve('.output/chrome-mv3');
-const test = base.extend<{ context: BrowserContext; worker: Worker; extensionId: string }>({
-  context: async ({}, use) => {
+const test = base.extend<{ context: BrowserContext; worker: Worker; extensionId: string; profilePath: string }>({
+  profilePath: async ({}, use) => { const dir=await mkdtemp(path.join(tmpdir(),'mylimits-browser-')); try { await use(dir); } finally { await rm(dir,{recursive:true,force:true}); } },
+  context: async ({ profilePath }, use) => {
     if (!existsSync(path.join(extensionPath, 'manifest.json'))) throw new Error('Run npm run build before browser tests.');
-    const userData = await mkdtemp(path.join(tmpdir(), 'mylimits-browser-'));
+    const userData = profilePath;
     const configured = process.env.CHROMIUM_PATH;
     const executablePath = configured; // Prefer Playwright's extension-capable Chromium.
     const context = await chromium.launchPersistentContext(userData, {
@@ -227,4 +228,69 @@ test('six account rows fit the popup and pins remain independent of nicknames', 
  await expect(page.locator('.account-row').first()).toContainText('GPT Projects');
  await page.reload();await expect(page.locator('.account-row').first()).toContainText('GPT Projects');
  await expect(page.getByRole('button',{name:'Details for Claude Work',exact:true})).toBeVisible();
+});
+
+test('real IndexedDB pagination, safe export and history deletion preserve account preferences',async({context,worker,extensionId})=>{
+ const fixture={...emptyStore('history-fixture'),accounts:demoState().accounts};fixture.accounts[0]!.alias='=SUM(A1:A2)';
+ await worker.evaluate(async({fixture,now})=>{
+  await chrome.storage.local.set({'mylimits:state:v2':fixture});
+  await new Promise<void>((resolve,reject)=>{const req=indexedDB.open('mylimits-history',2);req.onsuccess=()=>{const db=req.result,tx=db.transaction('readings','readwrite'),s=tx.objectStore('readings');for(let i=0;i<53;i++){const time=now-Math.floor(i/2)*60000;s.add({schemaVersion:2,accountId:fixture.accounts[0]!.id,time,observedAt:time,receivedAt:now,connectionId:'website:claude',snapshotKey:`fixture:${i}`,meters:[{id:'session',label:'Session',scope:'subscription',evidence:'reported',unit:'percent',used:null,total:null,usedPercent:i,resetsAt:now+3600000,source:'Fixture'}]})}s.add({accountId:fixture.accounts[1]!.id,time:now,meters:[],legacy:true});tx.oncomplete=()=>{db.close();resolve()};tx.onerror=()=>reject(tx.error)};req.onerror=()=>reject(req.error)});
+ },{fixture,now:Date.now()});
+ const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
+ const result=await page.evaluate(async id=>{
+  const one=await chrome.runtime.sendMessage({type:'history-page',accountId:id,limit:20});
+  const two=await chrome.runtime.sendMessage({type:'history-page',accountId:id,limit:20,before:one.data.cursor});
+  const three=await chrome.runtime.sendMessage({type:'history-page',accountId:id,limit:20,before:two.data.cursor});
+  const csv=await chrome.runtime.sendMessage({type:'export-history',accountId:id,format:'csv'});
+  const json=await chrome.runtime.sendMessage({type:'export-history',accountId:id,format:'json'});
+  return {pages:[one.data,two.data,three.data],csv:csv.data.text,json:json.data.text};
+ },fixture.accounts[0]!.id);
+ expect(result.pages.map(p=>p.points.length)).toEqual([20,20,13]);
+ const ids=result.pages.flatMap(p=>p.points.map((r:{id:number})=>r.id));expect(new Set(ids).size).toBe(53);
+ expect(result.csv).toContain("'=SUM(A1:A2)");expect(result.json).not.toContain('history-fixture');expect(JSON.parse(result.json).readings).toHaveLength(53);
+ await page.getByRole('button',{name:'History',exact:true}).click();await expect(page.getByText('Reading history')).toBeVisible();
+ await expect(page.getByRole('button',{name:'Load older readings'})).toBeVisible();await page.getByRole('button',{name:'Clear history',exact:true}).click();await page.getByRole('button',{name:'Confirm clear history',exact:true}).click();
+ await expect(page.getByText('No saved readings in this date range.')).toBeVisible();
+ const saved=await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);
+ expect(saved.accounts).toHaveLength(5);expect(saved.accounts[0]!.alias).toBe('=SUM(A1:A2)');
+});
+
+test('V1 state and IndexedDB history migrate on extension restart without losing nicknames',async({context,worker,extensionId,profilePath})=>{
+ const legacy={...emptyStore('legacy-keep-salt'),version:1,accounts:demoState().accounts};legacy.accounts[0]!.alias='Old work nickname';
+ await worker.evaluate(async legacy=>{
+  await new Promise<void>((resolve,reject)=>{const r=indexedDB.deleteDatabase('mylimits-history');r.onsuccess=()=>resolve();r.onerror=()=>reject(r.error);r.onblocked=()=>reject(new Error('History database still open'));});
+  await new Promise<void>((resolve,reject)=>{const r=indexedDB.open('mylimits-history',1);r.onupgradeneeded=()=>{const s=r.result.createObjectStore('readings',{keyPath:'id',autoIncrement:true});s.createIndex('account','accountId');s.createIndex('time','time')};r.onsuccess=()=>{const db=r.result,tx=db.transaction('readings','readwrite');tx.objectStore('readings').add({accountId:legacy.accounts[0]!.id,time:Date.now()-3600000,meters:[{id:'legacy-meter',usedPercent:42}]});tx.oncomplete=()=>{db.close();resolve()};tx.onerror=()=>reject(tx.error)};r.onerror=()=>reject(r.error)});
+  await chrome.storage.local.clear();await chrome.storage.local.set({'mylimits:state:v1':legacy});
+ },legacy);
+ await context.close();
+ const reopened=await chromium.launchPersistentContext(profilePath,{ignoreDefaultArgs:['--disable-extensions'],executablePath:process.env.CHROMIUM_PATH,channel:process.env.CHROMIUM_PATH?undefined:'chromium',headless:true,args:[`--disable-extensions-except=${extensionPath}`,`--load-extension=${extensionPath}`,'--no-sandbox','--disable-background-networking']});
+ await reopened.route(/^https?:\/\//,route=>route.abort());
+ try {
+ const restarted=reopened.serviceWorkers()[0]??await reopened.waitForEvent('serviceworker');
+ await expect.poll(async()=>restarted.evaluate(async()=> (await chrome.storage.local.get('mylimits:active-schema'))['mylimits:active-schema'])).toBe(2);
+ const saved=await restarted.evaluate(async()=>chrome.storage.local.get(['mylimits:state:v2','mylimits:backup:v1']));
+ const migrated=saved['mylimits:state:v2'] as Store;const backup=saved['mylimits:backup:v1'] as {version:number};
+ expect(migrated.installSalt).toBe('legacy-keep-salt');expect(migrated.accounts[0]!.alias).toBe('Old work nickname');expect(backup.version).toBe(1);
+ const page=await reopened.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
+ const history=await page.evaluate(async id=>chrome.runtime.sendMessage({type:'history-page',accountId:id}),legacy.accounts[0]!.id);
+ expect(history.ok).toBe(true);expect(history.data.points[0].legacy).toBe(true);expect(history.data.points[0].meters[0].usedPercent).toBe(42);
+ const forgotten=await page.evaluate(async id=>chrome.runtime.sendMessage({type:'forget',accountId:id}),legacy.accounts[0]!.id);expect(forgotten.ok).toBe(true);
+ const backups=await restarted.evaluate(async()=>chrome.storage.local.get(['mylimits:state:v1','mylimits:backup:v1','mylimits:state:v2']));expect(JSON.stringify(backups)).not.toContain('Old work nickname');
+ } finally { await reopened.close(); }
+});
+
+test('permitted fixture provider updates real history and prunes expired observations',async({context,worker,extensionId})=>{
+ await worker.evaluate(async()=>{
+  const original=chrome.permissions.contains.bind(chrome.permissions);
+  chrome.permissions.contains=async p=>p.origins?.includes('https://claude.ai/*')?true:original(p);
+  globalThis.fetch=async input=>{const path=new URL(String(input)).pathname;const value=path==='/api/account'?{uuid:'fictional-user'}:path==='/api/organizations'?[{uuid:'fictional-org',name:'Test team',capabilities:['chat']}]:{five_hour:{utilization:25,resets_at:new Date(Date.now()+3600000).toISOString()}};return new Response(JSON.stringify(value),{status:200,headers:{'content-type':'application/json'}})};
+  await new Promise<void>((resolve,reject)=>{const r=indexedDB.open('mylimits-history',2);r.onsuccess=()=>{const db=r.result,tx=db.transaction('readings','readwrite');tx.objectStore('readings').add({accountId:'expired',time:Date.now()-31*86400000,meters:[]});tx.oncomplete=()=>{db.close();resolve()};tx.onerror=()=>reject(tx.error)};r.onerror=()=>reject(r.error)});
+ });
+ const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
+ const enabled=await page.evaluate(async()=>chrome.runtime.sendMessage({type:'enable',provider:'claude',enabled:true}));expect(enabled.ok).toBe(true);
+ const account=enabled.data.accounts.find((a:Account)=>a.provider==='claude');expect(account).toBeTruthy();
+ const history=await page.evaluate(async id=>chrome.runtime.sendMessage({type:'history-page',accountId:id}),account.id);
+ expect(history.data.points, JSON.stringify({issue:enabled.data.historyIssue,connections:enabled.data.connections})).toHaveLength(1);expect(history.data.points[0].connectionId).toBe('website:claude');expect(history.data.points[0].meters[0].scope).toBe('subscription');
+ const old=await page.evaluate(async()=>chrome.runtime.sendMessage({type:'history-page',accountId:'expired'}));expect(old.data.points).toHaveLength(0);
+ const wire=JSON.stringify(enabled.data);expect(wire).not.toContain('fictional-org');expect(wire).not.toContain('fictional-user');
 });

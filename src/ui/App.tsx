@@ -5,7 +5,7 @@ import { accountName, accountStatus, isFresh, remainingPercent, type Account, ty
 import { PROVIDER_IDS } from '../core/model';
 import { providers } from '../providers/catalog';
 import { command, type Command, type PublicStore } from '../platform/messages';
-import { history, type HistoryPoint } from './history-view';
+import { HistoryView } from './HistoryView';
 import { selectAccounts, type LimitSort } from './overview';
 import { demoState } from './demo';
 import { countdown, age } from './format';
@@ -48,11 +48,6 @@ function AccountRow({account,store,now,expanded,onExpand,run,busy,connect}:{acco
  const meters=selected.slice(0,2);
  return <article className={`account-row ${expanded?'account-row--expanded':''}`}><div className="account-summary"><button className="account-identity" aria-label={`Details for ${accountName(account)}`} aria-expanded={expanded} onClick={onExpand}><Mark provider={account.provider}/><span className="account-copy"><strong>{account.pinned&&<Pin size={10}/>} {accountName(account)}</strong><small>{accountStatus(account,now,store.settings.refreshMinutes)}{account.updatedAt?` · ${age(account.updatedAt,now)}`:''}</small></span><ChevronDown size={13} className={expanded?'chevron-open':''}/></button><div className="row-meters">{meters.map(m=><Reading key={`${m.scope}/${m.id}`} account={account} meter={m} settings={store.settings} now={now}/>)}{!meters.length&&<span className="no-quota">{account.kind==='browser'?'No requests observed':'Quota not reported'}</span>}</div></div>{expanded&&<AccountDetails account={account} store={store} run={run} busy={busy} now={now} connect={connect}/>}</article>
 }
-function HistoryView({store,demo}:{store:PublicStore;demo:boolean}){
- const [id,setId]=useState(store.accounts[0]?.id??'');const [points,setPoints]=useState<HistoryPoint[]>([]);const [error,setError]=useState('');
- useEffect(()=>{let active=true;setError('');setPoints([]);if(id&&!demo)void history(id).then(p=>{if(active)setPoints(p)},()=>{if(active)setError('Local history could not be read.')});return()=>{active=false}},[id,demo]);
- return <section className="panel"><h2>Reading history</h2><p className="muted">Readings are snapshots, not a complete log of everything you did. Gaps stay unknown.</p><label>Account<select value={id} onChange={e=>setId(e.target.value)}><option value="">Choose account</option>{store.accounts.map(a=><option key={a.id} value={a.id}>{accountName(a)}</option>)}</select></label>{error&&<p role="alert">{error}</p>}{points.length?<table><thead><tr><th>Observed</th><th>Recorded values</th></tr></thead><tbody>{points.map((p,i)=><tr key={i}><td>{new Date(p.time).toLocaleString()}</td><td>{p.meters.map(m=>`${m.id}: ${m.usedPercent===null?'unknown':`${m.usedPercent}% used`}`).join(' · ')}</td></tr>)}</tbody></table>:<div className="empty-small">{demo?'Preview does not create history.':'No saved readings in this view yet.'}</div>}</section>
-}
 function Preferences({store,run,busy,demo,notify}:{store:PublicStore;run:Run;busy:boolean;demo:boolean;notify:(s:string)=>void}){
  const [draft,setDraft]=useState(store.settings);const settingsKey=JSON.stringify(store.settings);useEffect(()=>setDraft(store.settings),[settingsKey]);
  async function desktop(){if(demo){notify('Sample mode never requests permissions.');return}const enabled=!store.settings.desktopAlerts;if(enabled&&!await browser.permissions.request({permissions:['notifications']})){notify('Notification permission was not granted.');return}if(await run({type:'settings',settings:{...store.settings,desktopAlerts:enabled}})){if(!enabled)await browser.permissions.remove({permissions:['notifications']});}}
@@ -61,7 +56,7 @@ function Preferences({store,run,busy,demo,notify}:{store:PublicStore;run:Run;bus
 }
 export function App({view='dashboard'}:{view?:'popup'|'dashboard'|'sidepanel'}){
  const [store,setStore]=useState<PublicStore|null>(null);const [demo,setDemo]=useState(location.hash==='#demo');const [page,setPage]=useState<Page>('overview');const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [toast,setToast]=useState('');const [now,setNow]=useState(Date.now());const [expanded,setExpanded]=useState<string|null>(null);const [query,setQuery]=useState('');const [lowOnly,setLowOnly]=useState(false);const [sort,setSort]=useState<LimitSort>('default');const [filter,setFilter]=useState<ProviderId|'all'>('all');
- useEffect(()=>{if(demo){setStore(demoState());setError('');return}let active=true;const load=()=>void command({type:'state'}).then(s=>{if(active)setStore(s)},e=>{if(active)setError(e instanceof Error?e.message:'Could not load MyLimits.')});load();const listener=()=>load();browser.storage.onChanged.addListener(listener);return()=>{active=false;browser.storage.onChanged.removeListener(listener)}},[demo]);
+ useEffect(()=>{if(demo){setStore(demoState());setError('');return}let active=true;const load=(opened=false)=>void command({type:opened?'opened':'state'}).then(s=>{if(active)setStore(s)},e=>{if(active)setError(e instanceof Error?e.message:'Could not load MyLimits.')});load(true);const listener=()=>load();browser.storage.onChanged.addListener(listener);return()=>{active=false;browser.storage.onChanged.removeListener(listener)}},[demo]);
  useEffect(()=>{const escape=(e:KeyboardEvent)=>{if(e.key==='Escape'){const button=document.querySelector<HTMLButtonElement>('[aria-expanded="true"]');setExpanded(null);button?.focus();}};document.addEventListener('keydown',escape);return()=>document.removeEventListener('keydown',escape)},[]);
  useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),15000);return()=>clearInterval(timer)},[]);
  useEffect(()=>{if(!toast)return;const timer=setTimeout(()=>setToast(''),5000);return()=>clearTimeout(timer)},[toast]);

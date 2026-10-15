@@ -34,3 +34,11 @@ test('a cold companion restart retains the prior dated reading until a new read 
   assert.deepEqual(next.accounts[0]!.meters, store.accounts[0]!.meters);
   assert.equal(next.accounts[0]!.connection, 'unavailable');
 });
+
+test('late native snapshots cannot recreate a deliberately forgotten account',async()=>{
+ const {forgetAccount}=await import('./actions');
+ const connected=mergeCompanion(emptyStore('test'),[profile],now);
+ const forgotten=forgetAccount(connected,connected.accounts[0]!.id);
+ const late=mergeCompanion(forgotten,[{...profile,updatedAt:now+1000}],now+1000);
+ assert.equal(late.accounts.length,0);assert.equal(late.snapshots.length,0);
+});
