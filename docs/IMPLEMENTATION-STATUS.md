@@ -6,8 +6,8 @@ credential upload has been performed.
 ## Active checkpoint
 
 - Requested phase: Phase 1 (authorized by the user).
-- Current work package: P1-05 — implemented.
-- Next action: P1-06 — implement persisted refresh policy and request coordination.
+- Current work package: P1-06 — verified.
+- Next action: P1-07 — build the compact shared interface and account controls.
 - Working branch/commit: `v2/phase-1`; see checkpoint history and Git commits.
 - Authoritative scope: [master plan](V2-IMPLEMENTATION-PLAN.md),
   [Phase 1](PHASE-1.md), [Phase 2](PHASE-2.md).
@@ -28,7 +28,7 @@ implemented independent work while leaving that specific check pending.
 | P1-03 | 10 | verified | See checkpoint below.
 | P1-04 | 10 | verified | See checkpoint below.
 | P1-05 | 10 | implemented | See checkpoint below.
-| P1-06 | 10 | not_started | |
+| P1-06 | 10 | verified | See checkpoint below.
 | P1-07 | 12 | not_started | |
 | P1-08 | 8 | not_started | |
 | P1-09 | 8 | not_started | |
@@ -126,3 +126,9 @@ Next: P1-05 — add source-aware account and connection commands.
 State: **implemented**. Added validated account pin/order/snooze preferences, source disconnect and verified workspace commands, plus generation-safe website enable/disable and forget behavior. Native disconnect now retains remembered readings; forgetting explicitly deletes data. Added action regressions for names, workspace membership, invalid reorder and collector shutdown. User-facing controls are integrated in P1-07; no live revocation is claimed.
 
 Next: P1-06 — implement persisted refresh policy and request coordination.
+
+## P1-06 checkpoint — 15 October 2026
+
+State: **verified**. Added a two-slot refresh coordinator, same-source coalescing/cancellation, persisted generation/attempt/backoff state, Retry-After handling and startup/open/tab recovery policies. Added fake-clock and concurrency tests; type checking and 54 core tests pass. Browser observation updates retain their original reported-meter age and are stored in source snapshots. Account controls from P1-05 are ready for UI integration.
+
+Next: P1-07 — build the compact shared interface and account controls.
