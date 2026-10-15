@@ -59,3 +59,13 @@ native restart are fixture-tested. Ordinary logout, native revocation, global
 logout, other-device usage and actual expiry/renewal remain separate pending
 checks for every provider/source. No support level changed merely because the
 interface or schema was upgraded.
+
+## Phase 2 hosted gate — 15 October 2026
+
+P2-01 reviewed current first-party OpenAI App Server/SIWC and Google/xAI/Perplexity
+API documentation. **No independently hosted collector passed.** Hosted OAuth
+registration, appropriate quota scopes and an owner-authorized test account are
+not configured. Consumer quotas cannot be replaced by these products' API limits.
+See [HOSTED-FEASIBILITY.md](HOSTED-FEASIBILITY.md) for evidence, per-case pending
+checks and the snapshot-sync-only decision. Local/companion support levels above
+are unchanged. No provider password/cookie/authentication was uploaded.
