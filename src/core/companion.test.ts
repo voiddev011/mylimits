@@ -25,7 +25,7 @@ test('companion failure preserves reading age and cannot produce a fresh balance
   const next = mergeCompanion(store, [{ ...profile, status: 'unavailable' }], now + 60000);
   assert.equal(next.accounts[0]!.updatedAt, now);
   assert.equal(isFresh(next.accounts[0]!, profile.meters[0]!, now + 60000, 5), false);
-  assert.equal(mergeCompanion(next, [], now).accounts.length, 0);
+  assert.equal(mergeCompanion(next, [], now).accounts[0]!.connection, 'inactive');
 });
 test('a cold companion restart retains the prior dated reading until a new read succeeds', () => {
   const store = mergeCompanion(emptyStore('test'), [profile], now);

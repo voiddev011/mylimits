@@ -69,10 +69,11 @@ export function recordObservation(store: Store, provider: ProviderId, id: string
   const meter: Meter = {
     id: 'browser-requests', label: 'Requests observed today (UTC)', scope: 'local', evidence: 'observed',
     usedPercent: null, used, total: null, unit: 'requests', resetsAt,
-    source: 'This browser only. Request count is not an account quota.',
+    source: 'This browser only. Request count is not an account quota.', observedAt: now, connectionId: `website:${provider}`,
   };
   return { ...store,
     accounts: store.accounts.map(item => item.id === id ? { ...item, meters: [...item.meters.filter(m => m.id !== meter.id), meter] } : item),
+    snapshots: store.snapshots.map(s => s.accountId === id && s.connectionId === `website:${provider}` ? { ...s, snapshotId: `observation:${eventId}`, receivedAt: now, observedAt: s.meters.some(m => m.evidence === 'reported') ? s.observedAt : now, meters: [...s.meters.filter(m => m.id !== meter.id), meter] } : s),
     observationLedger: [...store.observationLedger, eventId].slice(-300),
   };
 }

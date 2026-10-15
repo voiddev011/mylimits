@@ -24,7 +24,7 @@ export function OpenAICompanion({ run, busy, demo, notify }: {
     } finally { setWorking(false); }
   }
   return <article className="website-card companion-card"><div className="website-top"><div><h3>OpenAI companion</h3><span className="small-note">Independent account connection · Windows / Linux setup</span></div></div>
-    <p>Connect through OpenAI once. The companion reads the available Work / Codex limits, including shared usage from other devices. Website logout independence still needs verification on your account.</p>
+    <p>Optional separate OpenAI authorization for returned Work / Codex limits. Website logout, renewal and shared usage from other devices still need live verification. Basic website tracking works without this service.</p>
     <p className="small-note">Install the companion first using the setup guide. It refreshes about once a minute while your computer is awake and online. Other ChatGPT limits may not be available.</p>
     <div className="website-bottom"><span className="small-note">{demo ? 'Sample mode' : status.connected ? 'Companion connected' : status.enabled ? 'Companion unavailable — check installation' : 'Not connected'}</span></div>
     <div className="companion-actions"><button className="button button--primary" disabled={busy || working} onClick={() => void connect().catch(() => notify('Could not connect. Check the companion installation and Chrome permission.'))}><Plus size={14} />{status.enabled ? 'Add OpenAI account' : 'Connect OpenAI'}</button>

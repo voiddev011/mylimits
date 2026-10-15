@@ -26,6 +26,7 @@ const test = base.extend<{ context: BrowserContext; worker: Worker; extensionId:
   },
   worker: async ({ context }, use) => {
     const worker = context.serviceWorkers()[0] ?? await context.waitForEvent('serviceworker', { timeout: 15_000 });
+    await expect.poll(async () => worker.evaluate(async () => (await chrome.storage.local.get('mylimits:active-schema'))['mylimits:active-schema'])).toBe(2);
     await use(worker);
   },
   extensionId: async ({ worker }, use) => use(new URL(worker.url()).host),
@@ -38,7 +39,7 @@ test('new install starts empty and sample preview does not write fake accounts t
   await page.getByRole('button', { name: 'Preview with sample data' }).click();
   await expect(page.getByText('Preview · sample accounts and readings')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Details for Claude Work', exact: true })).toBeVisible();
-  const count = await worker.evaluate(async () => ((await chrome.storage.local.get('mylimits:state:v1'))['mylimits:state:v1'] as Store).accounts.length);
+  const count = await worker.evaluate(async () => ((await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store).accounts.length);
   expect(count).toBe(0);
   await page.getByRole('button', { name: 'Exit sample preview' }).click();
   await expect(page.getByText('A clear view starts here.')).toBeVisible();
@@ -46,7 +47,7 @@ test('new install starts empty and sample preview does not write fake accounts t
 
 test('two Claude and three ChatGPT records can be renamed independently and persist on reload', async ({ context, worker, extensionId }) => {
   const fixture = { ...emptyStore('fictional-browser-test-salt'), accounts: demoState().accounts };
-  await worker.evaluate(async store => chrome.storage.local.set({ 'mylimits:state:v1': store }), fixture);
+  await worker.evaluate(async store => chrome.storage.local.set({ 'mylimits:state:v2': store }), fixture);
   const page = await context.newPage();
   await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
   await page.getByRole('button', { name: 'Details for Claude Personal', exact: true }).click();
@@ -58,7 +59,7 @@ test('two Claude and three ChatGPT records can be renamed independently and pers
   await expect(page.getByRole('button', { name: 'Details for GPT Work', exact: true })).toBeVisible();
   await page.reload();
   await expect(page.getByRole('button', { name: 'Details for Writing account', exact: true })).toBeVisible();
-  const saved = await worker.evaluate(async () => ((await chrome.storage.local.get('mylimits:state:v1'))['mylimits:state:v1'] as Store));
+  const saved = await worker.evaluate(async () => ((await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store));
   expect(saved.accounts).toHaveLength(5);
   expect(saved.accounts.find((account: { id: string }) => account.id === 'demo-claude-personal')!.alias).toBe('Writing account');
   expect(saved.accounts.find((account: { id: string }) => account.id === 'demo-gpt-personal')!.alias).toBe('GPT Personal');
@@ -66,34 +67,34 @@ test('two Claude and three ChatGPT records can be renamed independently and pers
 
 test('preferences persist and account warnings remain separately configurable', async ({ context, worker, extensionId }) => {
   const fixture = { ...emptyStore('fictional-browser-test-salt'), accounts: demoState().accounts };
-  await worker.evaluate(async store => chrome.storage.local.set({ 'mylimits:state:v1': store }), fixture);
+  await worker.evaluate(async store => chrome.storage.local.set({ 'mylimits:state:v2': store }), fixture);
   const page = await context.newPage();
   await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
-  await page.getByRole('button', { name: 'Preferences', exact: true }).click();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await page.getByLabel('Early warning').fill('30');
   await page.getByLabel('Critical warning').fill('10');
   await page.getByRole('button', { name: 'Save preferences' }).click();
-  await expect(page.getByText('Alert preferences saved.')).toBeVisible();
+  await expect(page.getByText('Preferences saved.')).toBeVisible();
   await page.reload();
-  await page.getByRole('button', { name: 'Preferences', exact: true }).click();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await expect(page.getByLabel('Early warning')).toHaveValue('30');
   await expect(page.getByLabel('Critical warning')).toHaveValue('10');
   await page.getByRole('button', { name: 'Overview', exact: true }).click();
   await page.getByRole('button', { name: 'Details for Claude Work', exact: true }).click();
-  await page.getByRole('button', { name: 'Settings for Claude Work', exact: true }).click();
-  await page.getByLabel('Alert threshold for Claude Work').selectOption('15');
-  await expect.poll(async () => worker.evaluate(async () => ((await chrome.storage.local.get('mylimits:state:v1'))['mylimits:state:v1'] as Store).accounts.find((account: { id: string }) => account.id === 'demo-claude-work')!.alertRemaining)).toBe(15);
+  await page.getByLabel('Warning for Claude Work').fill('15');
+  await page.getByRole('button', { name: 'Save threshold', exact: true }).click();
+  await expect.poll(async () => worker.evaluate(async () => ((await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store).accounts.find((account: { id: string }) => account.id === 'demo-claude-work')!.alertRemaining)).toBe(15);
 });
 
 test('denying website permission creates no account and popup fits its viewport', async ({ context, worker, extensionId }) => {
   const page = await context.newPage();
   await page.setViewportSize({ width: 520, height: 650 });
   await page.goto(`chrome-extension://${extensionId}/popup.html`);
-  await page.getByRole('button', { name: 'Websites', exact: true }).click();
+  await page.getByRole('button', { name: 'Accounts', exact: true }).click();
   await page.evaluate(() => { chrome.permissions.request = async () => false; });
   await page.getByRole('switch', { name: 'Track Claude', exact: true }).click();
-  await expect(page.getByText('Chrome site access was not granted. Nothing was connected.')).toBeVisible();
-  const store = await worker.evaluate(async () => ((await chrome.storage.local.get('mylimits:state:v1'))['mylimits:state:v1'] as Store));
+  await expect(page.getByText('Site access was not granted. Nothing was connected.')).toBeVisible();
+  const store = await worker.evaluate(async () => ((await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store));
   expect(store.accounts).toHaveLength(0);
   expect(store.providers.claude.enabled).toBe(false);
   const fits = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
@@ -109,7 +110,7 @@ test('capture dashboard preview and reject invalid or foreign UI messages', asyn
   await page.screenshot({ path: 'artifacts/dashboard-preview.png', fullPage: true });
   const result = await page.evaluate(() => chrome.runtime.sendMessage({ type: 'rename', accountId: 'x', alias: 'a'.repeat(200) }));
   expect(result.ok).toBe(false);
-  const before = await worker.evaluate(async () => ((await chrome.storage.local.get('mylimits:state:v1'))['mylimits:state:v1'] as Store).accounts.length);
+  const before = await worker.evaluate(async () => ((await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store).accounts.length);
   expect(before).toBe(0);
 });
 
@@ -117,26 +118,27 @@ test('capture dashboard preview and reject invalid or foreign UI messages', asyn
   const page = await context.newPage();
   await page.setViewportSize({ width: 520, height: 600 });
   await page.goto(`chrome-extension://${extensionId}/popup.html#demo`);
-  await expect(page.locator('.compact-meter')).toHaveCount(7);
-  const limitsFit = await page.locator('.compact-accounts').evaluate(element => element.getBoundingClientRect().bottom <= 600);
+  await expect(page.locator('.meter-chip')).toHaveCount(7);
+  const limitsFit = await page.locator('.account-list').evaluate(element => element.getBoundingClientRect().bottom <= 600);
   expect(limitsFit).toBe(true);
-  await expect(page.locator('.account-card')).toHaveCount(0);
+  await expect(page.locator('.account-detail')).toHaveCount(0);
   await page.getByRole('button', { name: 'Low only', exact: true }).click();
-  await expect(page.locator('.compact-account')).toHaveCount(1);
+  await expect(page.locator('.account-row')).toHaveCount(1);
   await expect(page.getByRole('button', { name: 'Details for GPT Work' })).toBeVisible();
   await page.getByRole('button', { name: 'Low only', exact: true }).click();
-  await page.getByLabel('Search accounts and limits').fill('Personal');
-  await expect(page.locator('.compact-account')).toHaveCount(2);
+  await page.getByLabel('Search accounts').fill('Personal');
+  await expect(page.locator('.account-row')).toHaveCount(2);
 });
 
 test('denied companion permission creates no account', async ({ context, worker, extensionId }) => {
   const page = await context.newPage();
   await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
-  await page.getByRole('button', { name: 'Websites', exact: true }).click();
+  await page.getByRole('button', { name: 'Accounts', exact: true }).click();
   await page.evaluate(() => { chrome.permissions.request = async () => false; });
+  await page.getByText('Advanced · optional OpenAI companion', { exact: true }).click();
   await page.getByRole('button', { name: 'Connect OpenAI', exact: true }).click();
   await expect(page.getByText('Companion access was not granted.')).toBeVisible();
-  const saved = await worker.evaluate(async () => ((await chrome.storage.local.get('mylimits:state:v1'))['mylimits:state:v1'] as Store));
+  const saved = await worker.evaluate(async () => ((await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store));
   expect(saved.accounts).toHaveLength(0);
 });
 
@@ -169,15 +171,15 @@ test('native snapshots update independent accounts and disconnect without exposi
   await page.getByRole('button', { name: 'Rename OpenAI 1f30', exact: true }).click();
   await page.getByLabel('Account nickname').fill('Independent work');
   await page.getByRole('button', { name: 'Save nickname', exact: true }).click();
-  await page.getByRole('button', { name: 'Refresh all websites' }).click();
+  await page.getByRole('button', { name: 'Refresh all limits' }).click();
   await expect(page.getByRole('button', { name: 'Details for Independent work', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Settings for Independent work', exact: true }).click();
-  page.once('dialog', dialog => dialog.accept());
-  await page.getByRole('button', { name: 'Disconnect account', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Details for Independent work', exact: true })).toHaveCount(0);
-  const saved = await worker.evaluate(async () => ((await chrome.storage.local.get('mylimits:state:v1'))['mylimits:state:v1'] as Store));
-  expect(saved.accounts.filter(account => account.companionProfile)).toHaveLength(1);
-  expect(saved.accounts.find(account => account.companionProfile)?.connection).toBe('active');
+  await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Details for Independent work', exact: true })).toBeVisible();
+  await expect(page.locator('.account-row').filter({ has: page.getByRole('button', { name: 'Details for Independent work', exact: true }) })).toContainText('Remembered');
+  const saved = await worker.evaluate(async () => ((await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store));
+  expect(saved.accounts.filter(account => account.companionProfile)).toHaveLength(2);
+  expect(saved.accounts.filter(account => account.companionProfile && account.connection === 'active')).toHaveLength(1);
+  expect(saved.accounts.find(account => account.companionProfile === profiles[1]!.id)?.connection).toBe('active');
   expect(JSON.stringify(saved)).not.toContain('DO-NOT-PERSIST');
 });
 
@@ -192,7 +194,7 @@ test('native snapshots update independent accounts and disconnect without exposi
     app: document.querySelector('.app')!.getBoundingClientRect().width,
   }));
   expect(widths).toEqual({ document: 520, body: 520, app: 520 });
-  await page.getByRole('button', { name: 'Websites', exact: true }).click();
+  await page.getByRole('button', { name: 'Accounts', exact: true }).click();
   expect(await page.locator('.app').evaluate(element => element.getBoundingClientRect().width)).toBe(520);
 });
 
@@ -204,9 +206,25 @@ test('unavailable native API shows reload guidance without a TypeError', async (
   });
   const page = await context.newPage();
   await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
-  await page.getByRole('button', { name: 'Websites', exact: true }).click();
+  await page.getByRole('button', { name: 'Accounts', exact: true }).click();
   await page.evaluate(() => { chrome.permissions.request = async () => true; });
+  await page.getByText('Advanced · optional OpenAI companion', { exact: true }).click();
   await page.getByRole('button', { name: 'Connect OpenAI', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('Reload MyLimits');
   await expect(page.getByRole('alert')).not.toContainText('is not a function');
+});
+
+test('six account rows fit the popup and pins remain independent of nicknames', async ({context,worker,extensionId})=>{
+ const fixture={...emptyStore('six-fixture'),accounts:demoState().accounts};
+ fixture.accounts.push({...fixture.accounts[0]!,id:'sixth',alias:'Claude Research',connection:'inactive'});
+ await worker.evaluate(async s=>chrome.storage.local.set({'mylimits:state:v2':s}),fixture);
+ const page=await context.newPage();await page.setViewportSize({width:520,height:600});await page.goto(`chrome-extension://${extensionId}/popup.html`);
+ await expect(page.locator('.account-row')).toHaveCount(6);
+ expect(await page.locator('.main-content').evaluate(el=>el.scrollHeight<=el.clientHeight+1)).toBe(true);
+ await page.getByRole('button',{name:'Details for GPT Projects',exact:true}).click();
+ await page.getByRole('button',{name:'Pin account',exact:true}).click();
+ await page.keyboard.press('Escape');
+ await expect(page.locator('.account-row').first()).toContainText('GPT Projects');
+ await page.reload();await expect(page.locator('.account-row').first()).toContainText('GPT Projects');
+ await expect(page.getByRole('button',{name:'Details for Claude Work',exact:true})).toBeVisible();
 });
