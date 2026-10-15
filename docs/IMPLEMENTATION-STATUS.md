@@ -6,8 +6,8 @@ credential upload has been performed.
 ## Active checkpoint
 
 - Requested phase: Phase 2 (authorized by the user: “Start with next phase”).
-- Current work package: P2-01 — verified.
-- Next action: P2-02 — implement the optional authenticated PostgreSQL snapshot API.
+- Current work package: P2-02 — verified.
+- Next action: P2-03 — implement gated durable jobs, credential boundaries and race tests.
 - Working branch/commit: `v2/phase-2`; Phase 1 and main preserved.
 - Authoritative scope: [master plan](V2-IMPLEMENTATION-PLAN.md),
   [Phase 1](PHASE-1.md), [Phase 2](PHASE-2.md).
@@ -35,7 +35,7 @@ implemented independent work while leaving that specific check pending.
 | P1-10 | 12 | verified | See checkpoint below.
 | **Phase 1 total** | **100** | **verified** | 62 core + 16 companion + 15 browser tests; packaged; live/manual checks pending. |
 | P2-01 | 8 | verified | See checkpoint below. |
-| P2-02 | 12 | not_started | |
+| P2-02 | 12 | verified | See checkpoint below. |
 | P2-03 | 12 | not_started | |
 | P2-04 | 8 | not_started | |
 | P2-05 | 12 | not_started | |
@@ -200,3 +200,15 @@ Next: Stop here. Await user Phase 1 acceptance and explicit Phase 2 instruction.
 State: **verified**. Read repository instructions, Phase 1 handoff, Phase 2 tasks and shared contracts. Clean local Phase 1 tree preserved; local and remote v2/phase-2 branches created from their matching Phase 1 content. Changed docs/HOSTED-FEASIBILITY.md, PROVIDER-CAPABILITIES.md and this ledger. Reviewed current official OpenAI App Server/SIWC, Google, xAI and Perplexity docs; no hosted registration/test account exists. Decision: production independent collection disabled, continue snapshot-only sync and test-only job seams. No live logout/renewal claim. Node 24.19.0/npm 11.9.0; network/Docker access verified using approved process execution; no configured provider secrets or identities. Documentation links checked against the retrieved first-party sources. Next package may build a locally runnable service without deploying it.
 
 Next: P2-02 — implement the optional authenticated PostgreSQL snapshot API.
+
+## P2-02 checkpoint — 15 October 2026
+
+State: **in_progress**. Implement a separate Fastify/PostgreSQL package with shared normalized snapshot contracts. Authentication uses a configured OIDC verifier; tests inject a verifier only under test mode. Device-bound source mappings keep browser hashes isolated and deletion tombstones prevent old uploads from recreating data. No public deployment or vendor registration. Run real PostgreSQL API integration tests in an isolated local container.
+
+Next: P2-02 — implement schemas, Postgres migrations, authentication and tenant API tests.
+
+## P2-02 checkpoint — 15 October 2026
+
+State: **verified**. Implemented server/package.json and lockfile, TypeScript config, src/app.ts/auth.ts/oidc.ts/config.ts/db.ts/service.ts/main.ts/migrate.ts, migrations/001_core.sql, tests/api.test.ts, .env.example; shared src/core/sync-contracts.ts and docs/SERVER-SETUP.md. Root TS excludes the separate server; Node loader now preserves normal dependency JS resolution. Real isolated PostgreSQL 17 is running on loopback with synthetic data. Server typecheck and all 11 API/database tests pass; root typecheck and all 62 core regressions pass. Tests include two-tenant isolation, forged owners, device binding, duplicate/old uploads, pagination, revision conflict, deletion tombstones, revocation, callback binding, origins/limits and unconfigured-auth rejection. No OIDC tenant/client or live provider grant is configured. API remains snapshot-only; a cloud refresh returns explicit unavailability rather than a fake quota.
+
+Next: P2-03 — implement gated durable jobs, credential boundaries and race tests.
