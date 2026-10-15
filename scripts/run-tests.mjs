@@ -10,3 +10,4 @@ import '../src/providers/reader.test.ts';
 import '../src/core/actions.test.ts';
 import '../src/core/scheduler.test.ts';
 import '../src/core/alert-policy.test.ts';
+import '../src/core/history-data.test.ts';

@@ -7,7 +7,7 @@ export function enableWebsite(store:Store,provider:ProviderId,enabled:boolean):S
 export function setWorkspace(store:Store,connectionId:string,workspaceId:string|null):Store {
  const c=store.connections.find(c=>c.id===connectionId);
  if(!c||c.kind!=='website'||c.provider!=='claude')throw new Error('Workspace selection is not available for this connection.');
- if(workspaceId!==null&&!c.workspaceIds.includes(workspaceId))throw new Error('Choose one of this connection’s verified workspaces.');
+ if(workspaceId!==null&&(!c.workspaceIds.includes(workspaceId)||!store.workspaces.some(w=>w.id===workspaceId&&w.provider===c.provider)))throw new Error('Choose one of this connection’s verified workspaces.');
  return changeConnection(store,connectionId,{workspaceId,enabled:true,status:'unavailable',nextRetryAt:null,lastAttemptAt:null,message:'Refreshing selected workspace.'},true);
 }
 export function accountPreferences(store:Store,id:string,patch:Pick<Partial<Account>,'pinned'|'pinnedMeterIds'|'snoozedUntil'>):Store {
@@ -23,11 +23,13 @@ export function forgetAccount(store:Store,id:string):Store {
  const a=store.accounts.find(a=>a.id===id);if(!a)return store;
  let next=store;
  for(const c of store.connections.filter(c=>c.accountId===id)){
-  next=changeConnection(next,c.id,{enabled:false,status:'disabled',accountId:null,message:'Account forgotten.'},true);
+  next=changeConnection(next,c.id,{enabled:false,status:'disabled',accountId:null,workspaceId:null,workspaceIds:[],message:'Account forgotten.'},true);
   if(c.kind==='website')next={...next,providers:{...next.providers,[c.provider]:{...next.providers[c.provider],enabled:false,status:'disabled',activeAccountId:null}}};
  }
- return {...next,accounts:next.accounts.filter(a=>a.id!==id),snapshots:next.snapshots.filter(s=>s.accountId!==id),
-  connections:next.connections.filter(c=>!(c.kind==='companion'&&c.profileId===a.companionProfile)),
+ const remaining=next.accounts.filter(a=>a.id!==id);
+ const used=new Set([...remaining.map(a=>a.workspaceId),...next.connections.filter(c=>c.accountId!==null).flatMap(c=>c.workspaceIds)]);
+ return {...next,accounts:remaining,workspaces:next.workspaces.filter(w=>used.has(w.id)),snapshots:next.snapshots.filter(s=>s.accountId!==id),
+  connections:next.connections,
   resetLedger:Object.fromEntries(Object.entries(next.resetLedger).filter(([key])=>!key.startsWith(`${id}/`))),
   alertLedger:Object.fromEntries(Object.entries(next.alertLedger).filter(([key])=>!key.startsWith(`${id}/`)))};
 }

@@ -127,5 +127,6 @@ export function accountStatus(account: Account, now: number, refreshMinutes: num
   if (account.connection === 'inactive') return 'Remembered';
   if (account.connection === 'offline') return 'Offline';
   if (account.connection !== 'active') return 'Temporarily unavailable';
+  if (!account.meters.some(m => m.evidence === 'reported')) return 'Quota unavailable';
   return account.meters.some(m => m.evidence === 'reported' && isFresh(account, m, now, refreshMinutes)) ? 'Updating' : 'Awaiting fresh reading';
 }

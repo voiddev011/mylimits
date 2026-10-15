@@ -4,8 +4,14 @@ import type { PublicState } from '../core/public';
 import { ProviderSchema, SettingsSchema } from '../core/schema';
 import type { HistoryPoint } from './history';
 
+const ms = z.number().finite().min(0).max(8.64e15);
 export const CommandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('state') }),
+  z.object({ type: z.literal('opened') }),
+  z.object({ type: z.literal('history-page'), accountId: z.string().min(1).max(240), from: ms.optional(), to: ms.optional(), limit: z.number().int().min(1).max(200).optional(), before: z.object({ time: ms, id: z.number().int().min(1) }).optional() }),
+  z.object({ type: z.literal('export-history'), accountId: z.string().min(1).max(240).optional(), from: ms.optional(), to: ms.optional(), format: z.enum(['json','csv']) }),
+  z.object({ type: z.literal('clear-history'), accountId: z.string().min(1).max(240).optional() }),
+
   z.object({ type: z.literal('account-preferences'), accountId: z.string().min(1).max(240), pinned: z.boolean().optional(), pinnedMeterIds: z.array(z.string().max(120)).max(10).optional(), snoozedUntil: z.number().finite().min(0).nullable().optional() }),
   z.object({ type: z.literal('order'), ids: z.array(z.string().min(1).max(240)).max(100) }),
   z.object({ type: z.literal('disconnect'), connectionId: z.string().min(1).max(240) }),

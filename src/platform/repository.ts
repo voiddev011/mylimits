@@ -32,3 +32,20 @@ export function updateStore<T>(mutate: (store: Store) => Promise<{ store: Store;
 }
 
 export async function publicStore() { return toPublicState(await readStore()); }
+
+// Explicit forgetting also removes that account from recovery copies. Migration
+// preserves backups; a later deliberate deletion must not retain forgotten data.
+export async function forgetLegacyAccount(accountId: string): Promise<void> {
+  const { STATE_V1, BACKUP_V1 } = await import('../core/migrations');
+  const { V1StoreSchema } = await import('../core/v1-schema');
+  const values=await browser.storage.local.get([STATE_V1,BACKUP_V1]);
+  const writes:Record<string,unknown>={};
+  for(const key of [STATE_V1,BACKUP_V1]){
+    if(values[key]===undefined)continue;
+    const old=V1StoreSchema.parse(values[key]);
+    writes[key]={...old,accounts:old.accounts.filter(a=>a.id!==accountId),
+      providers:Object.fromEntries(Object.entries(old.providers).map(([id,p])=>[id,p.activeAccountId===accountId?{...p,enabled:false,status:'disabled',activeAccountId:null}:p])),
+      alertLedger:Object.fromEntries(Object.entries(old.alertLedger).filter(([key])=>!key.startsWith(`${accountId}/`)))};
+  }
+  if(Object.keys(writes).length)await browser.storage.local.set(writes);
+}

@@ -6,8 +6,8 @@ credential upload has been performed.
 ## Active checkpoint
 
 - Requested phase: Phase 1 (authorized by the user).
-- Current work package: P1-08 — verified.
-- Next action: P1-09 — finish paginated history, export and data controls.
+- Current work package: P1-09 — verified.
+- Next action: P1-10 — run integrated checks, package and prepare the Phase 1 handoff.
 - Working branch/commit: `v2/phase-1`; see checkpoint history and Git commits.
 - Authoritative scope: [master plan](V2-IMPLEMENTATION-PLAN.md),
   [Phase 1](PHASE-1.md), [Phase 2](PHASE-2.md).
@@ -31,7 +31,7 @@ implemented independent work while leaving that specific check pending.
 | P1-06 | 10 | verified | See checkpoint below.
 | P1-07 | 12 | verified | See checkpoint below.
 | P1-08 | 8 | verified | See checkpoint below.
-| P1-09 | 8 | not_started | |
+| P1-09 | 8 | verified | See checkpoint below.
 | P1-10 | 12 | not_started | |
 | **Phase 1 total** | **100** | **not_started** | |
 | P2-01 | 8 | not_started | |
@@ -150,3 +150,9 @@ Next: P1-08 — implement quiet hours, snooze and confirmed reset notifications.
 State: **verified**. Implemented overnight local quiet hours, per-account snooze, scoped deduplication with legacy-ledger compatibility, conservative fresh-reading reset confirmation and used/remaining badge semantics. Failed notification delivery restores its ledger entry for retry. Added timing, no-false-reset and migration-dedup tests; all 58 core tests and type checking pass. No timestamp-only reset claim is made.
 
 Next: P1-09 — finish paginated history, export and data controls.
+
+## P1-09 checkpoint — 15 October 2026
+
+State: **verified**. Implemented real IndexedDB pagination with stable timestamp/ID cursors, snapshot deduplication, 30-day pruning, safe JSON/CSV export, date filters, basic observation bars and confirmed history clearing. Exports allowlist fields and disarm CSV formulas. Serializing accepted-history writes prevents forgotten accounts from being reinserted. Browser checks verified pagination, retention, source metadata and V1 history migration across a real browser restart. Fixed an IndexedDB auto-key write issue caught by those tests. Added pruning of forgotten accounts from local recovery copies and late-native-source tombstones; final integration verifies these additional deletion cases.
+
+Next: P1-10 — run integrated checks, package and prepare the Phase 1 handoff.

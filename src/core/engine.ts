@@ -36,11 +36,11 @@ export function applySnapshot(store: Store, provider: ProviderId, id: string, sn
   };
   const connectionId = options.connectionId ?? `website:${provider}`;
   const connection = store.connections.find(c => c.id === connectionId);
-  if (!connection || (options.generation !== undefined && connection.generation !== options.generation)) return store;
+  if (!connection || (options.generation !== undefined && (!connection.enabled || connection.generation !== options.generation))) return store;
   const base: Store = { ...store, accounts: [...store.accounts.filter(a => a.id !== id), account],
     connections: store.connections.map(c => c.id === connectionId ? { ...c, enabled: true } : c),
     providers: connection.kind === 'website' ? { ...store.providers, [provider]: { enabled:true,status:'active',activeAccountId:id,checkedAt:now,
-      message:snapshot.meters.some(m => m.evidence === 'reported') ? null : 'Only activity observed in this browser is available.',failures:0,nextRetryAt:null } } : store.providers };
+      message:snapshot.meters.some(m => m.evidence === 'reported') ? null : snapshot.kind === 'browser' ? 'Only activity observed in this browser is available.' : 'This plan did not report a quota. Remaining allowance is unknown.',failures:0,nextRetryAt:null } } : store.providers };
   const observedAt = options.observedAt ?? now;
   const result = acceptSnapshot(base, { schemaVersion:2,snapshotId:`${connectionId}:${id}:${observedAt}`,providerId:provider,accountId:id,connectionId,
     workspaceId:options.workspaceId ?? null,observedAt,receivedAt:now,connectorVersion:'phase1-v2',meters:account.meters.map(m=>({...m,observedAt:m.evidence==='observed'?(m.observedAt??previous?.updatedAt??observedAt):observedAt,connectionId})) }, connection.generation, now);
