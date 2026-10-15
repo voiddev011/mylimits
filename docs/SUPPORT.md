@@ -1,53 +1,67 @@
-# Provider support and acceptance checklist
+# Provider support and acceptance — Phase 1
 
-All network connectors in this initial source are prototypes until exercised
-in a real desktop browser with the relevant signed-in plans.
+Code/fixture verification does not establish live provider support. All quota
+readers remain **live-unverified prototypes** until tested with the relevant
+signed-in plan. See the dated [capability matrix](PROVIDER-CAPABILITIES.md) and
+[automated evidence](PHASE-1-HANDOFF.md).
 
-## Claude
+## Implemented sources
 
-The reader uses `/api/account`, `/api/organizations`, and the selected
-organization's `/usage` service. It handles normalized `limits` and legacy
-`five_hour` / `seven_day` buckets, plus additional model and extra-usage values
-when supplied. Identity is required before any reading can become an account.
+| Source | Reading / identity | Current limitation |
+| --- | --- | --- |
+| Claude website | Account, eligible workspace membership and selected workspace usage | Internal interfaces; exact plan access and logout behavior not live-verified |
+| ChatGPT website | Session identity and Work/Codex usage; code review when returned | Not ordinary chat, image, upload or tool quotas |
+| Optional OpenAI companion | Independent native profiles; Codex App Server quota snapshots | Real account authorization/renewal/logout and Windows native launch pending |
+| Gemini / Grok / Perplexity | Narrow recognized successful request counters | Browser-local activity only; no cap, token count or cross-device balance |
 
-Before promotion to verified support: test Free/Pro/Max/workspace accounts;
-record the real current workspace identity; verify account switching and every
-published reset timestamp; test missing or denied usage; sanitize captured fixtures.
+Claude handles normalized `limits` and legacy `five_hour`/`seven_day` plus other
+returned buckets. Workspace selection is explicit after verified memberships;
+missing selection fails visibly. ChatGPT windows use their reported duration,
+including monthly windows; missing secondary buckets are not invented. Some
+plans return no quota. Valid identity with no buckets means **Quota unavailable**.
 
-## ChatGPT
+## Status and recovery
 
-The reader uses `/api/auth/session` and `/backend-api/wham/usage`. It keeps
-Work/Codex windows separate from chat. It also handles code-review windows
-when the service returns them. Primary windows are named from their reported
-duration, including monthly windows; missing secondary windows are not invented.
+- **Updating**: the source has a usable reading; the last-reading age still matters.
+- **Remembered**: an earlier login or disconnected source; reading is dated.
+- **Needs sign-in**: sign into that website yourself, then reconnect/refresh.
+- **Open website to refresh**: page context was required; no hidden login is opened.
+- **Offline / Temporarily unavailable**: keep the previous reading and retry after
+  recovery/backoff. Error messages describe the source, not an invented balance.
+- **Awaiting fresh reading**: the reading is old or its reset expired; do not
+  interpret it as a newly full allowance.
+- **Local activity only**: requests observed here; remaining allowance is unknown.
 
-Before promotion to verified support: verify personal/workspace identity;
-confirm which quota pools the endpoint currently covers; test plan differences,
-session expiry, account changes, and returned credits/windows. Do not relabel
-these data as ordinary ChatGPT chat, image, upload, or tool quotas.
+Open **Accounts** to enable exact website access. Keep the companion collapsed
+unless you want its separately installed native connection. Missing companion
+support does not block website tracking. Disconnect keeps readings; forgetting
+requires confirmation and removes saved account data. A native logout failure
+keeps the source retryable rather than claiming success.
 
-## Gemini, Grok, Perplexity
+## Live/manual acceptance still pending
 
-Currently browser-only request counters. Narrow path matches may miss activity
-after a provider redesign, and counts exclude phone apps and other profiles.
-They are not token counts, successful model-answer counts, plan caps, or remaining
-search quotas. No message-count-to-quota conversion is performed.
+No real provider accounts, another physical device or Windows desktop were
+available for this implementation. Do each applicable row separately and record
+plan, workspace, browser/version, connection type, date and sanitized evidence.
+Never include authorization/cookies or raw session responses in screenshots/logs.
 
-Next: capture and validate available provider quota interfaces and identity,
-then introduce separate reported meters. A site being enabled does not establish
-that every feature's usage is available.
+| Check | Expected evidence | Current result |
+| --- | --- | --- |
+| Actual Windows Chrome and Brave popup at normal/high scale | Usable width, six representative rows at normal scale, long-name scroll, keyboard focus | Pending; Linux CSS layout fixtures are not Windows DPI tests |
+| Claude Free/Pro/Max/team membership and workspace changes | Compare returned windows/identity against provider usage screen | Pending |
+| OpenAI supported plans / personal and workspace identity | Compare Work/Codex and code-review pools; ordinary chat stays separate | Pending |
+| Provider tab closed, browser kept open | Reading changes only after a successful permitted background read | Pending per provider/source |
+| Browser close/reopen | Alarm recovery and preserved age before a new successful read | Real-account check pending; synthetic persistent-profile migration passed |
+| Other-device activity | Compare next reading to provider usage screen; record refresh delay | Pending; no real-time guarantee |
+| Website logout | Document whether website source stops; independent native source checked separately | Pending; no universal logout independence |
+| Native collector revoke, global logout and credential expiry | Reconnect required where revoked; do not report remembered data as fresh | Pending |
+| Companion Linux/Windows official sign-in and renewal | Actual native host launch and sanitized quota updates | Pending; fixture/Windows-path logic only |
+| Real desktop notification permission/revocation and local quiet time | One applicable alert, no stale/local warnings | Pending desktop UI acceptance |
 
-## Browser checks
+Automated tests cover migration/restart, aliases, permissions denial, missing
+native APIs, source independence, six-row fit, keyboard/shared layouts, history,
+exports and stale data. They use fictional data and block real HTTP. They cannot
+promote any row above to live-verified.
 
-- Empty install, denied site access, revoked access, and expired sessions.
-- Two remembered Claude and three remembered ChatGPT records, separate aliases.
-- UI writes persist after reload; disabled refresh cannot reactivate a source.
-- Low/critical warning deduplication and reset behavior.
-- Unknown, expired, inactive, and stale data never look like fresh empty balances.
-- No stored session tokens, prompts, or conversation bodies.
-- Preview never persists fake accounts or requests permissions.
-- Popup, side panel, keyboard interaction, long nicknames, and dark mode.
-
-Playwright fixture tests do not prove live provider access. Live acceptance
-requires a user's already-signed-in desktop browser and comparison against each
-provider's own usage screen.
+Phase 2, including hosted feasibility and more provider quota readers, has not
+started. Do not add a cloud login workaround to bypass a failed website session.

@@ -2,7 +2,8 @@
 
 This is the implementation handoff for MyLimits 2.0. It is designed for one
 GPT-6.1 Sol workstream using bounded tasks, shared contracts and durable progress
-notes. The documentation changes themselves do not start application work.
+notes. Phase 1 is now implemented on `v2/phase-1`; read the
+[Phase 1 handoff](PHASE-1-HANDOFF.md) and status before starting more work.
 
 ## Read in this order
 
@@ -15,13 +16,13 @@ notes. The documentation changes themselves do not start application work.
    instructions. Consult [research](COMPETITOR-RESEARCH.md) only for a concrete
    connector/design question; do not reload every competitor on every task.
 
-Use the [starter prompt](STARTER-PROMPT.md) to authorize Phase 1 implementation.
-Phase 2 requires the user's instruction after Phase 1's handoff.
+The [starter prompt](STARTER-PROMPT.md) is the original Phase 1 entry point.
+Do not repeat completed tasks. Phase 2 requires the user's next instruction.
 
 ## Current baseline
 
 - Project: `voiddev011/mylimits`, an existing React/TypeScript/WXT MV3 extension.
-- App version in `package.json` is initially `0.1.0`, not an already built V2.
+- App version is `2.0.0` with manifest label `2.0 Phase 1 preview` on this branch.
 - Known source boundaries: `src/core`, `src/providers`, `src/platform`, `src/ui`,
   `entrypoints`, `companion`, `tests/browser` and `.github/workflows/checks.yml`.
 - Existing website readers are prototypes. Claude and Work/Codex quota parsing
@@ -29,8 +30,8 @@ Phase 2 requires the user's instruction after Phase 1's handoff.
 - Optional OpenAI native companion exists; real logout/renewal/Windows behavior
   must not be assumed verified from fixture tests.
 - `BUILD-STATUS.md` is an initial historical record, not a current green test run.
-- Documentation-only work through `bf459d0` followed application work; inspect
-  actual branch/history rather than assuming the current code matches a chat.
+- The original pre-V2 documentation followed prototype application work;
+  inspect actual branch/history rather than assuming code matches a chat.
 - A managed workspace may contain pre-existing dirty files whose content was
   already published through another Git tool. Preserve them; inspect status and
   diffs before attributing, committing or resetting anything.

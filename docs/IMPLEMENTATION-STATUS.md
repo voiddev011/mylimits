@@ -6,8 +6,8 @@ credential upload has been performed.
 ## Active checkpoint
 
 - Requested phase: Phase 1 (authorized by the user).
-- Current work package: P1-10 — in_progress.
-- Next action: P1-10 — verify corrected CI ZIP upload, then publish the handoff.
+- Current work package: P1-10 — verified.
+- Next action: Stop here. Await user Phase 1 acceptance and explicit Phase 2 instruction.
 - Working branch/commit: `v2/phase-1`; see checkpoint history and Git commits.
 - Authoritative scope: [master plan](V2-IMPLEMENTATION-PLAN.md),
   [Phase 1](PHASE-1.md), [Phase 2](PHASE-2.md).
@@ -32,7 +32,7 @@ implemented independent work while leaving that specific check pending.
 | P1-07 | 12 | verified | See checkpoint below.
 | P1-08 | 8 | verified | See checkpoint below.
 | P1-09 | 8 | verified | See checkpoint below.
-| P1-10 | 12 | in_progress | See checkpoint below.
+| P1-10 | 12 | verified | See checkpoint below.
 | **Phase 1 total** | **100** | **verified** | 62 core + 16 companion + 15 browser tests; packaged; live/manual checks pending. |
 | P2-01 | 8 | not_started | |
 | P2-02 | 12 | not_started | |
@@ -188,3 +188,9 @@ Next: Await user Phase 1 acceptance; stop before Phase 2.
 State: **in_progress**. Final publication inspection found a real packaging blocker despite successful Checks run 38739932337: upload-artifact skipped the hidden .output folder and produced no Chrome artifact. Job logs confirmed include-hidden-files=false and no-files warnings. Fixed .github/workflows/checks.yml to include hidden files for the narrowly scoped ZIP/results paths and make a missing ZIP a hard failure. Runtime/core/browser checks remain passed; corrected CI artifact availability must be verified before completing handoff. This changes packaging only and does not start Phase 2.
 
 Next: P1-10 — verify corrected CI ZIP upload, then publish the handoff.
+
+## P1-10 checkpoint — 15 October 2026
+
+State: **verified**. Release gate complete after fixing CI delivery. Changed final files: .github/workflows/checks.yml (include hidden output on scoped paths; fail on missing ZIP), docs/README.md, ARCHITECTURE.md, SUPPORT.md, PROVIDER-CAPABILITIES.md, START-HERE.md, BUILD-STATUS.md, PHASE-1-HANDOFF.md and this ledger; privacy was updated in P1-09. Corrected GitHub checkpoint 571b251 passed run 38740486309: both Linux verify/browser/package and Windows logic jobs succeeded. Artifact mylimits-chrome ID 11975222283 exists, is not expired and is linked from README/handoff. Extracted local ZIP smoke passed on all three surfaces at manifest version 2.0.0. Final evidence remains 62 core + 16 companion + 15 browser tests, successful type/build/ZIP and archive inspection; 16 directly stored docs passed links/fences/location checks. Main was verified unchanged at 380125a8cdc411c7c49d6aac8e61e159315950e5. Final docs publish will be verified by full Git tree comparison. Provider/live logout/cross-device and actual Windows browser/native checks remain pending; no Phase 2 implementation or backend was started.
+
+Next: Stop here. Await user Phase 1 acceptance and explicit Phase 2 instruction.
