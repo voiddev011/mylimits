@@ -13,7 +13,7 @@ export function toPublicState(store: Store): PublicState {
     accounts: store.accounts.map(a => ({ id:a.id,provider:a.provider,kind:a.kind,alias:a.alias,defaultName:a.defaultName,plan:a.plan,
       companionProfile:a.companionProfile,connection:a.connection,createdAt:a.createdAt,updatedAt:a.updatedAt,alertRemaining:a.alertRemaining,alertsMuted:a.alertsMuted,
       pinned:a.pinned,order:a.order,pinnedMeterIds:a.pinnedMeterIds,snoozedUntil:a.snoozedUntil,workspaceId:a.workspaceId,
-      meters:a.meters.map(m=>({id:m.id,label:m.label,scope:m.scope,evidence:m.evidence,used:m.used,total:m.total,usedPercent:m.usedPercent,
+      meters:a.meters.map(m=>({id:m.id,label:m.label,scope:m.scope,evidence:m.evidence,used:m.used,total:m.total,remaining:m.remaining,usedPercent:m.usedPercent,
         unit:m.unit,resetsAt:m.resetsAt,source:m.source,currency:m.currency,windowId:m.windowId,observedAt:m.observedAt,connectionId:m.connectionId})) })),
   };
 }

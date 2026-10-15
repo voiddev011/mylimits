@@ -1,5 +1,5 @@
 // Pure domain types and calculations. No browser APIs or package dependencies.
-export const PROVIDER_IDS = ['claude', 'chatgpt', 'gemini', 'grok', 'perplexity'] as const;
+export const PROVIDER_IDS = ['claude', 'chatgpt', 'gemini', 'grok', 'perplexity', 'cursor'] as const;
 export type ProviderId = typeof PROVIDER_IDS[number];
 export interface Meter {
   id: string;
@@ -9,6 +9,7 @@ export interface Meter {
   usedPercent: number | null;
   used: number | null;
   total: number | null;
+  remaining?: number | null;
   unit: 'percent' | 'messages' | 'requests' | 'searches' | 'credits' | 'currency';
   resetsAt: number | null;
   source: string;
@@ -49,6 +50,7 @@ export interface Settings {
   quietHours?: { enabled: boolean; start: string; end: string }; 
 }
 export interface ProviderState {
+  readingMode?: 'quota' | 'activity';
   enabled: boolean;
   status: 'disabled' | 'checking' | Connection;
   activeAccountId: string | null;
@@ -76,7 +78,7 @@ export function emptyStore(salt: string): Store {
     version: 2, installSalt: salt, accounts: [],
     connections: PROVIDER_IDS.map(provider => websiteConnection(provider)), workspaces: [], snapshots: [], historyIssue: null, resetLedger: {},
     providers: Object.fromEntries(PROVIDER_IDS.map(id => [id, {
-      enabled: false, status: 'disabled', activeAccountId: null, checkedAt: null, message: null, failures: 0, nextRetryAt: null,
+      readingMode: id==='grok'||id==='perplexity'?'quota':undefined, enabled: false, status: 'disabled', activeAccountId: null, checkedAt: null, message: null, failures: 0, nextRetryAt: null,
     }])) as Store['providers'],
     settings: { warningRemaining: 20, criticalRemaining: 5, desktopAlerts: false, refreshMinutes: 5, theme: 'system', displayMode: 'remaining', resetAlerts: false, quietHours: { enabled: false, start: '22:00', end: '08:00' } },
     alertLedger: {}, observationLedger: [],

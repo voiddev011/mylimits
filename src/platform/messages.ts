@@ -8,6 +8,7 @@ const ms = z.number().finite().min(0).max(8.64e15);
 export const CommandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('state') }),
   z.object({ type: z.literal('opened') }),
+  z.object({type:z.literal('reader-mode'),provider:z.enum(['grok','perplexity']),mode:z.enum(['quota','activity'])}),
   z.object({ type:z.literal('sync'),action:z.enum(['status','start','poll','pause','resume','run','push-preferences','pull-preferences','disconnect','reset']),name:z.string().trim().min(1).max(60).optional() }),
   z.object({ type: z.literal('history-page'), accountId: z.string().min(1).max(240), from: ms.optional(), to: ms.optional(), limit: z.number().int().min(1).max(200).optional(), before: z.object({ time: ms, id: z.number().int().min(1) }).optional() }),
   z.object({ type: z.literal('export-history'), accountId: z.string().min(1).max(240).optional(), from: ms.optional(), to: ms.optional(), format: z.enum(['json','csv']) }),

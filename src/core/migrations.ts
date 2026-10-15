@@ -11,9 +11,9 @@ export interface StoragePort { get(keys: string | string[]): Promise<Record<stri
 const lifecycle: Record<string,ConnectionStatus>={active:'active',inactive:'disabled','signed-out':'needs-auth','waiting-for-tab':'needs-tab',unavailable:'unavailable',error:'error',disabled:'disabled',checking:'checking'};
 export function migrateV1(raw: unknown): Store {
  const old=V1StoreSchema.parse(raw); const base=emptyStore(old.installSalt);
- const next:Store={...base,...old,version:2,settings:{...base.settings,...old.settings},connections:base.connections,
+ const next:Store={...base,...old,version:2,providers:{...base.providers,...old.providers,grok:{...old.providers.grok,readingMode:'activity'},perplexity:{...old.providers.perplexity,readingMode:'activity'}},settings:{...base.settings,...old.settings},connections:base.connections,
   accounts:old.accounts.map((a,i)=>({...a,order:i,pinned:false,pinnedMeterIds:[],snoozedUntil:null,workspaceId:null})), snapshots:[],workspaces:[],historyIssue:null};
- next.connections=next.connections.map(c=>{const p=old.providers[c.provider];return {...c,enabled:p.enabled,status:lifecycle[p.status]??'unavailable',accountId:p.activeAccountId,
+ next.connections=next.connections.map(c=>{const p=c.provider==='cursor'?undefined:old.providers[c.provider];if(!p)return c;return {...c,enabled:p.enabled,status:lifecycle[p.status]??'unavailable',accountId:p.activeAccountId,
   lastAttemptAt:p.checkedAt,lastSuccessAt:old.accounts.find(a=>a.id===p.activeAccountId)?.updatedAt??null,nextRetryAt:p.nextRetryAt,failures:p.failures,message:p.message};});
  for(const a of next.accounts){
   const id=a.companionProfile?`companion:${a.companionProfile}`:`website:${a.provider}`;
@@ -29,7 +29,7 @@ export function migrateV1(raw: unknown): Store {
 export async function initializeV2(storage:StoragePort, migrateHistory:()=>Promise<void>, salt:()=>string):Promise<void>{
  const saved=await storage.get([ACTIVE_SCHEMA,STATE_V1,STATE_V2,MIGRATION,BACKUP_V1]);
  if(saved[ACTIVE_SCHEMA]!==undefined&&saved[ACTIVE_SCHEMA]!==1&&saved[ACTIVE_SCHEMA]!==2)throw new Error('This MyLimits data version is newer than this extension. Update before opening it.');
- if(saved[ACTIVE_SCHEMA]===2){StoreSchema.parse(saved[STATE_V2]);await migrateHistory();return;}
+ if(saved[ACTIVE_SCHEMA]===2){const next=StoreSchema.parse(saved[STATE_V2]);await migrateHistory();if(JSON.stringify(next)!==JSON.stringify(saved[STATE_V2]))await storage.set({[STATE_V2]:next});return;}
  const legacy=saved[STATE_V1];
  if(legacy!==undefined)V1StoreSchema.parse(legacy); // Never replace malformed saved data.
  const next=saved[STATE_V2]!==undefined?StoreSchema.parse(saved[STATE_V2]):legacy===undefined?emptyStore(salt()):migrateV1(legacy);
