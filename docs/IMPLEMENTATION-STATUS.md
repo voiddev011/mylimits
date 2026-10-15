@@ -6,8 +6,8 @@ credential upload has been performed.
 ## Active checkpoint
 
 - Requested phase: Phase 1 (authorized by the user).
-- Current work package: P1-09 — verified.
-- Next action: P1-10 — run integrated checks, package and prepare the Phase 1 handoff.
+- Current work package: P1-10 — in_progress.
+- Next action: P1-10 — finalize integrated checks, documentation, ZIP and publication.
 - Working branch/commit: `v2/phase-1`; see checkpoint history and Git commits.
 - Authoritative scope: [master plan](V2-IMPLEMENTATION-PLAN.md),
   [Phase 1](PHASE-1.md), [Phase 2](PHASE-2.md).
@@ -32,7 +32,7 @@ implemented independent work while leaving that specific check pending.
 | P1-07 | 12 | verified | See checkpoint below.
 | P1-08 | 8 | verified | See checkpoint below.
 | P1-09 | 8 | verified | See checkpoint below.
-| P1-10 | 12 | not_started | |
+| P1-10 | 12 | in_progress | See checkpoint below.
 | **Phase 1 total** | **100** | **not_started** | |
 | P2-01 | 8 | not_started | |
 | P2-02 | 12 | not_started | |
@@ -156,3 +156,9 @@ Next: P1-09 — finish paginated history, export and data controls.
 State: **verified**. Implemented real IndexedDB pagination with stable timestamp/ID cursors, snapshot deduplication, 30-day pruning, safe JSON/CSV export, date filters, basic observation bars and confirmed history clearing. Exports allowlist fields and disarm CSV formulas. Serializing accepted-history writes prevents forgotten accounts from being reinserted. Browser checks verified pagination, retention, source metadata and V1 history migration across a real browser restart. Fixed an IndexedDB auto-key write issue caught by those tests. Added pruning of forgotten accounts from local recovery copies and late-native-source tombstones; final integration verifies these additional deletion cases.
 
 Next: P1-10 — run integrated checks, package and prepare the Phase 1 handoff.
+
+## P1-10 checkpoint — 15 October 2026
+
+State: **in_progress**. Initial integrated gate passed: TypeScript, 62 core tests, 16 companion tests and production build; all 14 browser fixtures passed. Final inspection found two refresh edge cases: a manual/startup retry could bypass persisted backoff and page-context fallback dropped Retry-After. Hardened these and explicit offline reporting; added controller/history offline and shared-surface keyboard/layout checks. Final gate will be repeated after these code changes. Changed files: src/core/scheduler.ts and its test, src/providers/adapters.ts, tests/browser/extension.spec.ts, package manifests and wxt.config.ts; release documentation in progress.
+
+Next: P1-10 — finalize integrated checks, documentation, ZIP and publication.

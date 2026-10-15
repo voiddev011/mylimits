@@ -6,6 +6,7 @@ export default defineConfig({
   vite: () => ({ plugins: [tailwindcss()] }),
   manifest: {
     name: 'MyLimits',
+    version_name: '2.0 Phase 1 preview',
     description: 'Keep your AI accounts, usage limits, and reset times in one place.',
     permissions: ['storage', 'alarms', 'scripting', 'sidePanel'],
     optional_permissions: ['notifications', 'nativeMessaging'],
