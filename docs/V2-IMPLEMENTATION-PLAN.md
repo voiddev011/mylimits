@@ -1,8 +1,18 @@
 # MyLimits 2.0 implementation plan
 
-Date: **15 October 2026**. Status: **proposed implementation plan; application and cloud changes have not started**.
+Date: **15 October 2026**. Status: **detailed execution specification for GPT-6.1 Sol; application and cloud changes have not started**.
 
 Inputs: the agreed product redesign, [competitor research](COMPETITOR-RESEARCH.md), [current architecture](ARCHITECTURE.md), [roadmap](ROADMAP.md) and [OpenAI companion](OPENAI-COMPANION.md). This plan adds a conditional backend path following the request to investigate tracking after website logout. It does not assume a cloud provider, paid service, deployment or credential upload has been selected.
+
+Execution order: [START-HERE](START-HERE.md) → this master specification →
+[Phase 1](PHASE-1.md) → [Phase 2](PHASE-2.md). Update
+[IMPLEMENTATION-STATUS](IMPLEMENTATION-STATUS.md) after each work package. The
+[starter prompt](STARTER-PROMPT.md) starts implementation of Phase 1 only.
+
+There are exactly **two implementation phases, each budgeted at 100 relative
+effort points**. Points estimate engineering work, not elapsed hours or guaranteed
+provider access. Task IDs, dependencies, expected files and verification cases
+are supplied so another model can implement without reconstructing chat history.
 
 ## 1. Product outcome
 
@@ -68,16 +78,16 @@ The cloud gate passes only when at least one provider has a permitted independen
 
 ## 4. Feature scope and release priorities
 
-| Capability | V2 core | Expansion / conditional |
+| Capability | Phase 1 | Phase 2 / conditional |
 | --- | --- | --- |
 | Connection | Provider selection, optional site access, reuse existing login | Independent authorization and hosted collection per verified provider |
 | Accounts | Nicknames, reorder/pin, account/workspace identity, reconnect/remove | Multiple independently updating accounts where authorization permits |
 | Overview | Compact session/weekly meters and reset times | Optional custom meter selections and page widgets |
 | Status | Updating, remembered, sign-in required, unavailable, local activity only | Source diagnostics and cloud connection health |
 | Refresh | Startup, manual and scheduled collection with backoff | Provider-supported faster updates or event-driven collection |
-| Alerts | Low/critical balance, deduplication, snooze, quiet hours and mute | Confirmed-reset notifications and eligible cloud channels |
-| History | Local normalized readings and gaps | Charts, pacing ranges, reset timeline and CSV/JSON export |
-| Guidance | Separate maintained local task/model guide after tracking stabilizes | Opt-in prompt analysis and user-triggered conversation handoff |
+| Alerts | Low/critical balance, confirmed resets, deduplication, snooze, quiet hours and mute | Cross-source/cloud delivery coordination where enabled |
+| History | Local normalized readings, gaps, basic history view and safe export | Rich charts, pacing ranges, reset timeline and extended retention |
+| Guidance | Tracking remains focused; no placeholder Guide screen | Maintained local task/model guide, user-supplied prompt utilities and deliberate handoff |
 | Sync | Local-only default | Snapshot sync, account/settings sync and phone dashboard |
 | Native tools | Existing companion remains optional | Packaged installers and additional native-only sources |
 
@@ -248,19 +258,27 @@ Keep current `src/core`, `src/providers`, `src/platform`, `src/ui` and `entrypoi
 
 Proposed future implementation areas: `src/core/connections`, `src/core/migrations`, provider-specific adapter modules, shared UI components, and an optional `server/` service. These paths describe intended work, not existing completed features.
 
-## 11. Migration and release sequence
+## 11. Two equal-effort implementation phases
 
-| Milestone | Deliverable | Exit condition |
-| --- | --- | --- |
-| M0: Connection proof | Capability records, independent/cloud feasibility experiment and supported-source decisions | Logout, renewal, quota scope and account identity evidence recorded; cloud path passes or is explicitly deferred |
-| M1: Domain/storage | Account/workspace/connection separation, migrations, shared parser/snapshot contracts | Existing nicknames, thresholds, records and history survive; migration is repeatable and rollback is defined |
-| M2: New interface | Compact popup, Accounts and dashboard, shared side panel | Common six-account layout, normal/empty/stale/error states and keyboard/scaling checks pass |
-| M3: Reliable core | Claude/Codex collectors, scheduler, alerts, reconnect and distributable builds | Real-account acceptance matches the declared supported capabilities; no mandatory companion |
-| M4: Coverage/insights | Verified additional providers, history, pacing, reset timeline, optional widgets and export | Each advertised source passes its release checklist; gaps/estimates remain explicit |
-| M5: Conditional cloud | First supported provider, secure hosted authorization/collection, multi-account API and opt-in sync | Tenant isolation, expiry/renewal/revocation, ordinary website logout and collection failure behavior pass |
-| M6: Guidance/mobile | Local guide, optional prompt tools and optional phone dashboard | Advice explains its basis; user-triggered content actions and source freshness are clear |
+| Phase | Work | Relative effort | Deliverable |
+| --- | --- | --- | --- |
+| **1: Reliable local redesign** | Baseline/capabilities, domain contracts, migration, local adapters, account/connection flows, scheduling, compact surfaces, alerts, local history, release handoff | **100 points; 10 work packages** | A usable, installable redesigned extension with honest provider/source status and preserved user data |
+| **2: Expansion and connected services** | Hosted feasibility, tenant API, gated collectors, snapshot sync/phone view, more providers, insights, local guide, page widget, platform/native packaging, final hardening | **100 points; 10 work packages** | A broader product with optional cloud features and explicit provider-dependent limitations |
 
-M0 investigates cloud feasibility early, so that result shapes the connection model. Production cloud work begins after the gate; local usability work can continue if hosted authorization is unavailable. M5 does not block the first useful local release.
+Phase 1 investigates authorization constraints early without building a cloud
+service. Phase 2 runs the actual hosted proof before enabling independent cloud
+collection. Snapshot synchronization can remain useful even if that collector
+gate fails, but must never be advertised as logout-independent collection.
+
+The 100/100 split balances the planned work, not task counts alone. If a provider
+gate materially changes the scope, record the blocked capability and revised
+remaining estimates in the status file. Do not invent support, add filler work,
+or claim equal elapsed time to preserve the estimate.
+
+Complete Phase 1's handoff before beginning Phase 2. Both can have separately
+recorded manual/provider-access checks; a fixture-tested implementation is not a
+verified live provider connection. Continue independent work when an external
+check is unavailable, and leave the affected capability explicitly unverified.
 
 Implementation should use a dedicated branch. Preserve the current working version, back up storage before migration and avoid discarding unrelated workspace changes. Define rollback across both storage schema and extension versions; do not assume an old extension can interpret a new schema.
 
@@ -279,3 +297,146 @@ Release claims must name the provider, meter scope, connection type and supporte
 Recreate useful commercial product behavior with MyLimits' own code and interface. Study licensed open-source implementations and reuse focused components only after checking their actual grants and preserving attribution. Keep source/license notes for anything incorporated. Do not copy proprietary code, assets or text.
 
 This document records the intended upgrade and the newly considered cloud option. It does not deploy a backend, request provider partnership access, store a user's login remotely or start application implementation.
+
+## 14. Shared implementation contracts
+
+These are proposed contracts. Finalize them in P1-02 against the existing code,
+record any justified adjustment, and keep the same semantics throughout both
+phases. Avoid implementing a second competing model in UI or server code.
+
+### Identity and connections
+
+- Preserve existing account IDs and installation salt through migration; old IDs
+  may already combine account and workspace. Preserve that mapping until verified
+  evidence supports a more granular mapping. Do not reverse hashes or guess raw IDs.
+- A user-facing account can have several sources, but browser sessions, native
+  profiles and cloud grants remain independently addressable connections.
+- A workspace is explicit when verified. `null` means no known workspace, not
+  permission to combine workspaces.
+- Suggested connection kinds: `website`, `companion`, `independent-local`,
+  `cloud`, `snapshot-import`. Only implement usable kinds in each phase; listing
+  a kind in a type does not enable that connection method.
+- Suggested lifecycle: `disabled`, `checking`, `active`, `needs-auth`,
+  `needs-tab`, `unavailable`, `offline`, `error`. Derive the display-only
+  “remembered” account label from its connections and dated readings.
+- One website-session connection may change the detected current account when
+  the user signs into another login. Detach its live mapping from the previous
+  account while retaining that account's nickname and snapshot. Native/cloud
+  connections for other accounts must remain active.
+- Increment a connection generation on disable, disconnect, account rebinding
+  or credential replacement. A response from an older generation cannot mutate
+  current state. Account deletion additionally removes history and preferences.
+
+### Snapshot contract
+
+Use runtime-validated data with the following fields or their documented equivalent:
+
+```ts
+type Evidence = 'reported' | 'observed' | 'estimated';
+interface UsageSnapshot {
+  schemaVersion: 2;
+  snapshotId: string;
+  providerId: string;
+  accountId: string;
+  connectionId: string;
+  workspaceId: string | null;
+  observedAt: number; // milliseconds UTC; age of the actual reading
+  receivedAt: number; // milliseconds UTC; local ingestion time
+  connectorVersion: string;
+  meters: UsageMeter[];
+}
+interface UsageMeter {
+  id: string;
+  label: string;
+  scope: 'subscription' | 'work-codex' | 'chat' | 'api' | 'local';
+  evidence: Evidence;
+  unit: 'percent' | 'messages' | 'requests' | 'searches' | 'credits' | 'currency';
+  used: number | null;
+  total: number | null;
+  usedPercent: number | null;
+  currency: string | null;
+  resetsAt: number | null;
+  windowId: string | null;
+  sourceLabel: string;
+}
+```
+
+Reject non-finite values, negative counters and malformed timestamps. Percentage
+clamping for visual display must not hide malformed input. A positive total is
+needed for division; reported zero is valid and unknown is `null`. Monetary
+values require a currency and cannot silently mix currencies. Retain separate
+windows even if their reset times coincide. Validate clock skew/old arrivals
+before selecting the current snapshot; a newer arrival can contain older data.
+
+Transport-level transient identity/authentication is not part of the public
+snapshot. Account verification happens before publishing the normalized record.
+The UI never receives raw responses, salts, cookie values, access/refresh tokens
+or native bridge secrets.
+
+### Adapter and capability contract
+
+An adapter takes a permitted connection context and abort signal, returns a
+normalized validated snapshot or typed error, and declares fixed provider
+origins. Inject transport and clocks for tests. Errors distinguish authentication,
+missing page context, permission denial, network/offline, throttling with retry
+time, unsupported quota scope and unexpected response shape.
+
+Capabilities record tab-independent access, account-wide scope, supported meters,
+multi-account behavior, independent authorization, renewal and hosted deployment.
+Each includes `supported`, `unsupported` or `unverified`, its evidence level
+(`documentation`, `fixture`, `live`), last check date and connection type.
+Do not promote documentation/fixture evidence into live support automatically.
+
+### Storage and messages
+
+- Existing state key: `mylimits:state:v1`. Introduce an explicitly versioned V2
+  key only after schema validation and backup; preserve V1 for recovery. A pointer
+  to the active schema is written only after the V2 state is durable and validated.
+- Existing IndexedDB: `mylimits-history`, version 1, store `readings`, indexes
+  `account` and `time`. Browser storage and IndexedDB do not share an atomic
+  transaction: use a resumable migration journal and make retries idempotent.
+- Default history retention remains 30 days until Phase 2 changes it explicitly.
+  Keep legacy history usable with a documented legacy-source mapping.
+- Serialize writes; reject unrecognized versions without resetting data. Never
+  “fix” parse failure by silently creating an empty store over the saved record.
+- Extend validated messages for connect/enable, account preferences, workspace
+  selection, refresh by connection, disconnect, forget and paginated history.
+  Public state uses purpose-built public types; private fields are not excluded
+  merely by relying on callers to ignore them.
+- Keep the current observation sender/origin/path checks. Page messages cannot
+  choose arbitrary fetch origins, invoke cloud actions or issue UI commands.
+
+### Alert and timing contract
+
+Use one unit throughout storage and messages: epoch milliseconds. Convert source
+seconds/durations in parsers only. Clock injection makes reset/freshness tests
+deterministic. Schedule collection with browser alarms, not a permanent worker
+loop. Refresh-on-open reuses an already fresh/in-flight read rather than causing
+a network storm. The quiet-hours policy uses local time with a defined overnight
+range; it suppresses delivery, not quota collection.
+
+Alert identities include account, workspace/scope, meter and reset window.
+Do not collapse different quota windows into one ledger entry. Snooze/quiet
+hours must not falsely mark an undelivered alert as delivered. When notifications
+resume, alert once only if a fresh currently low reading still warrants it.
+
+## 15. Scope control for the executing model
+
+Use the task files as ordered executable specifications, not invitations to
+redesign the architecture again. Implement one work package at a time and update
+the status file with changed files, actual commands/results, decisions and next
+action. Read the relevant task and contracts rather than reloading all research
+on every step. No parallel agents are part of this handoff.
+
+Keep existing WXT/React/TypeScript/Zod tooling and Node 24+ unless a concrete
+failure requires a narrowly justified change. The unit runner imports test
+modules explicitly; new `.test.ts` files must be wired into it. Do not replace
+the test framework, introduce a monorepo framework, add a UI state framework, or
+upgrade dependencies simply because the plan is a redesign.
+
+Read the existing implementation before editing, particularly companion handling
+and account reconciliation. Preserve regression tests. Run focused tests during
+each package, then the required integration/build checks at the phase gate;
+record blocked checks honestly instead of claiming a pass or repeatedly rerunning
+successful unchanged checks. Changes to shared semantics require updating the
+master contract and downstream task notes in the same work package.

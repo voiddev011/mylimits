@@ -2,11 +2,30 @@
 
 Your AI usage limits, account nicknames, and reset times in one place.
 
+All project Markdown lives in this `docs/` folder. Run development commands from
+the repository root, one directory above this file.
+
+## Documentation and implementation handoff
+
+- [Start here: execution instructions](START-HERE.md)
+- [V2 master plan and shared contracts](V2-IMPLEMENTATION-PLAN.md)
+- [Phase 1: redesigned local extension — 100 effort points](PHASE-1.md)
+- [Phase 2: expansion and connected services — 100 effort points](PHASE-2.md)
+- [Implementation progress and handoff](IMPLEMENTATION-STATUS.md)
+- [Copy-paste GPT-6.1 Sol starter prompt](STARTER-PROMPT.md)
+- [Competitor research](COMPETITOR-RESEARCH.md)
+- [Current architecture](ARCHITECTURE.md), [provider support](SUPPORT.md),
+  [privacy](PRIVACY.md), [companion setup](OPENAI-COMPANION.md),
+  [historical build status](BUILD-STATUS.md), and [high-level roadmap](ROADMAP.md)
+
+The V2 documents describe planned work. The implementation status file records
+what has actually been implemented and verified.
+
 MyLimits is a local-first Chrome extension built with TypeScript, React, WXT,
 and Manifest V3. It uses existing website sessions after you approve Chrome's
 site access. An optional **Windows/Linux OpenAI companion** uses an explicit official
 sign-in flow and an independent Codex connection. No MyLimits cloud account or
-cloud server is required. See the [companion setup guide](docs/OPENAI-COMPANION.md).
+cloud server is required. See the [companion setup guide](OPENAI-COMPANION.md).
 
 ## Development status
 
@@ -24,8 +43,8 @@ accounts before a release can claim reliable provider support.
 | Grok | Successful, recognized browser request observations | Local counts only; account quota and cross-device usage are unknown. |
 | Perplexity | Successful, recognized browser request observations | Local counts only; Pro/Research balances are unknown. |
 
-See [supported providers](docs/SUPPORT.md) for the validation checklist and
-[architecture](docs/ARCHITECTURE.md) for the account and quota model.
+See [supported providers](SUPPORT.md) for the validation checklist and
+[architecture](ARCHITECTURE.md) for the account and quota model.
 
 ## Features in this prototype
 
@@ -113,7 +132,7 @@ its site permission. Notification permission is only requested after a click.
 3. Add better workspace selection and explicit support for multiple profile snapshots.
 4. Add token-saving guides, task-to-model/mode recommendations, and prompt templates.
 
-See [the roadmap](docs/ROADMAP.md). Guidance is separate from the tracking core
+See [the roadmap](ROADMAP.md). Guidance is separate from the tracking core
 and will never silently read conversations or claim a local count is an exact quota.
 
 ## Research and originality

@@ -1,5 +1,11 @@
 # Roadmap
 
+This is the original high-level roadmap. The actionable upgrade is now defined
+by the [two-phase implementation plan](V2-IMPLEMENTATION-PLAN.md),
+[Phase 1](PHASE-1.md), and [Phase 2](PHASE-2.md). Use those documents for scope,
+dependencies and acceptance criteria; record progress in
+[implementation status](IMPLEMENTATION-STATUS.md).
+
 ## Core tracking first
 
 - Complete the install/build and extension browser checks.

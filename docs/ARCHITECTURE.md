@@ -1,5 +1,9 @@
 # Architecture
 
+This describes the current prototype. The target V2 contracts and migration
+rules are in the [implementation plan](V2-IMPLEMENTATION-PLAN.md). Keep this file
+consistent with actual implemented behavior as each phase lands.
+
 ```mermaid
 flowchart TD
   Consent[Optional site access] --> Connector[Provider connector]

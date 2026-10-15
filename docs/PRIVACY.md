@@ -84,4 +84,4 @@ an account in its Overview settings to request Codex logout before deleting the
 profile. Failed logout keeps the profile for retry and does not claim remote
 revocation. Use OpenAI's own account/security controls when needed. Stopping the
 service pauses background collection without deleting credentials. See the
-[setup and removal guide](docs/OPENAI-COMPANION.md).
+[setup and removal guide](OPENAI-COMPANION.md).

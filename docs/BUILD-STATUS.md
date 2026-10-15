@@ -1,5 +1,9 @@
 # Verification status
 
+**Historical initial-prototype record.** Entries below describe the original
+bootstrap environment and are not current V2 verification results. See
+[implementation status](IMPLEMENTATION-STATUS.md) for the active execution record.
+
 This file records what has actually been checked in the development environment.
 
 - Pure core and provider-parser tests: passed locally (25 behavior tests).
