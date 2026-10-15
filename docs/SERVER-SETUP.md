@@ -110,3 +110,55 @@ Supported revocation can retry at most three times within 24 hours, retaining an
 encrypted credential only for that cleanup. Failure remains explicitly unconfirmed;
 local disconnection is not remote logout. Replaced credential generations are
 protected from old cleanup. Explicit data deletion removes credential envelopes.
+
+## Optional dashboard and extension pairing
+
+Build the responsive same-origin dashboard with `npm run build:web --prefix server`
+before starting the service. It is served at `APP_ORIGIN`; no public host is
+created by the build. On a phone it needs an intentionally configured reachable
+HTTPS service; a laptop's loopback address is not reachable from a separate phone.
+This phase tests a 390px phone layout locally without publishing it.
+
+For an operator/development extension build, set **MYLIMITS_SYNC_ORIGIN** to that
+service origin before `npm run build` or `npm run dev`. HTTPS is required except
+loopback HTTP. Paths/query strings/userinfo are rejected. The build declares only
+that server's optional host grant; request URLs stay bound to the configured origin.
+An ordinary build with no origin declares no extra server host and exposes no
+working sync-login button. Set the server's `ALLOWED_ORIGINS` to the installed
+extension's exact `chrome-extension://...` origin. Published store IDs can be
+configured once by the operator; an unpacked build has its own ID.
+
+In the extension **Settings → Optional snapshot sync**, click Connect and approve
+the configured server's site access. The MyLimits dashboard opens with a one-time
+code; sign in to MyLimits and explicitly approve the named device. This is not an
+AI-provider login. The extension polls with a separate private secret and receives
+its own revocable MyLimits device token once. Codes expire after ten minutes.
+Pairing codes alone cannot obtain a device token; callback login preserves only
+a validated pairing-code return path, never an arbitrary redirect.
+
+**Sync now** uploads normalized readings only. Five-minute alarms retry bounded
+batches while the browser runs. Acknowledgements and backoff persist across worker
+restarts. Source identity includes device and local source ID; identical hashes
+on separate devices do not automatically merge accounts. The phone dashboard
+labels snapshot-only mode and original last-reading time. It does not collect
+fresh data when all local sources are closed/signed out.
+
+Reading sync does not silently overwrite preferences. Push local preferences or
+explicitly apply cloud preferences; revision conflicts require reviewing/applying
+the remote version before another push. Aliases map only through this device's
+known server IDs. Applying remote settings cannot grant local notification access.
+
+Pause stops sync requests but retains the local app-device credential. Disconnect
+revokes the sync device and leaves local tracking/data intact; a failed remote
+revocation stays unconfirmed for retry. Revoke devices/delete synced data in the
+web dashboard independently of provider logout. Forgotten local accounts enqueue
+a device/source deletion marker even if an upload acknowledgement was lost.
+That source stays excluded, and server tombstones reject old/late uploads. Offline
+remote deletions remain visibly pending. Changing configured server origin never
+sends an old device credential to the new origin; remove the local connection and
+pair anew. Locally removing a connection is not confirmation of old-server revocation.
+
+Run `npm run test:web --prefix server` with an isolated test database and available
+Playwright Chromium (`CHROMIUM_PATH` optional) for real-service phone UI acceptance.
+Fixture sessions are seeded directly in the private test DB; there is no fixture
+login endpoint in the application.

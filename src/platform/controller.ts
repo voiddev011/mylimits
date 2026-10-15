@@ -13,11 +13,13 @@ import { readHistory, readHistoryPage, historyExport, clearHistory, removeHistor
 import { CommandSchema, type Command } from './messages';
 import { mergeCompanion, markCompanionUnavailable } from '../core/companion';
 import { addCompanionAccount, companionRequest, companionStatus, enableCompanion, listenCompanion, refreshCompanion } from './companion';
+import { snapshotSync } from './sync';
 
 const coordinator = new RefreshCoordinator(2);
 const observedProviders: readonly ProviderId[] = ['gemini', 'grok', 'perplexity'];
 const REFRESH_ALARM = 'mylimits:refresh';
 const COMPANION_ALARM = 'mylimits:companion';
+const SYNC_ALARM='mylimits:sync';
 
 async function renderBadge(): Promise<void> {
   const value = badge(await readStore(), Date.now());
@@ -105,6 +107,7 @@ export async function refreshProvider(provider: ProviderId, manual = false, reas
 
 async function refreshAll(manual = false, reason: RefreshReason = manual ? 'manual' : 'scheduled'): Promise<void> {
   const results = await Promise.allSettled([...PROVIDER_IDS.map(provider => refreshProvider(provider, manual, reason)), refreshCompanion()]);
+  await snapshotSync.run().catch(()=>{});
   if (results.some(result => result.status === 'rejected')) await renderBadge().catch(() => undefined);
 }
 
@@ -193,6 +196,21 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
   switch (command.type) {
     case 'state': return publicStore();
     case 'opened': void refreshAll(false, 'open').catch(() => {}); return publicStore();
+    case 'sync': {
+      if(command.action==='status')return snapshotSync.status();
+      if(command.action==='start')return snapshotSync.start(command.name);
+      if(command.action==='poll'){const status=await snapshotSync.poll();if(status.enabled)await browser.alarms.create(SYNC_ALARM,{periodInMinutes:5});return status}
+      if(command.action==='run')return snapshotSync.run(true);
+      if(command.action==='push-preferences')return snapshotSync.pushPreferences();
+      if(command.action==='pull-preferences'){
+        const data=await snapshotSync.pullPreferences();
+        if(data.settings?.desktopAlerts&&!await browser.permissions.contains({permissions:['notifications']}))data.settings={...data.settings,desktopAlerts:false};
+        await updateStore(store=>({store:{...store,settings:data.settings??store.settings,accounts:store.accounts.map(a=>data.names[a.id]!==undefined?{...a,alias:data.names[a.id]!}:a)},value:undefined}));
+        if(data.settings)await browser.alarms.create(REFRESH_ALARM,{periodInMinutes:data.settings.refreshMinutes});await renderBadge();return snapshotSync.status();
+      }
+      const status=command.action==='disconnect'?await snapshotSync.disconnect():command.action==='reset'?await snapshotSync.reset():await snapshotSync.enable(command.action==='resume');
+      if(status.enabled)await browser.alarms.create(SYNC_ALARM,{periodInMinutes:5});else await browser.alarms.clear(SYNC_ALARM);return status;
+    }
     case 'account-preferences': {
       const { type: _type, accountId, ...patch } = command;
       await updateStore(store => ({ store: accountPreferences(store, accountId, patch), value: undefined })); break;
@@ -240,6 +258,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
       const account = store.accounts.find(item => item.id === command.accountId);
       if (account?.companionProfile) { await companionRequest('remove', account.companionProfile); await refreshCompanion(); }
       if (account && !account.companionProfile && store.providers[account.provider].activeAccountId === account.id) await setProvider(account.provider, false);
+      await snapshotSync.forget(command.accountId);
       await updateStore(async current => { await removeHistory(command.accountId); await forgetLegacyAccount(command.accountId); return { store: forgetAccount(current, command.accountId), value: undefined }; });
       break;
     }
@@ -267,6 +286,8 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
 }
 
 export function startController(): void {
+  const storage=browser.storage.local as typeof browser.storage.local&{setAccessLevel?:(options:{accessLevel:'TRUSTED_CONTEXTS'})=>Promise<void>};
+  void storage.setAccessLevel?.({accessLevel:'TRUSTED_CONTEXTS'}).catch(()=>{});
   listenCompanion(async profiles => {
     const changes = await updateStore(store => {
       const next = profiles === null ? markCompanionUnavailable(store) : mergeCompanion(store, profiles, Date.now());
@@ -284,7 +305,7 @@ export function startController(): void {
     void handle(parsed.data, sender).then(data => sendResponse({ ok: true, data }), error => sendResponse({ ok: false, error: error instanceof Error ? error.message : 'The action could not be completed.' }));
     return true;
   });
-  browser.alarms.onAlarm.addListener(alarm => { if (alarm.name === COMPANION_ALARM) void refreshCompanion().catch(() => {}); if (alarm.name === REFRESH_ALARM) void refreshAll().catch(() => undefined); });
+  browser.alarms.onAlarm.addListener(alarm => { if(alarm.name===SYNC_ALARM)void snapshotSync.run().catch(()=>{});if (alarm.name === COMPANION_ALARM) void refreshCompanion().catch(() => {}); if (alarm.name === REFRESH_ALARM) void refreshAll().catch(() => undefined); });
   browser.permissions.onRemoved.addListener(permissions => {
     void (async () => {
       if (permissions.permissions?.includes('nativeMessaging')) await enableCompanion(false);
@@ -301,6 +322,7 @@ export function startController(): void {
     const store = await readStore();
     await browser.alarms.create(REFRESH_ALARM, { periodInMinutes: store.settings.refreshMinutes });
     if ((await companionStatus()).enabled) await browser.alarms.create(COMPANION_ALARM, { periodInMinutes: 1 });
+    if((await snapshotSync.status()).enabled)await browser.alarms.create(SYNC_ALARM,{periodInMinutes:5});
     await renderBadge();
     await refreshAll();
   })().catch(() => undefined);

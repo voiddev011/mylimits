@@ -110,3 +110,39 @@ Quiet hours, snooze and reset alerts are local preferences. Reset alerts require
 fresh provider evidence of a new window; the passage of a countdown alone does
 not establish a reset. No backend, cloud synchronization, prompt analysis or
 conversation transfer is added by Phase 1.
+
+## Phase 2 optional snapshot sync
+
+A configured build can offer separately approved MyLimits snapshot sync. It is
+off by default; ordinary website tracking/preview makes no sync requests. The
+user approves that server's exact optional host grant and a named device after
+MyLimits sign-in. No AI website cookie, transient bearer, native bridge secret,
+installation salt, prompt or conversation is part of an upload.
+
+Sync uploads normalized account names/plan and readings, including pseudonymous
+source/account/workspace IDs, evidence and original observation time. The server
+assigns device-scoped mappings and records its receipt time separately. A cloud
+receipt does not make old usage fresh or establish an independent provider grant.
+Preferences sync is explicit and revisioned; matching device mappings do not
+silently merge separate people or accounts.
+
+The MyLimits device token and pairing poll secret are app authorization, not AI
+provider authorization. They are kept in a separate private extension storage key,
+never public state/history/export. Where Chrome supports it, local storage access
+is restricted to trusted extension contexts. This local storage is not an encrypted
+vault. The server stores token hashes; browser dashboard sessions use short-lived
+HttpOnly cookies. Configured OIDC/KMS operators remain responsible for their service.
+
+Server deletion removes readings/names/plan and retains opaque source tombstones
+needed to reject replay. Device revocation invalidates its uploads. Local forgetting
+queues remote deletion even for an unacknowledged upload; offline deletion is
+pending until a successful connection. Clearing local history does not automatically
+clear separately synced data. Pausing sync does not revoke MyLimits/AI authorization.
+Changing servers never forwards an existing app token to the new origin.
+
+Production independently hosted AI collection remains disabled by the feasibility
+gate. The tested server job/encryption boundaries use synthetic collectors/KMS;
+no provider credentials are accepted for snapshot sync, no real production KMS is
+configured and no public deployment was performed. If a future permitted collector
+stores server-decryptable authorization, its opt-in/retention policy must be stated
+separately; it cannot be described as zero-knowledge snapshot sync.

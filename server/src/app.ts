@@ -3,12 +3,14 @@ import type pg from 'pg';
 import { z } from 'zod';
 import { ConfigSchema,type Config } from './config';
 import { ApiError,authenticate,oidcVerifier,requireWeb,type Principal,type Verify } from './auth';
-import { accounts,deleteAccount,registerDevice,snapshots,upload } from './service';
+import { accounts,deleteAccount,deleteAccountInTransaction,registerDevice,snapshots,upload } from './service';
 import { transaction } from './db';
 import { SyncPreferencesSchema } from '../../src/core/sync-contracts';
 import { authRoutes } from './oidc';
 import { JobRunner } from './jobs';
 import { CredentialStore } from './credentials';
+import { pairingRoutes } from './pairing';
+import { webRoutes } from './web';
 export type RequestWithPrincipal=FastifyRequest&{principal:Principal};
 const identifier=z.string().uuid();
 const params=(request:FastifyRequest)=>z.object({id:identifier}).parse(request.params).id;
@@ -44,10 +46,12 @@ export function createApp(options:{config:Config;pool:pg.Pool;testVerifier?:Veri
  const p=(r:FastifyRequest)=>(r as RequestWithPrincipal).principal;
  app.get('/health',async()=>({ok:true,mode:'snapshot-only',authenticationConfigured:!!config.oidc}));
  authRoutes(app,pool,config);
+ pairingRoutes(app,pool);
+ webRoutes(app);
  app.post('/v1/devices',async r=>{const b=z.object({name:z.string().trim().min(1).max(60)}).strict().parse(r.body);return registerDevice(pool,p(r),b.name)});
  app.get('/v1/devices',async r=>{requireWeb(p(r));return {devices:(await pool.query('SELECT id,name,revoked_at AS "revokedAt" FROM devices WHERE owner_id=$1 ORDER BY created_at',[p(r).owner])).rows}});
  app.delete('/v1/devices/:id',async r=>{
-  requireWeb(p(r));const id=params(r);await transaction(pool,async db=>{
+  const id=params(r);if(p(r).kind==='device'&&p(r).deviceId!==id)throw new ApiError(403,'wrong_device');await transaction(pool,async db=>{
    const found=await db.query('UPDATE devices SET revoked_at=now() WHERE owner_id=$1 AND id=$2 RETURNING id',[p(r).owner,id]);if(!found.rows.length)throw new ApiError(404,'device_not_found');
    await db.query("UPDATE connections SET enabled=false,status='disabled',generation=generation+1 WHERE owner_id=$1 AND device_id=$2",[p(r).owner,id]);
    await db.query('DELETE FROM jobs WHERE owner_id=$1 AND connection_id IN (SELECT id FROM connections WHERE owner_id=$1 AND device_id=$2)',[p(r).owner,id]);
@@ -76,6 +80,15 @@ export function createApp(options:{config:Config;pool:pg.Pool;testVerifier?:Veri
   });return {disconnected:true,providerRevocation:'not-applicable-snapshot-only'};
  });
  app.delete('/v1/accounts/:id',async r=>{await deleteAccount(pool,p(r),params(r));return {deleted:true}});
+ app.delete('/v1/source-data',async r=>{
+  const principal=p(r);if(principal.kind!=='device'||!principal.deviceId)throw new ApiError(403,'device_authentication_required');
+  const {sourceAccountId}=z.object({sourceAccountId:z.string().min(1).max(240)}).strict().parse(r.body);
+  await transaction(pool,async db=>{
+   const device=await db.query('SELECT id FROM devices WHERE owner_id=$1 AND id=$2 AND revoked_at IS NULL FOR UPDATE',[principal.owner,principal.deviceId]);if(!device.rows.length)throw new ApiError(401,'device_revoked');
+   await db.query('INSERT INTO source_tombstones(owner_id,device_id,source_id) VALUES($1,$2,$3) ON CONFLICT DO NOTHING',[principal.owner,principal.deviceId,sourceAccountId]);
+   const account=(await db.query('SELECT id FROM accounts WHERE owner_id=$1 AND device_id=$2 AND source_id=$3',[principal.owner,principal.deviceId,sourceAccountId])).rows[0];if(account)await deleteAccountInTransaction(db,principal,account.id);
+  });return {deleted:true};
+ });
  app.get('/v1/preferences',async r=>{
   const row=(await pool.query('SELECT revision,data FROM preferences WHERE owner_id=$1',[p(r).owner])).rows[0];return row??{revision:0,data:{}};
  });
@@ -97,6 +110,7 @@ export function createApp(options:{config:Config;pool:pg.Pool;testVerifier?:Veri
    await db.query("UPDATE connections SET enabled=false,generation=generation+1,status='disabled' WHERE owner_id=$1",[p(r).owner]);
    await db.query('DELETE FROM jobs WHERE owner_id=$1',[p(r).owner]);await db.query('DELETE FROM snapshots WHERE owner_id=$1',[p(r).owner]);await db.query('DELETE FROM preferences WHERE owner_id=$1',[p(r).owner]);
    for(const table of ['encrypted_credentials','connection_cleanup'])await db.query(`DELETE FROM ${table} WHERE owner_id=$1`,[p(r).owner]);
+   await db.query('DELETE FROM pair_requests WHERE approved_owner=$1',[p(r).owner]);
   });return {deleted:true,devicesRevoked:true};
  });
  return app;

@@ -102,3 +102,32 @@ test('origin checks reject hostile browser writes and API budgets are bounded',a
  assert.equal((await a.inject({url:'/v1/accounts',headers:{...headers(),origin:'https://hostile.invalid'}})).statusCode,403);
  let last;for(let i=0;i<121;i++)last=await a.inject({url:'/v1/accounts',headers:headers()});assert.equal(last!.statusCode,429);
 });
+test('pairing requires explicit owner approval, a bound secret and one-time exchange',async t=>{
+ const a=app(t);const start=await a.inject({method:'POST',url:'/pairing/start',payload:{name:'My laptop'}});assert.equal(start.statusCode,200);const request=start.json();
+ const poll=()=>a.inject({method:'POST',url:'/pairing/poll',payload:{id:request.id,secret:request.secret}});
+ assert.equal((await poll()).json().status,'pending');
+ assert.equal((await a.inject({method:'POST',url:'/v1/pairings/approve',payload:{code:request.code}})).statusCode,403);
+ assert.equal((await a.inject({url:`/v1/pairings/${request.code}`,headers:headers()})).json().name,'My laptop');
+ assert.equal((await a.inject({method:'POST',url:'/v1/pairings/approve',headers:headers(),payload:{code:request.code}})).statusCode,200);
+ assert.equal((await a.inject({method:'POST',url:'/v1/pairings/approve',headers:headers('bob'),payload:{code:request.code}})).statusCode,409);
+ const wrong=await a.inject({method:'POST',url:'/pairing/poll',payload:{id:request.id,secret:'incorrect-secret-of-at-least-thirty-two-characters'}});assert.equal(wrong.statusCode,410);
+ const paired=await poll();assert.equal(paired.json().status,'connected');const {deviceId,token}=paired.json();assert.equal((await poll()).statusCode,410);
+ assert.equal((await a.inject({url:'/v1/accounts',headers:headers(token)})).statusCode,200);
+ const devices=(await a.inject({url:'/v1/devices',headers:headers()})).json().devices;assert.equal(devices[0].id,deviceId);
+ assert.ok(!JSON.stringify(devices).includes(token));
+});
+test('expired pairing cannot issue credentials and device self-revoke does not revoke peers',async t=>{
+ const a=app(t),expired=(await a.inject({method:'POST',url:'/pairing/start',payload:{name:'Expired'}})).json();await pool.query('UPDATE pair_requests SET expires_at=0 WHERE id=$1',[expired.id]);
+ assert.equal((await a.inject({method:'POST',url:'/pairing/poll',payload:{id:expired.id,secret:expired.secret}})).statusCode,410);
+ const one=await device(a),two=await device(a);
+ assert.equal((await a.inject({method:'DELETE',url:`/v1/devices/${two.id}`,headers:headers(one.token)})).statusCode,403);
+ assert.equal((await a.inject({method:'DELETE',url:`/v1/devices/${one.id}`,headers:headers(one.token)})).statusCode,200);
+ assert.equal((await a.inject({url:'/v1/accounts',headers:headers(two.token)})).statusCode,200);
+});
+test('source tombstones cover lost acknowledgements and deletion before first upload',async t=>{
+ const a=app(t),d=await device(a),sample=item();await send(a,d,[sample]);
+ const deletion=await a.inject({method:'DELETE',url:'/v1/source-data',headers:headers(d.token),payload:{sourceAccountId:sample.snapshot.accountId}});assert.equal(deletion.statusCode,200);
+ assert.equal((await send(a,d,[item(15)])).statusCode,410);assert.equal((await a.inject({url:'/v1/accounts',headers:headers()})).json().accounts.length,0);
+ const unseen='not-yet-uploaded';assert.equal((await a.inject({method:'DELETE',url:'/v1/source-data',headers:headers(d.token),payload:{sourceAccountId:unseen}})).statusCode,200);
+ assert.equal((await send(a,d,[{...item(16),snapshot:{...item(16).snapshot,accountId:unseen}}])).statusCode,410);
+});
