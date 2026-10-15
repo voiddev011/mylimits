@@ -6,8 +6,8 @@ credential upload has been performed.
 ## Active checkpoint
 
 - Requested phase: Phase 1 (authorized by the user).
-- Current work package: P1-04 — verified.
-- Next action: P1-05 — add source-aware account and connection commands.
+- Current work package: P1-05 — implemented.
+- Next action: P1-06 — implement persisted refresh policy and request coordination.
 - Working branch/commit: `v2/phase-1`; see checkpoint history and Git commits.
 - Authoritative scope: [master plan](V2-IMPLEMENTATION-PLAN.md),
   [Phase 1](PHASE-1.md), [Phase 2](PHASE-2.md).
@@ -27,7 +27,7 @@ implemented independent work while leaving that specific check pending.
 | P1-02 | 12 | verified | See checkpoint below.
 | P1-03 | 10 | verified | See checkpoint below.
 | P1-04 | 10 | verified | See checkpoint below.
-| P1-05 | 10 | not_started | |
+| P1-05 | 10 | implemented | See checkpoint below.
 | P1-06 | 10 | not_started | |
 | P1-07 | 12 | not_started | |
 | P1-08 | 8 | not_started | |
@@ -120,3 +120,9 @@ Next: P1-04 — adapt existing readers and native snapshots to V2 reconciliation
 State: **verified**. Adapted existing readers to V2 snapshots and preserved independent native sources. Added Claude workspace choice from validated membership, strict unavailable-selection handling, fixed-origin request-local authentication, sanitized choices and retry timing. Native cold-start readings retain their original age. Type checking and 47 core tests pass; legacy cold-start assertion now compares retained normalized readings, preserving its original behavior guarantee.
 
 Next: P1-05 — add source-aware account and connection commands.
+
+## P1-05 checkpoint — 15 October 2026
+
+State: **implemented**. Added validated account pin/order/snooze preferences, source disconnect and verified workspace commands, plus generation-safe website enable/disable and forget behavior. Native disconnect now retains remembered readings; forgetting explicitly deletes data. Added action regressions for names, workspace membership, invalid reorder and collector shutdown. User-facing controls are integrated in P1-07; no live revocation is claimed.
+
+Next: P1-06 — implement persisted refresh policy and request coordination.

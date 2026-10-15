@@ -5,8 +5,8 @@ export interface CompanionProfile { id:string;status:'active'|'signed-out'|'unav
 export function mergeCompanion(store:Store,profiles:CompanionProfile[],now:number):Store {
  const keep=new Set(profiles.map(p=>`openai-companion:${p.id}`));
  const removed=store.accounts.filter(a=>a.companionProfile&&!keep.has(a.id)).map(a=>a.id);
- let next:Store={...store,accounts:store.accounts.filter(a=>!removed.includes(a.id)),connections:store.connections.filter(c=>c.kind!=='companion'||keep.has(c.accountId??'')),snapshots:store.snapshots.filter(s=>!removed.includes(s.accountId)),
-  alertLedger:Object.fromEntries(Object.entries(store.alertLedger).filter(([k])=>!removed.some(id=>k.startsWith(`${id}/`))))};
+ let next:Store={...store,connections:store.connections.map(c=>c.kind==='companion'&&removed.includes(c.accountId??'')?{...c,enabled:false,status:'disabled',generation:c.enabled?c.generation+1:c.generation,message:'Disconnected; saved reading retained.'}:c)};
+
  for(const profile of profiles){
   const id=`openai-companion:${profile.id}`,connectionId=`companion:${profile.id}`;
   let prior=next.accounts.find(a=>a.id===id);

@@ -4,6 +4,8 @@ import { AccountSchema, MeterSchema, SettingsSchema } from '../core/schema';
 import { accountId, applySnapshot, badge, collectAlerts, markProvider, recordObservation } from '../core/engine';
 import { providers, providerForUrl } from '../providers/catalog';
 import { AdapterError, readProvider } from '../providers/adapters';
+import { enableWebsite, setWorkspace, accountPreferences, orderAccounts, forgetAccount } from '../core/actions';
+import { changeConnection } from '../core/connections';
 import { readStore, publicStore, updateStore } from './repository';
 import { readHistory, removeHistory, saveHistory } from './history';
 import { CommandSchema, type Command } from './messages';
@@ -108,12 +110,7 @@ async function setProvider(provider: ProviderId, enabled: boolean): Promise<void
   const origin = providers[provider].origin;
   if (enabled && !await browser.permissions.contains({ origins: [origin] })) throw new Error('Approve Chrome site access before enabling this website.');
   generation[provider]++;
-  await updateStore(store => {
-    const next = enabled ? { ...store, providers: { ...store.providers, [provider]: { ...store.providers[provider], enabled: true, status: 'inactive' as const, checkedAt: null, nextRetryAt: null, failures: 0 } } }
-      : markProvider(store, provider, 'disabled', 'Website tracking is off.', Date.now());
-    next.providers[provider].enabled = enabled;
-    return { store: next, value: undefined };
-  });
+  await updateStore(store => ({ store: enableWebsite(store, provider, enabled), value: undefined }));
   const scriptId = `mylimits-observer-${provider}`;
   const registered = await browser.scripting.getRegisteredContentScripts({ ids: [scriptId] });
   if (registered.length) await browser.scripting.unregisterContentScripts({ ids: [scriptId] });
@@ -193,6 +190,23 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
   if (!sender.url?.startsWith(browser.runtime.getURL('/'))) throw new Error('This action must come from the MyLimits dashboard.');
   switch (command.type) {
     case 'state': return publicStore();
+    case 'account-preferences': {
+      const { type: _type, accountId, ...patch } = command;
+      await updateStore(store => ({ store: accountPreferences(store, accountId, patch), value: undefined })); break;
+    }
+    case 'order': await updateStore(store => ({ store: orderAccounts(store, command.ids), value: undefined })); break;
+    case 'workspace':
+      await updateStore(store => ({ store: setWorkspace(store, command.connectionId, command.workspaceId), value: undefined }));
+      await refreshProvider('claude', true); break;
+    case 'disconnect': {
+      const conn = (await readStore()).connections.find(c => c.id === command.connectionId);
+      if (!conn) throw new Error('Connection is no longer saved.');
+      if (conn.kind === 'website') await setProvider(conn.provider, false);
+      else if (conn.kind === 'companion') { await companionRequest('remove', conn.profileId); await refreshCompanion(); }
+      else await updateStore(store => ({ store: changeConnection(store, conn.id, { enabled:false,status:'disabled' }, true), value:undefined }));
+      break;
+    }
+
     case 'companion-status': return companionStatus();
     case 'companion-enable':
       if (command.enabled) await browser.alarms.create(COMPANION_ALARM, { periodInMinutes: 1 });
@@ -214,7 +228,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
       const account = store.accounts.find(item => item.id === command.accountId);
       if (account?.companionProfile) { await companionRequest('remove', account.companionProfile); await refreshCompanion(); }
       if (account && !account.companionProfile && store.providers[account.provider].activeAccountId === account.id) await setProvider(account.provider, false);
-      await updateStore(current => ({ store: { ...current, accounts: current.accounts.filter(item => item.id !== command.accountId), alertLedger: Object.fromEntries(Object.entries(current.alertLedger).filter(([key]) => !key.startsWith(`${command.accountId}/`))) }, value: undefined }));
+      await updateStore(current => ({ store: forgetAccount(current, command.accountId), value: undefined }));
       await removeHistory(command.accountId);
       break;
     }

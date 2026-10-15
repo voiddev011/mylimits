@@ -7,3 +7,4 @@ import '../src/core/native-runtime.test.ts';
 import '../src/core/connections.test.ts';
 import '../src/core/migrations.test.ts';
 import '../src/providers/reader.test.ts';
+import '../src/core/actions.test.ts';
