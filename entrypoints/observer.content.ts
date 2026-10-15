@@ -2,7 +2,7 @@ import { browser } from 'wxt/browser';
 import { providerForUrl } from '../src/providers/catalog';
 
 export default defineContentScript({
-  matches: ['https://gemini.google.com/*', 'https://grok.com/*', 'https://www.perplexity.ai/*'],
+  // Matches are supplied only by the controller after optional site access.
   registration: 'runtime',
   runAt: 'document_start',
   main(ctx) {

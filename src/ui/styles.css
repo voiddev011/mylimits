@@ -15,3 +15,5 @@
 @media(min-width:760px){.app--dashboard .compact-accounts{grid-template-columns:repeat(2,minmax(0,1fr))}.app--dashboard.app--compact{padding:0 30px}.app--dashboard .limit-tools{max-width:520px}}
 @media(max-width:350px){.compact-meters{gap:5px 8px}.compact-meter-meta{font-size:8px}.limit-tools select{width:100px}}
 .compact-account{padding:5px 9px}.compact-account-heading{line-height:18px;margin-bottom:3px}.compact-meter>div:first-child{line-height:14px}.compact-meter-meta{line-height:10px}.app--compact .summary-grid{min-height:38px}.app--compact .summary-grid>div{line-height:14px}
+.companion-card{border-color:var(--accent)}.companion-actions{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:12px 0}.companion-card>p+p{margin-top:8px}
+.app--compact .summary-grid{padding:6px 0;min-height:32px}.app--compact .summary-grid svg{display:none}.app--compact .summary-grid>div{flex-wrap:nowrap;gap:4px;padding:0 6px}.app--compact .summary-grid strong,.app--compact .summary-grid .reset-stat{line-height:18px}.app--compact .summary-grid span{font-size:9px;line-height:11px}

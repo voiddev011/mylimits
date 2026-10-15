@@ -7,6 +7,7 @@ import { command, history, type Command, type PublicStore } from '../platform/me
 import type { HistoryPoint } from '../platform/history';
 import { demoState } from './demo';
 import { age, countdown } from './format';
+import { OpenAICompanion } from './OpenAICompanion';
 import { selectAccounts, type LimitSort } from './overview';
 import './styles.css';
 
@@ -61,13 +62,13 @@ function AccountCard({ account, settings, now, run, demo, busy }: { account: Acc
       </div>
       <button className={`icon-button ${options ? 'selected' : ''}`} aria-label={`Settings for ${accountName(account)}`} aria-expanded={options} onClick={() => setOptions(!options)}><Settings2 size={16} /></button>
     </div>
-    <div className={`connection-label ${active ? 'connection-label--active' : ''}`}><span className="status-dot" />{account.kind === 'browser' ? 'Local activity · not account-scoped' : active ? 'Current website account' : account.connection === 'inactive' ? 'Saved account · not currently signed in' : account.connection === 'signed-out' ? 'Website sign-in needed' : 'Last reading · refresh unavailable'}</div>
+    <div className={`connection-label ${active ? 'connection-label--active' : ''}`}><span className="status-dot" />{account.kind === 'browser' ? 'Local activity · not account-scoped' : account.companionProfile ? (active ? 'Companion connection · independent of website login' : 'Companion · reconnect or check local service') : active ? 'Current website account' : account.connection === 'inactive' ? 'Saved account · not currently signed in' : account.connection === 'signed-out' ? 'Website sign-in needed' : 'Last reading · refresh unavailable'}</div>
     {options && <div className="account-options">
       {account.kind === 'account' && <>
         <label className="field-inline">Warn at <select aria-label={`Alert threshold for ${accountName(account)}`} value={account.alertRemaining ?? ''} disabled={busy} onChange={event => void run({ type: 'account-settings', accountId: account.id, alertRemaining: event.target.value ? Number(event.target.value) : null, alertsMuted: account.alertsMuted })}><option value="">Default ({settings.warningRemaining}% left)</option>{[5, 10, 15, 20, 25, 30, 50].map(value => <option key={value} value={value}>{value}% left</option>)}</select></label>
         <button className="text-button" disabled={busy} onClick={() => void run({ type: 'account-settings', accountId: account.id, alertRemaining: account.alertRemaining, alertsMuted: !account.alertsMuted })}>{account.alertsMuted ? <Bell size={14} /> : <BellOff size={14} />}{account.alertsMuted ? 'Unmute desktop alerts' : 'Mute desktop alerts'}</button>
       </>}
-      <button className="text-button danger" disabled={busy} onClick={() => { if (confirm(`Forget ${accountName(account)} and its local history?${active ? ' Tracking for this website will also turn off.' : ''}`)) void run({ type: 'forget', accountId: account.id }); }}><Trash2 size={14} />Forget saved {account.kind === 'browser' ? 'activity' : 'account'}</button>
+      <button className="text-button danger" disabled={busy} onClick={() => { if (confirm(`${account.companionProfile ? 'Disconnect' : 'Forget'} ${accountName(account)} and remove its local history?${account.companionProfile ? ' This ends its companion connection.' : active ? ' Tracking for this website will also turn off.' : ''}`)) void run({ type: 'forget', accountId: account.id }); }}><Trash2 size={14} />{account.companionProfile ? 'Disconnect' : 'Forget saved'} {account.kind === 'browser' ? 'activity' : 'account'}</button>
     </div>}
     {account.meters.length ? <div className="meter-list">{account.meters.map(meter => <MeterView key={meter.id} meter={meter} account={account} settings={settings} now={now} />)}</div> : <div className="no-reading"><CircleHelp size={18} /><p>{account.kind === 'browser' ? 'Activity will appear after a recognised request on this website. Account quotas are not available yet.' : 'This account has not exposed a usage reading. Its remaining allowance is unknown.'}</p></div>}
     {account.provider === 'chatgpt' && <p className="scope-note">These readings cover Work / Codex. Ordinary chat limits are separate.</p>}
@@ -87,7 +88,7 @@ function Websites({ store, run, busy, demo, notify }: { store: PublicStore; run:
     }
     await run({ type: 'enable', provider, enabled });
   }
-  return <div className="website-list">{PROVIDER_IDS.map(provider => {
+  return <div className="website-list"><OpenAICompanion run={run} busy={busy} demo={demo} notify={notify} />{PROVIDER_IDS.map(provider => {
     const definition = providers[provider];
     const state = store.providers[provider];
     return <article className="website-card" key={provider}><div className="website-top"><ProviderMark provider={provider} /><div><h3>{definition.name}</h3><span className="small-note">{definition.support === 'prototype' ? 'Account readings · prototype' : 'Browser activity only'}</span></div><button className={`switch ${state.enabled ? 'switch--on' : ''}`} role="switch" aria-checked={state.enabled} aria-label={`Track ${definition.name}`} disabled={busy} onClick={() => void toggle(provider).catch(error => notify(error instanceof Error ? error.message : 'Could not change website access.'))}><span /></button></div><p>{definition.detail}</p>{state.message && state.enabled && <div className="provider-message">{state.message}</div>}<div className="website-bottom"><a className="text-button" href={definition.home} target="_blank" rel="noreferrer">Open website<ExternalLink size={12} /></a>{state.enabled && <button className="text-button" disabled={busy} onClick={() => void run({ type: 'refresh', provider })}><RefreshCw size={12} />Refresh</button>}</div></article>;
@@ -172,7 +173,7 @@ export function App({ view = 'dashboard' }: { view?: View }) {
       {page !== 'overview' && <div className="page-heading"><span className="eyebrow">{page === 'websites' ? 'MAKE YOURSELF AT HOME' : 'A HEADS-UP, YOUR WAY'}</span><h1>{page === 'websites' ? 'Your websites.' : 'Stay ahead of limits.'}</h1><p>{page === 'websites' ? 'Choose what to track. Your existing website login does the rest.' : 'Set the reminders that fit the way you work.'}</p></div>}
       {error && <div className="error-panel" role="alert">{error}<button className="icon-button" aria-label="Dismiss error" onClick={() => setError('')}><X size={14} /></button></div>}
       {!store ? <div className="loading-state"><LoaderCircle className="spin" size={24} /><p>{error ? 'The extension is not responding.' : 'Getting your local dashboard ready…'}</p>{error && <button className="button" onClick={() => { setDemo(true); setError(''); }}>Preview with sample data</button>}</div> : page === 'websites' ? <Websites store={store} run={run} busy={busy} demo={demo} notify={setToast} /> : page === 'alerts' ? <Alerts store={store} run={run} busy={busy} demo={demo} notify={setToast} /> : <>
-        <div className="summary-grid"><div><Layers3 size={16} /><strong>{accounts.length}</strong><span>saved accounts</span></div><div className={low.length ? 'summary-warning' : ''}><Activity size={16} /><strong>{low.length}</strong><span>running low</span></div><div><Clock3 size={16} /><strong className="reset-stat">{resetTimes.length ? countdown(Math.min(...resetTimes), now) : '—'}</strong><span>next reported reset</span></div></div>
+        <div className="summary-grid"><div><Layers3 size={16} /><strong>{accounts.length}</strong><span>accounts</span></div><div className={low.length ? 'summary-warning' : ''}><Activity size={16} /><strong>{low.length}</strong><span>running low</span></div><div><Clock3 size={16} /><strong className="reset-stat">{resetTimes.length ? countdown(Math.min(...resetTimes), now) : '—'}</strong><span>next reset</span></div></div>
         {store.accounts.length > 0 && <>
           <div className="limit-tools">
             <input type="search" aria-label="Search accounts and limits" placeholder="Find account or limit…" value={query} onChange={event => setQuery(event.target.value)} />
@@ -180,7 +181,7 @@ export function App({ view = 'dashboard' }: { view?: View }) {
           </div>
           <div className="limit-filters"><select aria-label="Filter by website" value={filter} onChange={event => setFilter(event.target.value as ProviderId | 'all')}><option value="all">All websites</option>{PROVIDER_IDS.filter(provider => store.accounts.some(account => account.provider === provider)).map(provider => <option key={provider} value={provider}>{providers[provider].name}</option>)}</select><button className={lowOnly ? 'active' : ''} aria-pressed={lowOnly} onClick={() => setLowOnly(!lowOnly)}><Bell size={12} />Low only</button><span>{quotas.reduce((count, account) => count + account.meters.length, 0)} limits</span></div>
           <div className="compact-accounts" aria-label="Account limits">{quotas.map(account => <article className="compact-account" key={account.id}>
-            <button className="compact-account-heading" aria-label={`Details for ${accountName(account)}`} aria-expanded={expanded === account.id} onClick={() => setExpanded(expanded === account.id ? null : account.id)}><ProviderMark provider={account.provider} /><strong>{accountName(account)}</strong><span>{account.connection === 'active' ? 'Current' : 'Saved'}</span><ChevronDown size={14} /></button>
+            <button className="compact-account-heading" aria-label={`Details for ${accountName(account)}`} aria-expanded={expanded === account.id} onClick={() => setExpanded(expanded === account.id ? null : account.id)}><ProviderMark provider={account.provider} /><strong>{accountName(account)}</strong><span>{account.companionProfile ? (account.connection === 'active' ? 'Companion' : 'Offline') : account.connection === 'active' ? 'Current' : 'Saved'}</span><ChevronDown size={14} /></button>
             <div className="compact-meters">{account.meters.map(meter => {
               const remaining = remainingPercent(meter);
               const fresh = isFresh(account, meter, now, store.settings.refreshMinutes);

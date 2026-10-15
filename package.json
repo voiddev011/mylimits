@@ -11,8 +11,11 @@
     "typecheck": "tsc --noEmit",
     "test": "node --import ./scripts/register-typescript.mjs ./scripts/run-tests.mjs",
     "test:browser": "playwright test",
-    "check": "npm run typecheck && npm test && npm run build",
-    "postinstall": "wxt prepare"
+    "check": "npm run typecheck && npm test && npm run test:companion && npm run build",
+    "postinstall": "wxt prepare",
+    "companion:install": "node companion/install.mjs",
+    "companion:start": "node companion/daemon.mjs",
+    "test:companion": "node companion/companion.test.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
@@ -31,5 +34,7 @@
     "typescript": "^5.9.0",
     "wxt": "^0.20.0"
   },
-  "engines": { "node": ">=24" }
+  "engines": {
+    "node": ">=24"
+  }
 }

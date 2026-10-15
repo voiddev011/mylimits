@@ -13,7 +13,7 @@ jobs:
         with:
           node-version: 24
       - name: Install dependencies
-        run: npm install
+        run: npm ci
       - name: Core tests, type checking and extension build
         run: npm run check
       - name: Install Chromium for browser tests

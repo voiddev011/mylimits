@@ -18,6 +18,7 @@ export interface Account {
   id: string;
   provider: ProviderId;
   kind: 'account' | 'browser';
+  companionProfile?: string;
   alias: string;
   defaultName: string;
   plan: string | null;

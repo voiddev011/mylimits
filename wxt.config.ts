@@ -8,7 +8,7 @@ export default defineConfig({
     name: 'MyLimits',
     description: 'Keep your AI accounts, usage limits, and reset times in one place.',
     permissions: ['storage', 'alarms', 'scripting', 'sidePanel'],
-    optional_permissions: ['notifications'],
+    optional_permissions: ['notifications', 'nativeMessaging'],
     optional_host_permissions: [
       'https://claude.ai/*',
       'https://chatgpt.com/*',

@@ -4,8 +4,9 @@ Your AI usage limits, account nicknames, and reset times in one place.
 
 MyLimits is a local-first Chrome extension built with TypeScript, React, WXT,
 and Manifest V3. It uses existing website sessions after you approve Chrome's
-site access. It does not open login windows, create an extension account, or
-send usage to a MyLimits server.
+site access. An optional **Linux OpenAI companion** uses an explicit official
+sign-in flow and an independent Codex connection. No MyLimits cloud account or
+cloud server is required. See the [companion setup guide](docs/OPENAI-COMPANION.md).
 
 ## Development status
 
@@ -17,7 +18,8 @@ accounts before a release can claim reliable provider support.
 | Website | Implemented source | Important limit |
 | --- | --- | --- |
 | Claude | Authenticated account, workspace, and usage requests; normalized and legacy usage formats | First eligible workspace; some plans do not expose quotas. Prototype, not live-verified. |
-| ChatGPT | Authenticated Work / Codex usage windows, including code-review windows when supplied | These are not ordinary ChatGPT chat message limits. Prototype, not live-verified. |
+| OpenAI companion (Linux) | Official Codex App Server sign-in, isolated profiles, quota polling and native messaging | Work/Codex buckets returned by OpenAI; live logout/renewal/cross-device validation pending. |
+| ChatGPT website | Authenticated Work / Codex usage windows, including code-review windows when supplied | These are not ordinary ChatGPT chat message limits. Prototype, not live-verified. |
 | Gemini | Successful, recognized browser request observations | Local counts only; account quota and cross-device usage are unknown. |
 | Grok | Successful, recognized browser request observations | Local counts only; account quota and cross-device usage are unknown. |
 | Perplexity | Successful, recognized browser request observations | Local counts only; Pro/Research balances are unknown. |
@@ -27,6 +29,9 @@ See [supported providers](docs/SUPPORT.md) for the validation checklist and
 
 ## Features in this prototype
 
+- Optional Linux OpenAI companion: independent profiles, one-minute polling, and
+  a native bridge with credential-free quota snapshots. Live verification pending.
+- Compact limit rows, search, low-only filtering, and sorting by balance or reset.
 - Popup, side panel, and full extension dashboard with light/dark themes.
 - Choose websites once; reuse existing sessions where the provider permits it.
 - Rename individual saved accounts, such as **Claude Work** or **GPT Personal**.
@@ -48,10 +53,11 @@ remembers different verified accounts as you switch those website logins, and
 you can rename each independently. An inactive account retains its dated last
 reading; it is not polled with copied credentials.
 
-This version **does not** keep two Claude and three ChatGPT logins live at once
-or merge account data across separate Chrome profiles. Browser-only activity
-is explicitly not account-scoped. Simultaneous isolated sessions and an optional
-way to combine profile snapshots are later work.
+Website tracking keeps one current session per website. The optional OpenAI
+companion adds isolated connections for up to 20 OpenAI accounts, separately
+from website cookies. Each profile has its own official Codex authorization and
+nickname. This implementation still needs live account verification. Companion
+connections do not add independent Claude/Gemini/Grok/Perplexity authorization.
 
 ## Run locally
 
@@ -83,17 +89,20 @@ npm run zip            # installable Chrome archive under .output/
 
 Browser tests use an isolated temporary Chrome profile and fictional readings.
 They deny real HTTP traffic. Set `CHROMIUM_PATH` if using a specific local
-Chromium executable; otherwise `/usr/bin/chromium` is used if present.
+Chromium executable; otherwise Playwright's managed Chromium is used.
+Install it first with `npx playwright install chromium`.
 
 ## Privacy and permissions
 
 Usage data stays in the local Chrome profile. Account identifiers are salted and
-hashed; authentication values stay in request-local memory. Prompt and response
+hashed for website readers. Website authentication stays in request-local memory;
+companion authorization is managed separately by Codex in protected local storage
+and never sent to the extension. Prompt and response
 bodies are never collected by the activity observer. API keys are not accepted
 by this version. See [PRIVACY.md](PRIVACY.md).
 
 Required permissions are `storage`, `alarms`, `scripting`, and `sidePanel`.
-Site access and `notifications` are optional. Turning a website off removes
+Site access, `notifications`, and companion `nativeMessaging` access are optional. Turning a website off removes
 its site permission. Notification permission is only requested after a click.
 
 ## Next steps
