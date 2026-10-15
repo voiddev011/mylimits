@@ -10,7 +10,7 @@ export function projectAccounts(store: Store): Store {
     const sources = store.connections.filter(c => c.accountId === account.id);
     const readings = store.snapshots.filter(s => s.accountId === account.id);
     if (!readings.length) return account;
-    const live = (s: UsageSnapshot) => sources.some(c => c.id === s.connectionId && c.enabled && ['active','checking'].includes(c.status));
+    const live = (s: UsageSnapshot) => sources.some(c => c.id === s.connectionId && c.workspaceId === s.workspaceId && c.enabled && ['active','checking'].includes(c.status));
     const sorted = [...readings].sort((a,b) => Number(live(b))-Number(live(a)) || b.observedAt-a.observedAt);
     const chosen = sorted[0]!;
     const connection = sources.find(c => c.id === chosen.connectionId);
