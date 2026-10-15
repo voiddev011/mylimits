@@ -121,8 +121,10 @@ test('logout failure keeps profile and credentials so disconnect can be retried'
 });
 test('restart reloads profiles without inventing fresh data; private files are owner-only', async t => {
   const { service, directory } = await fixture(t); const { profile } = await service.add();
-  assert.equal((await stat(path.join(directory, 'profiles.json'))).mode & 0o777, 0o600);
-  assert.equal((await stat(path.join(directory, 'accounts', profile))).mode & 0o777, 0o700);
+  if (process.platform !== 'win32') {
+    assert.equal((await stat(path.join(directory, 'profiles.json'))).mode & 0o777, 0o600);
+    assert.equal((await stat(path.join(directory, 'accounts', profile))).mode & 0o777, 0o700);
+  }
   const restarted = new Companion({ directory }); await restarted.load(); t.after(() => restarted.close());
   assert.equal(restarted.snapshot().profiles[0].status, 'unavailable');
   assert.equal(restarted.snapshot().profiles[0].updatedAt, 0); assert.deepEqual(restarted.snapshot().profiles[0].meters, []);
@@ -169,4 +171,35 @@ test('an interrupted sign-in keeps a visible profile for explicit cleanup', asyn
   assert.equal(service.snapshot().profiles.length, 1);
   assert.equal(service.snapshot().profiles[0].status, 'unavailable');
   assert.equal(JSON.parse(await readFile(path.join(directory, 'profiles.json'))).length, 1);
+});
+test('Windows paths use LocalAppData and a stable per-user named pipe', async () => {
+  const { companionPaths } = await import('./paths.mjs');
+  const first = companionPaths('win32', 'C:\\Users\\Jainam', 'C:\\Users\\Jainam\\AppData\\Local');
+  assert.equal(first.dataDir, 'C:\\Users\\Jainam\\AppData\\Local\\MyLimitsCompanion');
+  assert.ok(first.socketPath.startsWith('\\\\.\\pipe\\mylimits-'));
+  assert.notEqual(first.socketPath, companionPaths('win32', 'C:\\Users\\Other').socketPath);
+  assert.equal(first.socketPath, companionPaths('win32', 'C:\\Users\\Jainam').socketPath);
+});
+test('Windows launchers quote spaces, percent and apostrophes without enabling shell expansion', async () => {
+  const { batchLauncher, psLiteral, taskScript, registryRoots } = await import('./windows.mjs');
+  const batch = batchLauncher('C:\\Program Files\\nodejs\\node.exe', 'C:\\100%\\host.mjs');
+  assert.ok(batch.includes('DisableDelayedExpansion')); assert.ok(batch.includes('100%%'));
+  assert.ok(!batch.includes('%*'));
+  assert.equal(psLiteral("C:\\O'Neil\\node.exe"), "'C:\\O''Neil\\node.exe'");
+  assert.ok(taskScript('node.exe', 'daemon.mjs', 'codex.js', 'C:\\My Limits').includes('-EncodedCommand'));
+  assert.ok(registryRoots.brave.includes('BraveSoftware\\Brave-Browser'));
+});
+test('local bridge authorization rejects missing and incorrect tokens', async t => {
+  const { localToken, authenticated, challenge, answer } = await import('./local-auth.mjs');
+  const directory = await mkdtemp(path.join(tmpdir(), 'mylimits-token-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const token = await localToken(directory, true);
+  assert.equal((await localToken(directory)), token);
+  assert.equal(await localToken(directory, true), token);
+  const hello = challenge(token); const response = answer(hello, token);
+  assert.ok(authenticated(response, token, hello.nonce));
+  assert.equal(authenticated(response, token, challenge(token).nonce), false);
+  assert.throws(() => answer(hello, 'a'.repeat(64)));
+  assert.equal(authenticated({ type: 'status' }, token, hello.nonce), false);
+  assert.ok(!JSON.stringify([hello, response]).includes(token));
 });

@@ -4,7 +4,7 @@ Your AI usage limits, account nicknames, and reset times in one place.
 
 MyLimits is a local-first Chrome extension built with TypeScript, React, WXT,
 and Manifest V3. It uses existing website sessions after you approve Chrome's
-site access. An optional **Linux OpenAI companion** uses an explicit official
+site access. An optional **Windows/Linux OpenAI companion** uses an explicit official
 sign-in flow and an independent Codex connection. No MyLimits cloud account or
 cloud server is required. See the [companion setup guide](docs/OPENAI-COMPANION.md).
 
@@ -18,7 +18,7 @@ accounts before a release can claim reliable provider support.
 | Website | Implemented source | Important limit |
 | --- | --- | --- |
 | Claude | Authenticated account, workspace, and usage requests; normalized and legacy usage formats | First eligible workspace; some plans do not expose quotas. Prototype, not live-verified. |
-| OpenAI companion (Linux) | Official Codex App Server sign-in, isolated profiles, quota polling and native messaging | Work/Codex buckets returned by OpenAI; live logout/renewal/cross-device validation pending. |
+| OpenAI companion (Windows/Linux) | Official Codex App Server sign-in, isolated profiles, quota polling and native messaging | Work/Codex buckets returned by OpenAI; live logout/renewal/cross-device validation pending. |
 | ChatGPT website | Authenticated Work / Codex usage windows, including code-review windows when supplied | These are not ordinary ChatGPT chat message limits. Prototype, not live-verified. |
 | Gemini | Successful, recognized browser request observations | Local counts only; account quota and cross-device usage are unknown. |
 | Grok | Successful, recognized browser request observations | Local counts only; account quota and cross-device usage are unknown. |
@@ -29,7 +29,7 @@ See [supported providers](docs/SUPPORT.md) for the validation checklist and
 
 ## Features in this prototype
 
-- Optional Linux OpenAI companion: independent profiles, one-minute polling, and
+- Optional Windows/Linux OpenAI companion: independent profiles, one-minute polling, and
   a native bridge with credential-free quota snapshots. Live verification pending.
 - Compact limit rows, search, low-only filtering, and sorting by balance or reset.
 - Popup, side panel, and full extension dashboard with light/dark themes.

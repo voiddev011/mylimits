@@ -23,7 +23,7 @@ export function OpenAICompanion({ run, busy, demo, notify }: {
       await check();
     } finally { setWorking(false); }
   }
-  return <article className="website-card companion-card"><div className="website-top"><div><h3>OpenAI companion</h3><span className="small-note">Independent account connection · Linux setup</span></div></div>
+  return <article className="website-card companion-card"><div className="website-top"><div><h3>OpenAI companion</h3><span className="small-note">Independent account connection · Windows / Linux setup</span></div></div>
     <p>Connect through OpenAI once. The companion reads the available Work / Codex limits, including shared usage from other devices. Website logout independence still needs verification on your account.</p>
     <p className="small-note">Install the companion first using the setup guide. It refreshes about once a minute while your computer is awake and online. Other ChatGPT limits may not be available.</p>
     <div className="website-bottom"><span className="small-note">{demo ? 'Sample mode' : status.connected ? 'Companion connected' : status.enabled ? 'Companion unavailable — check installation' : 'Not connected'}</span></div>

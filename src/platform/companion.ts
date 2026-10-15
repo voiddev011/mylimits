@@ -1,5 +1,6 @@
 import { browser } from 'wxt/browser';
 import { z } from 'zod';
+import { nativeRuntime } from '../core/native-runtime';
 import { MeterSchema } from '../core/schema';
 import type { CompanionProfile } from '../core/companion';
 const HOST = 'com.mylimits.openai';
@@ -21,7 +22,9 @@ export async function connectCompanion() {
   if (port) return;
   if (!(await companionStatus()).enabled || !await browser.permissions.contains({ permissions: ['nativeMessaging'] })) return;
   const stamp = ++generation;
-  const connection = browser.runtime.connectNative(HOST); port = connection;
+  const chrome = (globalThis as unknown as { chrome?: { runtime?: typeof browser.runtime } }).chrome;
+  const runtime = nativeRuntime(chrome?.runtime, browser.runtime);
+  const connection = runtime.connectNative(HOST); port = connection;
   connection.onMessage.addListener(raw => {
     if (stamp !== generation) return;
     if (raw?.type === 'snapshot') {
@@ -37,6 +40,7 @@ export async function connectCompanion() {
     else entry.reject(new Error('OpenAI action failed. Finish sign-in or check the companion. If disconnect failed, retry it before removing credentials.'));
   });
   connection.onDisconnect.addListener(() => {
+    void runtime.lastError; // Consume Chrome's diagnostic without exposing host details.
     if (port !== connection) return;
     port = undefined;
     for (const entry of pending.values()) { clearTimeout(entry.timer); entry.reject(unavailable()); }

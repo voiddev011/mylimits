@@ -63,7 +63,9 @@ response containing authentication material is written to project files.
 ## Optional OpenAI companion
 
 Connecting opens OpenAI's official authorization page. Each connection has an
-isolated Codex profile under `~/.local/share/mylimits-companion`. Codex manages
+isolated Codex profile under `~/.local/share/mylimits-companion` on Linux or
+`%LOCALAPPDATA%\MyLimitsCompanion` on Windows. The Windows installer applies
+per-user directory ACLs, and its named pipe requires a local random bridge token. Codex manages
 authorization and renewal, preferring the OS credential store with its `auto`
 setting and otherwise using its local auth file. Directories are owner-only and
 service-created files use umask 0077. File storage is not an encrypted vault.

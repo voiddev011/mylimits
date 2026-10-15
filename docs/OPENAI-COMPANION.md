@@ -1,4 +1,4 @@
-# OpenAI companion (Linux prototype)
+# OpenAI companion (Windows and Linux prototype)
 
 This optional local service connects through the official Codex App Server. It
 reads the quota buckets OpenAI exposes without relying on ChatGPT website cookies.
@@ -7,11 +7,62 @@ but **not yet verified with a real signed-in account**, ordinary website logout,
 other-device usage, or token renewal. These are acceptance tests, not guarantees.
 Ordinary ChatGPT chat limits are not established by the returned Codex buckets.
 
+## Windows setup (Chrome or Brave)
+
+The Windows installer and API fallback are implemented, but Windows Task Scheduler,
+registry registration, native host launch and real OpenAI sign-in still need a live
+Windows test. Cross-platform logic tests run on Linux; that is not Windows certification.
+Use Node.js 24+. Run from a normal PowerShell terminal as your own user, not Administrator.
+
+1. In your cloned project, update and build:
+
+   ```powershell
+   git pull
+   npm ci
+   npm run build
+   npm install -g @openai/codex
+   ```
+
+2. Reload MyLimits in `brave://extensions` (or `chrome://extensions`) and copy its
+   32-character extension ID. Keep the same unpacked extension folder.
+3. Register the companion, replacing the ID:
+
+   ```powershell
+   npm run companion:install -- --extension-id YOUR_EXTENSION_ID --browser brave
+   ```
+
+   Use `--browser chrome` for Chrome. The installer locates npm's `codex.cmd`, then
+   runs its JavaScript CLI using Node directly, avoiding Windows command-shim issues.
+   An absolute `--codex` path can point to `codex.exe` or the Codex `bin/codex.js` file.
+4. The installer registers only your user's browser host and requests a per-user
+   scheduled task named **MyLimitsCompanion**, starting now and on Windows sign-in.
+   If task setup fails, it prints an exact foreground PowerShell command to run.
+5. Reload the extension after approving companion permission if asked. Open
+   Websites → Connect OpenAI (or Retry bridge, then Add OpenAI account).
+
+Windows data lives under `%LOCALAPPDATA%\MyLimitsCompanion`. The installer restricts
+that directory to the current user's SID. Codex profiles, runtime files and the
+bridge secret inherit those permissions. The local bridge uses a per-user named
+pipe plus a random authentication token; the token never enters the extension.
+The task uses your logged-in session, not an elevated or system account. Sleep,
+shutdown, sign-out, or revocation stops updates.
+
+Check task status from PowerShell:
+
+```powershell
+Get-ScheduledTask -TaskName MyLimitsCompanion
+Get-ScheduledTaskInfo -TaskName MyLimitsCompanion
+```
+
+To pause collection, disable and stop that task in Task Scheduler. To uninstall,
+first disconnect accounts in MyLimits, then stop/remove the task and remove the
+`com.mylimits.openai` key from your browser's **HKCU** NativeMessagingHosts registry
+branch. Do not delete credential files as a substitute for disconnecting access.
+
 ## Install on your Linux computer
 
 Use desktop Chrome, Chromium, or Brave on a normal Linux installation. Snap/Flatpak
-browser isolation can prevent native messaging. Windows, macOS and Firefox are
-not supported by this first installer. Node.js 24+ is required.
+browser isolation can prevent native messaging. Windows setup is above. macOS and Firefox are not supported. Node.js 24+ is required.
 
 1. Download the latest MyLimits code and open a terminal in its folder.
 2. Build the extension:
@@ -82,7 +133,8 @@ never guesses that two separately authorized profiles are the same account.
 ## Credentials and local boundaries
 
 Each profile has a separate `CODEX_HOME` under
-`~/.local/share/mylimits-companion/accounts/<profile-id>`. Codex manages authorization
+`~/.local/share/mylimits-companion/accounts/<profile-id>` on Linux, or
+`%LOCALAPPDATA%\MyLimitsCompanion\accounts\<profile-id>` on Windows. Codex manages authorization
 and renewal; its credential-store setting is `auto`, preferring an OS credential
 store when available and otherwise its local auth file. Directories are owner-only,
 files created by the service use umask 0077. Disk files are not an encrypted vault.
@@ -90,7 +142,8 @@ The extension never receives access tokens, refresh tokens, account emails, auth
 files, raw upstream errors, or conversation content. Official sign-in URLs pass
 through only to open the user-approved authorization page.
 
-The Unix socket is owner-only. There is no HTTP listener or MyLimits cloud server.
+On Linux, the Unix socket is owner-only. On Windows, an authenticated named pipe
+and installer-applied per-user directory ACLs protect the bridge. There is no HTTP listener or MyLimits cloud server.
 The Chrome native-host manifest allowlists specific extension IDs. A user or process
 with access to your OS account is within this local trust boundary.
 
@@ -148,7 +201,7 @@ journalctl --user -u mylimits-companion.service -n 30
 - `companion/service.mjs`: isolated account profiles, sign-in, polling, backoff,
   sanitized snapshots, and logout/cancel before removal.
 - `companion/limits.mjs`: normalize only supplied numeric percentages and reset times.
-- `companion/daemon.mjs`: owner-only Unix socket and the browser-independent timer.
+- `companion/daemon.mjs`: authenticated local IPC and the browser-independent timer.
 - `companion/host.mjs` / `protocol.mjs`: Chrome native-message framing and allowlist.
 - `src/platform/companion.ts`: optional permission, bridge, validation and reconnect.
 - `src/core/companion.ts`: merge independent records while retaining names/preferences.
@@ -168,3 +221,8 @@ account updates/nicknames/disconnect, credential exclusion, stale readings,
 message fragmentation, failed logout, retry backoff and the compact viewport.
 They do not authenticate a real OpenAI account or install the systemd service.
 Complete the live acceptance checklist above on your Linux computer.
+
+Windows follow-up validation: added pure tests for Windows directory/pipe naming,
+launcher quoting and mutual bridge authentication, plus browser coverage for a
+missing native API and unit coverage for partial browser namespace fallback. The
+Windows task/registry installer still requires the live Windows acceptance test.

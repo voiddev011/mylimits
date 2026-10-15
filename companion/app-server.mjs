@@ -8,7 +8,8 @@ export class AppServer extends EventEmitter {
   constructor({ executable = 'codex', home, timeout = 30_000, spawnProcess = spawn }) {
     super();
     this.pending = new Map(); this.nextId = 0; this.timeout = timeout;
-    this.child = spawnProcess(executable, ['app-server', '--listen', 'stdio://'], {
+    const script = /\.m?js$/i.test(executable);
+    this.child = spawnProcess(script ? process.execPath : executable, [...(script ? [executable] : []), 'app-server', '--listen', 'stdio://'], {
       env: { ...process.env, PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ''}`, CODEX_HOME: home }, stdio: ['pipe', 'pipe', 'pipe'],
     });
     let buffered = ''; const decoder = new StringDecoder('utf8');

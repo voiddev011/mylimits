@@ -195,3 +195,18 @@ test('native snapshots update independent accounts and disconnect without exposi
   await page.getByRole('button', { name: 'Websites', exact: true }).click();
   expect(await page.locator('.app').evaluate(element => element.getBoundingClientRect().width)).toBe(520);
 });
+
+test('unavailable native API shows reload guidance without a TypeError', async ({ context, worker, extensionId }) => {
+  await worker.evaluate(() => {
+    const original = chrome.permissions.contains.bind(chrome.permissions);
+    chrome.permissions.contains = async options => options.permissions?.includes('nativeMessaging') ? true : original(options);
+    Object.defineProperty(chrome.runtime, 'connectNative', { configurable: true, value: undefined });
+  });
+  const page = await context.newPage();
+  await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
+  await page.getByRole('button', { name: 'Websites', exact: true }).click();
+  await page.evaluate(() => { chrome.permissions.request = async () => true; });
+  await page.getByRole('button', { name: 'Connect OpenAI', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Reload MyLimits');
+  await expect(page.getByRole('alert')).not.toContainText('is not a function');
+});
