@@ -31,6 +31,6 @@ test('a cold companion restart retains the prior dated reading until a new read 
   const store = mergeCompanion(emptyStore('test'), [profile], now);
   const next = mergeCompanion(store, [{ ...profile, status: 'unavailable', updatedAt: 0, meters: [], plan: null }], now + 60000);
   assert.equal(next.accounts[0]!.updatedAt, now);
-  assert.deepEqual(next.accounts[0]!.meters, profile.meters);
+  assert.deepEqual(next.accounts[0]!.meters, store.accounts[0]!.meters);
   assert.equal(next.accounts[0]!.connection, 'unavailable');
 });

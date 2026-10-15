@@ -1,3 +1,4 @@
+import { acceptSnapshot, projectAccounts } from './connections';
 import { type Account, type Meter, type ProviderId, type Store, accountName, alertThresholds, isFresh, remainingPercent } from './model';
 
 export interface Snapshot {
@@ -6,6 +7,8 @@ export interface Snapshot {
   displayName: string;
   plan: string | null;
   meters: Meter[];
+  workspace?: { identity: string; name: string };
+  workspaces?: { identity: string; name: string }[];
 }
 
 export async function accountId(provider: ProviderId, identity: string, salt: string): Promise<string> {
@@ -14,12 +17,12 @@ export async function accountId(provider: ProviderId, identity: string, salt: st
   return `${provider}:${Array.from(new Uint8Array(digest)).map(byte => byte.toString(16).padStart(2, '0')).join('')}`;
 }
 
-export function applySnapshot(store: Store, provider: ProviderId, id: string, snapshot: Omit<Snapshot, 'identity'>, now: number): Store {
+export function applySnapshot(store: Store, provider: ProviderId, id: string, snapshot: Omit<Snapshot, 'identity'>, now: number, options: { connectionId?: string; workspaceId?: string | null; observedAt?: number; generation?: number } = {}): Store {
   const previous = store.accounts.find(account => account.id === id);
   const localMeters = (previous?.meters ?? []).filter(meter => meter.evidence === 'observed');
   const incomingIds = new Set(snapshot.meters.map(meter => meter.id));
   const account: Account = {
-    id, provider, kind: snapshot.kind,
+    ...previous, id, provider, kind: snapshot.kind,
     alias: previous?.alias ?? '',
     defaultName: snapshot.displayName,
     plan: snapshot.plan,
@@ -30,29 +33,28 @@ export function applySnapshot(store: Store, provider: ProviderId, id: string, sn
     alertRemaining: previous?.alertRemaining ?? null,
     alertsMuted: previous?.alertsMuted ?? false,
   };
-  return {
-    ...store,
-    accounts: [...store.accounts.filter(item => item.id !== id).map(item => (
-      item.provider === provider && !item.companionProfile ? { ...item, connection: 'inactive' as const } : item
-    )), account],
-    providers: { ...store.providers, [provider]: {
-      enabled: true, status: 'active', activeAccountId: id, checkedAt: now,
-      message: snapshot.meters.some(meter => meter.evidence === 'reported') ? null : 'Only activity observed in this browser is available.',
-      failures: 0, nextRetryAt: null,
-    } },
-  };
+  const connectionId = options.connectionId ?? `website:${provider}`;
+  const connection = store.connections.find(c => c.id === connectionId);
+  if (!connection || (options.generation !== undefined && connection.generation !== options.generation)) return store;
+  const base: Store = { ...store, accounts: [...store.accounts.filter(a => a.id !== id), account],
+    connections: store.connections.map(c => c.id === connectionId ? { ...c, enabled: true } : c),
+    providers: connection.kind === 'website' ? { ...store.providers, [provider]: { enabled:true,status:'active',activeAccountId:id,checkedAt:now,
+      message:snapshot.meters.some(m => m.evidence === 'reported') ? null : 'Only activity observed in this browser is available.',failures:0,nextRetryAt:null } } : store.providers };
+  const observedAt = options.observedAt ?? now;
+  const result = acceptSnapshot(base, { schemaVersion:2,snapshotId:`${connectionId}:${id}:${observedAt}`,providerId:provider,accountId:id,connectionId,
+    workspaceId:options.workspaceId ?? null,observedAt,receivedAt:now,connectorVersion:'phase1-v2',meters:account.meters.map(m=>({...m,observedAt:m.evidence==='observed'?(m.observedAt??previous?.updatedAt??observedAt):observedAt,connectionId})) }, connection.generation, now);
+  return result.accepted ? result.store : store;
+
 }
 
 export function markProvider(store: Store, provider: ProviderId, status: Exclude<Store['providers'][ProviderId]['status'], 'checking' | 'active'>, message: string, now: number): Store {
-  return {
-    ...store,
+  const next: Store = { ...store,
+    connections:store.connections.map(c=>c.id===`website:${provider}`?{...c,status:status==='signed-out'?'needs-auth':status==='waiting-for-tab'?'needs-tab':status==='disabled'?'disabled':status==='inactive'?'disabled':status,enabled:status==='disabled'?false:c.enabled,message,lastAttemptAt:now}:c),
     accounts: store.accounts.map(account => account.provider === provider && !account.companionProfile && account.connection === 'active'
-      ? { ...account, connection: status === 'disabled' ? 'inactive' as const : status }
-      : account),
-    providers: { ...store.providers, [provider]: {
-      ...store.providers[provider], status, activeAccountId: null, checkedAt: now, message,
-    } },
-  };
+      ? { ...account, connection: status === 'disabled' ? 'inactive' as const : status } : account),
+    providers: { ...store.providers, [provider]: { ...store.providers[provider], status, activeAccountId:null,checkedAt:now,message } } };
+  return projectAccounts(next);
+
 }
 
 export function recordObservation(store: Store, provider: ProviderId, id: string, eventId: string, now: number): Store {

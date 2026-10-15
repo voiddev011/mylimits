@@ -7,7 +7,7 @@ import { AdapterError, readProvider } from '../providers/adapters';
 import { readStore, publicStore, updateStore } from './repository';
 import { readHistory, removeHistory, saveHistory } from './history';
 import { CommandSchema, type Command } from './messages';
-import { mergeCompanion } from '../core/companion';
+import { mergeCompanion, markCompanionUnavailable } from '../core/companion';
 import { addCompanionAccount, companionRequest, companionStatus, enableCompanion, listenCompanion, refreshCompanion } from './companion';
 
 const running = new Map<ProviderId, Promise<void>>();
@@ -62,12 +62,17 @@ export async function refreshProvider(provider: ProviderId, manual = false): Pro
     }
     await updateStore(store => ({ store: { ...store, providers: { ...store.providers, [provider]: { ...store.providers[provider], status: 'checking' } } }, value: undefined }));
     try {
-      const snapshot = await readProvider(provider);
+      const connection = before.connections.find(c => c.id === `website:${provider}`);
+      const selected = before.workspaces.find(w => w.id === connection?.workspaceId);
+      const snapshot = await readProvider(provider, { workspaceRemoteId: selected?.remoteId });
+      const choices = await Promise.all((snapshot.workspaces ?? []).map(async w => ({ id: await accountId(provider, `workspace:${w.identity}`, before.installSalt), provider, remoteId: w.identity, name: w.name })));
+      const selectedId = choices.find(w => w.remoteId === snapshot.workspace?.identity)?.id ?? null;
       const meters = snapshot.meters.map(meter => MeterSchema.parse(meter));
       const id = await accountId(provider, snapshot.identity, before.installSalt);
       const accepted = await updateStore(store => {
         if (!store.providers[provider].enabled || generation[provider] !== stamp) return { store, value: false };
-        const next = applySnapshot(store, provider, id, { ...snapshot, meters }, Date.now());
+        const enriched = { ...store, workspaces: [...store.workspaces.filter(w => !choices.some(n => n.id === w.id)), ...choices], connections: store.connections.map(c => c.id === `website:${provider}` ? { ...c, workspaceIds: choices.map(w=>w.id) } : c) };
+        const next = applySnapshot(enriched, provider, id, { ...snapshot, meters }, Date.now(), { workspaceId: selectedId });
         // Persist only the normalised fields. Transient identity and auth never reach storage.
         AccountSchema.parse(next.accounts.find(account => account.id === id));
         return { store: next, value: true };
@@ -230,7 +235,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
 export function startController(): void {
   listenCompanion(async profiles => {
     const changes = await updateStore(store => {
-      const next = profiles === null ? { ...store, accounts: store.accounts.map(account => account.companionProfile ? { ...account, connection: 'unavailable' as const } : account) } : mergeCompanion(store, profiles, Date.now());
+      const next = profiles === null ? markCompanionUnavailable(store) : mergeCompanion(store, profiles, Date.now());
       const readings = next.accounts.filter(account => account.companionProfile && account.connection === 'active' && account.updatedAt > (store.accounts.find(prior => prior.id === account.id)?.updatedAt ?? 0));
       for (const account of next.accounts.filter(account => account.companionProfile)) AccountSchema.parse(account);
       const removed = store.accounts.filter(account => account.companionProfile && !next.accounts.some(current => current.id === account.id)).map(account => account.id);

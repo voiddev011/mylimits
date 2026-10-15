@@ -2,13 +2,10 @@ import { browser } from 'wxt/browser';
 import type { ProviderId } from '../core/model';
 import type { Snapshot } from '../core/engine';
 import { providers } from './catalog';
-import { object, parseClaude, parseChatGPT } from './parsers';
 
-export class AdapterError extends Error {
-  constructor(public readonly status: 'signed-out' | 'waiting-for-tab' | 'unavailable' | 'error', message: string) {
-    super(message);
-  }
-}
+import { AdapterError, retryTime } from './errors';
+import { readAccountProvider, type ReaderOptions } from './reader';
+export { AdapterError } from './errors';
 
 async function pageJSON(provider: ProviderId, path: string, headers: Record<string, string>): Promise<{ status: number; body: unknown }> {
   const tabs = await browser.tabs.query({ url: providers[provider].origin });
@@ -34,18 +31,21 @@ async function pageJSON(provider: ProviderId, path: string, headers: Record<stri
   return result;
 }
 
-async function readJSON(provider: ProviderId, path: string, headers: Record<string, string> = {}): Promise<unknown> {
+async function readJSON(provider: ProviderId, path: string, headers: Record<string, string> = {}, signal?: AbortSignal): Promise<unknown> {
+  if (signal?.aborted) throw new AdapterError('error', 'Refresh was cancelled.', null, 'cancelled');
   const controller = new AbortController();
+  const abort = () => controller.abort(); signal?.addEventListener('abort', abort, { once: true });
   const timer = setTimeout(() => controller.abort(), 12_000);
-  let result: { status: number; body: unknown };
+  let result: { status: number; body: unknown; retryAt?: number | null };
   try {
     const response = await fetch(new URL(path, providers[provider].home), {
       credentials: 'include', headers, signal: controller.signal, redirect: 'error',
     });
-    result = { status: response.status, body: response.ok ? await response.json() : null };
+    result = { status: response.status, body: response.ok ? await response.json() : null, retryAt: retryTime(response.headers.get('retry-after')) };
   } catch {
     result = { status: 0, body: null };
-  } finally { clearTimeout(timer); }
+  } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
+  if (signal?.aborted) throw new AdapterError('error', 'Refresh was cancelled.', null, 'cancelled');
   // Some sites only expose session data from an already-open page context.
   // This fallback never creates a tab or opens a login window.
   if ([0, 401, 403].includes(result.status)) {
@@ -58,32 +58,11 @@ async function readJSON(provider: ProviderId, path: string, headers: Record<stri
   }
   if (result.status === 401) throw new AdapterError('signed-out', `Sign in on the ${providers[provider].name} website, then refresh.`);
   if (result.status === 403) throw new AdapterError('unavailable', 'The website declined this usage request.');
-  if (result.status === 429) throw new AdapterError('error', 'The website asked us to slow down. Automatic refresh will back off.');
+  if (result.status === 429) throw new AdapterError('error', 'The website asked us to slow down. Automatic refresh will back off.', result.retryAt ?? null, 'rate-limit');
   if (result.status < 200 || result.status >= 300) throw new AdapterError('unavailable', 'This usage interface is currently unavailable.');
   return result.body;
 }
 
-export async function readProvider(provider: ProviderId): Promise<Snapshot> {
-  if (provider === 'claude') {
-    const account = await readJSON(provider, '/api/account');
-    const organizations = await readJSON(provider, '/api/organizations');
-    const list = Array.isArray(organizations) ? organizations.map(object) : [];
-    // Initial version follows the first eligible workspace; see support matrix.
-    const organization = list.find(item => Array.isArray(item.capabilities) && item.capabilities.includes('chat')) ?? list[0];
-    if (!organization || typeof organization.uuid !== 'string') throw new AdapterError('unavailable', 'No Claude workspace could be verified.');
-    const usage = await readJSON(provider, `/api/organizations/${encodeURIComponent(organization.uuid)}/usage`);
-    try { return parseClaude(account, organization, usage); }
-    catch { throw new AdapterError('unavailable', 'Claude account identity or usage format could not be verified.'); }
-  }
-  if (provider === 'chatgpt') {
-    const session = object(await readJSON(provider, '/api/auth/session'));
-    if (typeof session.accessToken !== 'string' || !session.accessToken) throw new AdapterError('signed-out', 'Sign in on ChatGPT, then refresh.');
-    // Session token stays in this request's memory and never enters storage or UI messages.
-    const usage = await readJSON(provider, '/backend-api/wham/usage', { Authorization: `Bearer ${session.accessToken}` });
-    try { return parseChatGPT(session, usage); }
-    catch { throw new AdapterError('unavailable', 'ChatGPT account identity or usage format could not be verified.'); }
-  }
-  return {
-    identity: 'local-browser-activity', kind: 'browser', displayName: `${providers[provider].name} · This browser`, plan: null, meters: [],
-  };
+export async function readProvider(provider: ProviderId, options: ReaderOptions = {}, signal?: AbortSignal): Promise<Snapshot> {
+  return readAccountProvider(provider, options, (path, headers) => readJSON(provider, path, headers, signal));
 }

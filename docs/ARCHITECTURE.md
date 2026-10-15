@@ -89,3 +89,18 @@ Verify actual identity and quota scope before enabling an account reader.
 Prefer provider-reported usage, then narrowly targeted visible quota metadata.
 If neither exists, expose an honest observed count with unknown remaining
 quota. Ship connector fixes inside extension releases, not remote executable code.
+
+## Phase 1 V2 migration
+
+V2 writes `mylimits:state:v2` and commits `mylimits:active-schema = 2` only after
+validated state and the IndexedDB version-2 upgrade succeed. V1 and a separate
+`mylimits:backup:v1` remain intact. The `mylimits:migration:v2` journal makes
+interrupted state/history steps repeatable; browser storage and IndexedDB are
+not treated as one transaction. Invalid/unknown saved versions produce a recovery
+error rather than a reset. Reverting to V1 uses the preserved backup and cannot
+read later V2-only preference changes automatically.
+
+Connection snapshots are authoritative for source readings. Account meters and
+status are a materialized projection for common views and compatibility with
+existing core consumers, rebuilt in one reconciler. Raw workspace routing IDs
+remain worker-private; public state uses explicit field allowlists.

@@ -1,16 +1,16 @@
 import { browser } from 'wxt/browser';
-import { emptyStore, type Store } from '../core/model';
+import { type Store } from '../core/model';
 import { StoreSchema } from '../core/schema';
+import { toPublicState } from '../core/public';
 
-const KEY = 'mylimits:state:v1';
+import { initializeV2, STATE_V2 } from '../core/migrations';
+import { ensureHistory } from './history';
+const KEY = STATE_V2;
 let queue: Promise<unknown> = Promise.resolve();
 let initialisation: Promise<void> | undefined;
 
 export async function readStore(): Promise<Store> {
-  initialisation ??= (async () => {
-    const saved = (await browser.storage.local.get(KEY))[KEY];
-    if (saved === undefined) await browser.storage.local.set({ [KEY]: emptyStore(crypto.randomUUID()) });
-  })();
+  initialisation ??= initializeV2(browser.storage.local, ensureHistory, () => crypto.randomUUID()).catch(error => { initialisation = undefined; throw new Error(error instanceof Error ? `Saved data needs recovery: ${error.message}` : 'Saved data needs recovery.'); });
   await initialisation;
   const saved = (await browser.storage.local.get(KEY))[KEY];
   if (saved !== undefined) {
@@ -31,7 +31,4 @@ export function updateStore<T>(mutate: (store: Store) => Promise<{ store: Store;
   return task;
 }
 
-export async function publicStore(): Promise<Omit<Store, 'installSalt' | 'alertLedger' | 'observationLedger'>> {
-  const { installSalt: _salt, alertLedger: _alerts, observationLedger: _observations, ...publicData } = await readStore();
-  return publicData;
-}
+export async function publicStore() { return toPublicState(await readStore()); }
