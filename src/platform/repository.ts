@@ -1,6 +1,7 @@
 import { browser } from 'wxt/browser';
 import { emptyStore, type Store } from '../core/model';
 import { StoreSchema } from '../core/schema';
+import { toPublicState } from '../core/public';
 
 const KEY = 'mylimits:state:v1';
 let queue: Promise<unknown> = Promise.resolve();
@@ -31,7 +32,4 @@ export function updateStore<T>(mutate: (store: Store) => Promise<{ store: Store;
   return task;
 }
 
-export async function publicStore(): Promise<Omit<Store, 'installSalt' | 'alertLedger' | 'observationLedger'>> {
-  const { installSalt: _salt, alertLedger: _alerts, observationLedger: _observations, ...publicData } = await readStore();
-  return publicData;
-}
+export async function publicStore() { return toPublicState(await readStore()); }

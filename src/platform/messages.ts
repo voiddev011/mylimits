@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { browser } from 'wxt/browser';
-import type { Store } from '../core/model';
+import type { PublicState } from '../core/public';
 import { ProviderSchema, SettingsSchema } from '../core/schema';
 import type { HistoryPoint } from './history';
 
@@ -21,7 +21,7 @@ export const CommandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('observation'), provider: ProviderSchema, eventId: z.string().uuid() }),
 ]);
 export type Command = z.infer<typeof CommandSchema>;
-export type PublicStore = Omit<Store, 'installSalt' | 'alertLedger' | 'observationLedger'>;
+export type PublicStore = PublicState;
 export interface Response<T = unknown> { ok: boolean; data?: T; error?: string; }
 
 export async function command<T = PublicStore>(message: Command): Promise<T> {
