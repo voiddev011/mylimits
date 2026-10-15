@@ -2,7 +2,8 @@
 
 **Historical initial-prototype record.** Entries below describe the original
 bootstrap environment and are not current V2 verification results. See
-[implementation status](IMPLEMENTATION-STATUS.md) for the active execution record.
+[implementation status](IMPLEMENTATION-STATUS.md) and the
+[Phase 1 handoff](PHASE-1-HANDOFF.md) for current execution and package evidence.
 
 This file records what has actually been checked in the development environment.
 

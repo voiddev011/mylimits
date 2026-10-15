@@ -4,6 +4,12 @@ Checked: 15 October 2026. Evidence is code/documentation plus fictional fixtures
 no real signed-in provider account is available in this environment. A successful
 fixture test never establishes live quota access or survival of website logout.
 
+Implemented build: **2.0.0 Phase 1 preview**, branch `v2/phase-1`.
+Evidence: production Chromium fixtures, pure domain/parser tests and native
+service fixtures. The [handoff](PHASE-1-HANDOFF.md) lists exact commands/results.
+Runtime connection kinds remain independent; merely having a `cloud` type does
+not make cloud collection available.
+
 | Provider / source | Quota scope | Tab requirement | Account-wide | Website logout / renewal | Multiple live accounts | Hosted |
 | --- | --- | --- | --- | --- | --- | --- |
 | Claude website | Reported subscription/workspace windows where returned | Background first; existing permitted tab fallback | Unverified live; intended provider account/workspace reading | Session-bound; logout independence unsupported by this connection | One current website session; remembered accounts retained | Unverified; not implemented |
@@ -31,3 +37,25 @@ fixture test never establishes live quota access or survival of website logout.
 
 Phase 1 retains the current source scope. Additional providers, new independent
 grants and hosted collection belong to Phase 2, which has not started.
+
+## Capability declarations
+
+Values below describe this connection method, not all possible provider tools.
+`unverified` means no qualifying live evidence here; it must not be advertised
+as supported. Checked **15 October 2026**; evidence **code + fixture** unless
+the linked provider documentation is explicitly cited above.
+
+| Connection kind / source | Tab-independent quota | Account-wide quota | Independent authorization | Renewal / website logout independence | Hosted deployment |
+| --- | --- | --- | --- | --- | --- |
+| Website / Claude | unverified | unverified | unsupported (session-bound implementation) | unsupported (depends on browser session) | unsupported in Phase 1 |
+| Website / ChatGPT Work-Codex | unverified | unverified | unsupported (session-bound implementation) | unsupported (depends on browser session) | unsupported in Phase 1 |
+| Companion / OpenAI | unverified live; fixture transport needs no tab | unverified | unverified live; isolated official sign-in path implemented | unverified | unverified, not implemented |
+| Website / Gemini-Grok-Perplexity observer | unsupported (no quota reader) | unsupported | unsupported | unsupported | unsupported in Phase 1 |
+
+Claude workspace selection now uses validated membership choices; the legacy
+first-eligible default is used only when no explicit workspace is selected.
+Source generations, independent remembered accounts, denied access and cold
+native restart are fixture-tested. Ordinary logout, native revocation, global
+logout, other-device usage and actual expiry/renewal remain separate pending
+checks for every provider/source. No support level changed merely because the
+interface or schema was upgraded.
