@@ -7,7 +7,7 @@ credential upload has been performed.
 
 - Requested phase: Phase 1 (authorized by the user).
 - Current work package: P1-10 — in_progress.
-- Next action: P1-10 — finalize integrated checks, documentation, ZIP and publication.
+- Next action: P1-10 — publish final documentation and verify the branch/package handoff.
 - Working branch/commit: `v2/phase-1`; see checkpoint history and Git commits.
 - Authoritative scope: [master plan](V2-IMPLEMENTATION-PLAN.md),
   [Phase 1](PHASE-1.md), [Phase 2](PHASE-2.md).
@@ -162,3 +162,9 @@ Next: P1-10 — run integrated checks, package and prepare the Phase 1 handoff.
 State: **in_progress**. Initial integrated gate passed: TypeScript, 62 core tests, 16 companion tests and production build; all 14 browser fixtures passed. Final inspection found two refresh edge cases: a manual/startup retry could bypass persisted backoff and page-context fallback dropped Retry-After. Hardened these and explicit offline reporting; added controller/history offline and shared-surface keyboard/layout checks. Final gate will be repeated after these code changes. Changed files: src/core/scheduler.ts and its test, src/providers/adapters.ts, tests/browser/extension.spec.ts, package manifests and wxt.config.ts; release documentation in progress.
 
 Next: P1-10 — finalize integrated checks, documentation, ZIP and publication.
+
+## P1-10 checkpoint — 15 October 2026
+
+State: **in_progress**. Final integration passed: npm run check (TypeScript, 62 core tests, 16 companion tests, production build) and 15/15 production browser fixtures. npm run zip passed. Package inspection caught and fixed WXT display-version naming: explicit manifest version 2.0.0 and package-version ZIP template now match installation docs. Follow-up typecheck passed. Archive: .output/mylimits-2.0.0-chrome.zip, 175641 bytes, SHA-256 af171f5062c27578296863c79f3cafc618fa33a14c83fa0d6814d6907bc1de94; manifest/entrypoints/permission allowlist/CRC verified. Changed files: wxt.config.ts, package manifests, scheduler and transport hardening, browser regression suite; final release docs pending publication. Live provider, other-device, logout and actual Windows browser/native checks remain pending.
+
+Next: P1-10 — publish final documentation and verify the branch/package handoff.
