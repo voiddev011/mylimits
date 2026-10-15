@@ -2,13 +2,19 @@ export interface HistoryPoint { accountId: string; time: number; meters: { id: s
 
 function database(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('mylimits-history', 1);
+    const request = indexedDB.open('mylimits-history', 2);
     request.onupgradeneeded = () => {
-      const store = request.result.createObjectStore('readings', { keyPath: 'id', autoIncrement: true });
-      store.createIndex('account', 'accountId');
-      store.createIndex('time', 'time');
+      const db = request.result;
+      const store = db.objectStoreNames.contains('readings') ? request.transaction!.objectStore('readings') : db.createObjectStore('readings', { keyPath: 'id', autoIncrement: true });
+      if (!store.indexNames.contains('account')) store.createIndex('account', 'accountId');
+      if (!store.indexNames.contains('time')) store.createIndex('time', 'time');
+      if (!store.indexNames.contains('snapshotKey')) store.createIndex('snapshotKey', 'snapshotKey', { unique: true });
+      if (!store.indexNames.contains('account-time')) store.createIndex('account-time', ['accountId', 'time']);
+      const cursor = store.openCursor();
+      cursor.onsuccess = () => { const row = cursor.result; if (row) { if (!row.value.schemaVersion) row.update({ ...row.value, schemaVersion: 2, observedAt: row.value.time, receivedAt: row.value.time, connectionId: 'legacy', legacy: true }); row.continue(); } };
     };
-    request.onsuccess = () => resolve(request.result);
+    request.onblocked = () => reject(new Error('Close other MyLimits tabs and retry the history upgrade.'));
+    request.onsuccess = () => { request.result.onversionchange = () => request.result.close(); resolve(request.result); };
     request.onerror = () => reject(new Error('Local history could not be opened.'));
   });
 }
@@ -52,3 +58,5 @@ export async function removeHistory(accountId: string): Promise<void> {
   });
   db.close();
 }
+
+export async function ensureHistory(): Promise<void> { const db = await database(); db.close(); }

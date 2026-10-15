@@ -6,8 +6,8 @@ credential upload has been performed.
 ## Active checkpoint
 
 - Requested phase: Phase 1 (authorized by the user).
-- Current work package: P1-02 — verified.
-- Next action: P1-03 — implement resumable V1-to-V2 migration.
+- Current work package: P1-03 — verified.
+- Next action: P1-04 — adapt existing readers and native snapshots to V2 reconciliation.
 - Working branch/commit: `v2/phase-1`; see checkpoint history and Git commits.
 - Authoritative scope: [master plan](V2-IMPLEMENTATION-PLAN.md),
   [Phase 1](PHASE-1.md), [Phase 2](PHASE-2.md).
@@ -25,7 +25,7 @@ implemented independent work while leaving that specific check pending.
 | --- | ---: | --- | --- |
 | P1-01 | 8 | verified | See checkpoint below.
 | P1-02 | 12 | verified | See checkpoint below.
-| P1-03 | 10 | not_started | |
+| P1-03 | 10 | verified | See checkpoint below.
 | P1-04 | 10 | not_started | |
 | P1-05 | 10 | not_started | |
 | P1-06 | 10 | not_started | |
@@ -108,3 +108,9 @@ Next: P1-02 — implement V2 domain and public contracts.
 State: **verified**. Added explicit connection/workspace/snapshot contracts, validated V2 schemas, generation fencing, account read-model projection and allowlisted public state. Added four domain regression tests and retained the 35 existing tests. Type checking and all 39 core tests pass. Account meters/status remain a materialized read projection inside the same aggregate for existing UI/parser compatibility; connection snapshots are authoritative for source reconciliation, not a second independent store. Baseline browser fixtures passed 10/10 with approved process permissions.
 
 Next: P1-03 — implement resumable V1-to-V2 migration.
+
+## P1-03 checkpoint — 15 October 2026
+
+State: **verified**. Added strict legacy parsing, a V1 backup, V2 state/pointer keys and resumable migration journal. IndexedDB upgrades preserve legacy readings and add idempotency/pagination indexes. Added crash-after-each-write, retry, history failure, malformed/future version and preservation tests. Type checking and 43 core tests pass. Actual browser IndexedDB migration coverage will run at the integration gate.
+
+Next: P1-04 — adapt existing readers and native snapshots to V2 reconciliation.
