@@ -205,7 +205,15 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
       break;
     case 'companion-add': await addCompanionAccount(); break;
     case 'companion-remove': await companionRequest('remove', command.profile); await refreshCompanion(); break;
-    case 'refresh': command.provider ? await refreshProvider(command.provider, true) : await refreshAll(true); break;
+    case 'refresh': {
+      const source = command.connectionId ? (await readStore()).connections.find(c => c.id === command.connectionId) : undefined;
+      if(command.connectionId && !source) throw new Error('This connection is no longer available.');
+      if(source?.kind === 'companion') { await companionRequest('refresh', source.profileId); await refreshCompanion(); }
+      else if(source) await refreshProvider(source.provider, true);
+      else if(command.provider) await refreshProvider(command.provider, true);
+      else await refreshAll(true);
+      break;
+    }
     case 'enable': await setProvider(command.provider, command.enabled); break;
     case 'rename':
       await updateStore(store => ({ store: { ...store, accounts: store.accounts.map(account => account.id === command.accountId ? { ...account, alias: command.alias } : account) }, value: undefined }));

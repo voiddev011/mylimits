@@ -15,7 +15,7 @@ export const CommandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('companion-enable'), enabled: z.boolean() }),
   z.object({ type: z.literal('companion-add') }),
   z.object({ type: z.literal('companion-remove'), profile: z.string().uuid() }),
-  z.object({ type: z.literal('refresh'), provider: ProviderSchema.optional() }),
+  z.object({ type: z.literal('refresh'), provider: ProviderSchema.optional(), connectionId: z.string().min(1).max(240).optional() }),
   z.object({ type: z.literal('enable'), provider: ProviderSchema, enabled: z.boolean() }),
   z.object({ type: z.literal('rename'), accountId: z.string().max(180), alias: z.string().trim().max(60) }),
   z.object({ type: z.literal('account-settings'), accountId: z.string().max(180), alertRemaining: z.number().int().min(1).max(95).nullable(), alertsMuted: z.boolean() }),

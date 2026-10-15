@@ -1,206 +1,93 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { browser } from 'wxt/browser';
-import { Activity, ArrowRight, Bell, BellOff, Check, ChevronDown, CircleHelp, Clock3, ExternalLink, Gauge, Layers3, LoaderCircle, Pencil, RefreshCw, Settings2, ShieldCheck, Trash2, X } from 'lucide-react';
-import { accountName, alertThresholds, isFresh, remainingPercent, PROVIDER_IDS, type Account, type Meter, type ProviderId, type Settings } from '../core/model';
+import { ArrowDown, ArrowUp, Bell, Check, ChevronDown, ExternalLink, Gauge, History, LayoutDashboard, Pin, Plus, RefreshCw, Search, Settings as SettingsIcon, ShieldCheck, SlidersHorizontal, X } from 'lucide-react';
+import { accountName, accountStatus, isFresh, remainingPercent, type Account, type Meter, type ProviderId, type Settings } from '../core/model';
+import { PROVIDER_IDS } from '../core/model';
 import { providers } from '../providers/catalog';
-import { command, history, type Command, type PublicStore } from '../platform/messages';
-import type { HistoryPoint } from '../platform/history';
-import { demoState } from './demo';
-import { age, countdown } from './format';
-import { OpenAICompanion } from './OpenAICompanion';
+import { command, type Command, type PublicStore } from '../platform/messages';
+import { history, type HistoryPoint } from './history-view';
 import { selectAccounts, type LimitSort } from './overview';
+import { demoState } from './demo';
+import { countdown, age } from './format';
+import { OpenAICompanion } from './OpenAICompanion';
 import './styles.css';
-
-type Page = 'overview' | 'websites' | 'alerts';
-type View = 'popup' | 'sidepanel' | 'dashboard';
-type Run = (action: Command) => Promise<boolean>;
-
-function ProviderMark({ provider }: { provider: ProviderId }) {
-  const letters: Record<ProviderId, string> = { claude: 'C', chatgpt: 'G', gemini: '✦', grok: 'X', perplexity: 'P' };
-  return <span className="provider-mark" style={{ '--provider-color': providers[provider].color } as React.CSSProperties} aria-hidden="true">{letters[provider]}</span>;
+type Page='overview'|'accounts'|'history'|'settings';
+type Run=(action:Command)=>Promise<boolean>;
+function Mark({provider}:{provider:ProviderId}){return <span className="provider-mark" style={{'--provider':providers[provider].color} as React.CSSProperties}>{provider==='chatgpt'?'G':providers[provider].name[0]}</span>}
+function Reading({account,meter,settings,now}:{account:Account;meter:Meter;settings:Settings;now:number}){
+ const remaining=remainingPercent(meter);const fresh=isFresh(account,meter,now,settings.refreshMinutes)&&meter.evidence==='reported';
+ const percent=settings.displayMode==='used'&&remaining!==null?100-remaining:remaining;
+ const low=fresh&&remaining!==null&&remaining<=(account.alertRemaining??settings.warningRemaining);
+ return <div className={`meter-chip ${!fresh?'meter-chip--dated':''} ${low?'meter-chip--low':''}`} title={`${meter.label}. ${meter.source}. ${fresh?'Current reading':`Last reading ${age(meter.observedAt??account.updatedAt,now)}`}`}>
+  <div className="meter-top"><span>{meter.label.replace('Work / Codex · ','').replace(' · all models','')}</span><strong>{meter.evidence==='observed'?`${meter.used??0} observed`:percent===null?'Unknown':`${Math.round(percent)}%`}</strong></div>
+  {remaining!==null&&meter.evidence==='reported'?<div className="meter-track"><span style={{width:`${Math.max(0,Math.min(100,percent??0))}%`}}/></div>:<div className="meter-track meter-track--unknown"/>}
+  <small>{meter.evidence==='observed'?'This browser only':remaining===null?'Quota not reported':`${fresh?'':'Last · '}${countdown(meter.resetsAt,now)}`}</small>
+ </div>
 }
-
-function MeterView({ meter, account, settings, now }: { meter: Meter; account: Account; settings: Settings; now: number }) {
-  const remaining = remainingPercent(meter);
-  const fresh = isFresh(account, meter, now, settings.refreshMinutes);
-  const { warning, critical } = alertThresholds(account, settings);
-  const level = !fresh ? 'stale' : remaining !== null && remaining <= critical ? 'critical' : remaining !== null && remaining <= warning ? 'warning' : 'healthy';
-  return <div className={`meter meter--${level}`}>
-    <div className="meter-heading"><span>{meter.label}</span><span className={`evidence evidence--${meter.evidence}`}>{meter.evidence === 'reported' ? 'Reported' : 'Observed'}</span></div>
-    {remaining !== null ? <>
-      <div className="meter-value"><strong>{Math.round(remaining)}<span>%</span></strong><span>{fresh ? 'left' : 'left at last reading'}</span></div>
-      <div className="meter-track" role="progressbar" aria-label={`${meter.label}, percent remaining${fresh ? '' : ' at last reading'}`} aria-valuenow={Math.round(remaining)} aria-valuemin={0} aria-valuemax={100}><div style={{ width: `${remaining}%` }} /></div>
-    </> : <div className="observed-value"><strong>{meter.resetsAt !== null && meter.resetsAt <= now ? 0 : meter.used ?? '—'}</strong><span>{meter.unit} observed</span></div>}
-    <div className="meter-footer"><Clock3 size={12} /><span>{meter.resetsAt !== null && meter.resetsAt > now ? `Resets in ${countdown(meter.resetsAt, now)}` : countdown(meter.resetsAt, now)}</span></div>
-    {meter.evidence === 'observed' && <p className="small-note">This browser only. Remaining account quota is unknown.</p>}
-  </div>;
+function AccountDetails({account,store,run,busy,now,connect}:{account:Account;store:PublicStore;run:Run;busy:boolean;now:number;connect:(p:ProviderId,on:boolean)=>Promise<void>}){
+ const [editing,setEditing]=useState(false);const [alias,setAlias]=useState(account.alias);const [warning,setWarning]=useState(String(account.alertRemaining??''));const [confirm,setConfirm]=useState(false);
+ const connections=store.connections.filter(c=>c.accountId===account.id);
+ async function rename(e:FormEvent){e.preventDefault();if(await run({type:'rename',accountId:account.id,alias}))setEditing(false)}
+ const sorted=[...store.accounts].sort((a,b)=>(a.order??0)-(b.order??0));const position=sorted.findIndex(a=>a.id===account.id);
+ function move(delta:number){const ids=sorted.map(a=>a.id);const to=position+delta;if(to<0||to>=ids.length)return;[ids[position],ids[to]]=[ids[to]!,ids[position]!];void run({type:'order',ids});}
+ return <div className="account-detail">
+  <div className="detail-heading"><div><strong>{accountName(account)}</strong><p>{account.plan??'Plan not reported'} · Last reading {account.updatedAt?age(account.updatedAt,now):'not available'}</p></div><div className="inline-actions"><button className="icon-button" aria-label={`Move ${accountName(account)} up`} disabled={busy||position===0} onClick={()=>move(-1)}><ArrowUp size={15}/></button><button className="icon-button" aria-label={`Move ${accountName(account)} down`} disabled={busy||position===sorted.length-1} onClick={()=>move(1)}><ArrowDown size={15}/></button></div></div>
+  {editing?<form className="inline-form" onSubmit={e=>void rename(e)}><label className="grow">Account nickname<input autoFocus maxLength={60} value={alias} onChange={e=>setAlias(e.target.value)}/></label><button className="button" disabled={busy}>Save nickname</button><button type="button" className="icon-button" aria-label="Cancel rename" onClick={()=>setEditing(false)}><X size={16}/></button></form>:<div className="inline-actions"><button className="button button--small" aria-label={`Rename ${accountName(account)}`} onClick={()=>setEditing(true)}>Rename</button><button className="button button--small" disabled={busy} aria-pressed={!!account.pinned} onClick={()=>void run({type:'account-preferences',accountId:account.id,pinned:!account.pinned})}><Pin size={12}/>{account.pinned?'Unpin account':'Pin account'}</button></div>}
+  <div className="detail-meters">{account.meters.map(m=><div className="detail-meter" key={`${m.scope}/${m.id}`}><Reading account={account} meter={m} settings={store.settings} now={now}/><label className="check-label"><input type="checkbox" checked={account.pinnedMeterIds?.includes(m.id)??false} disabled={busy||(!account.pinnedMeterIds?.includes(m.id)&&(account.pinnedMeterIds?.length??0)>=2)} onChange={e=>void run({type:'account-preferences',accountId:account.id,pinnedMeterIds:e.target.checked?[...(account.pinnedMeterIds??[]),m.id]:(account.pinnedMeterIds??[]).filter(id=>id!==m.id)})}/>Pin meter</label></div>)}</div>
+  {account.kind==='browser'&&<p className="notice">These are local request observations. Remaining account quota and activity on other devices are unknown.</p>}
+  <div className="connection-list">{connections.map(c=><div className="connection-item" key={c.id}><div><strong>{c.kind==='website'?'Website session':c.kind==='companion'?'Optional native companion':'Saved source'}</strong><p>{c.message??(c.kind==='website'?'Uses the current login in this browser.':'Independent authorization; live logout behavior is unverified.')}</p>{c.nextRetryAt&&c.status!=='active'&&<small>Next check: {countdown(c.nextRetryAt,now)}</small>}</div><div className="inline-actions">{c.kind==='website'?<button className="button button--small" disabled={busy} onClick={()=>void connect(c.provider,true)}>{c.enabled?'Reconnect':'Enable tracking'}</button>:c.enabled&&<button className="button button--small" disabled={busy} onClick={()=>void run({type:'refresh',connectionId:c.id})}>Refresh source</button>}{c.enabled&&<button className="text-button" disabled={busy} onClick={()=>void run({type:'disconnect',connectionId:c.id})}>Disconnect</button>}</div>{c.kind==='website'&&c.provider==='claude'&&c.workspaceIds.length>0&&<label className="workspace-picker">Workspace<select aria-label={`Workspace for ${accountName(account)}`} value={c.workspaceId??''} disabled={busy} onChange={e=>void run({type:'workspace',connectionId:c.id,workspaceId:e.target.value||null})}><option value="">Default workspace</option>{store.workspaces.filter(w=>c.workspaceIds.includes(w.id)).map(w=><option key={w.id} value={w.id}>{w.name}</option>)}</select></label>}</div>)}</div>
+  {!connections.length&&<p className="muted">Remembered account. Sign into this account on its website, then reconnect that provider. Other saved accounts keep their own nicknames.</p>}
+  <a className="text-button" href={providers[account.provider].home} target="_blank" rel="noreferrer">Open {providers[account.provider].name}<ExternalLink size={12}/></a>
+  <form className="account-alerts" onSubmit={e=>{e.preventDefault();void run({type:'account-settings',accountId:account.id,alertRemaining:warning===''?null:Number(warning),alertsMuted:account.alertsMuted})}}><label>Warning remaining (%)<input aria-label={`Warning for ${accountName(account)}`} type="number" min={1} max={95} placeholder={`Default ${store.settings.warningRemaining}`} value={warning} onChange={e=>setWarning(e.target.value)}/></label><button className="button button--small" disabled={busy}>Save threshold</button></form>
+  <div className="inline-actions"><label className="check-label"><input type="checkbox" checked={account.alertsMuted} disabled={busy} onChange={e=>void run({type:'account-settings',accountId:account.id,alertRemaining:account.alertRemaining,alertsMuted:e.target.checked})}/>Mute account alerts</label><button className="text-button" disabled={busy} onClick={()=>void run({type:'account-preferences',accountId:account.id,snoozedUntil:(account.snoozedUntil??0)>now?null:now+3600000})}>{(account.snoozedUntil??0)>now?'End snooze':'Snooze 1 hour'}</button></div>
+  <div className="forget-line">{confirm?<><span>Delete this account’s saved readings and history?</span><button className="text-button danger" disabled={busy} onClick={()=>void run({type:'forget',accountId:account.id})}>Confirm forget</button><button className="text-button" onClick={()=>setConfirm(false)}>Cancel</button></>:<button className="text-button danger" onClick={()=>setConfirm(true)}>Forget saved account</button>}</div>
+ </div>
 }
-
-function AccountCard({ account, settings, now, run, demo, busy }: { account: Account; settings: Settings; now: number; run: Run; demo: boolean; busy: boolean }) {
-  const [editing, setEditing] = useState(false);
-  const [alias, setAlias] = useState(account.alias || account.defaultName);
-  const [options, setOptions] = useState(false);
-  const [points, setPoints] = useState<HistoryPoint[] | null>(null);
-  const [historyError, setHistoryError] = useState('');
-  const active = account.connection === 'active';
-  async function rename(event: FormEvent) {
-    event.preventDefault();
-    if (await run({ type: 'rename', accountId: account.id, alias: alias.trim() })) setEditing(false);
-  }
-  async function loadHistory() {
-    if (points) { setPoints(null); return; }
-    if (demo) { setHistoryError('History is available for real readings; this is sample data.'); return; }
-    try { setPoints(await history(account.id)); setHistoryError(''); }
-    catch (error) { setHistoryError(error instanceof Error ? error.message : 'History could not be loaded.'); }
-  }
-  return <article className={`account-card ${active ? '' : 'account-card--saved'}`}>
-    <div className="account-heading">
-      <ProviderMark provider={account.provider} />
-      <div className="account-title">
-        {editing ? <form className="rename-form" onSubmit={rename}><label className="sr-only" htmlFor={`alias-${account.id}`}>Account nickname</label><input id={`alias-${account.id}`} maxLength={60} value={alias} onChange={event => setAlias(event.target.value)} autoFocus /><button className="icon-button" type="submit" aria-label="Save nickname" disabled={busy}><Check size={16} /></button><button className="icon-button" type="button" aria-label="Cancel rename" onClick={() => setEditing(false)}><X size={16} /></button></form> : <div className="name-line"><h3>{accountName(account)}</h3><button className="icon-button subtle" aria-label={`Rename ${accountName(account)}`} onClick={() => { setAlias(accountName(account)); setEditing(true); }}><Pencil size={13} /></button></div>}
-        <div className="account-subtitle">{providers[account.provider].name}{account.plan ? ` · ${account.plan}` : ''}{account.kind === 'browser' ? ' · browser activity' : ''}</div>
-      </div>
-      <button className={`icon-button ${options ? 'selected' : ''}`} aria-label={`Settings for ${accountName(account)}`} aria-expanded={options} onClick={() => setOptions(!options)}><Settings2 size={16} /></button>
-    </div>
-    <div className={`connection-label ${active ? 'connection-label--active' : ''}`}><span className="status-dot" />{account.kind === 'browser' ? 'Local activity · not account-scoped' : account.companionProfile ? (active ? 'Companion connection · independent of website login' : 'Companion · reconnect or check local service') : active ? 'Current website account' : account.connection === 'inactive' ? 'Saved account · not currently signed in' : account.connection === 'signed-out' ? 'Website sign-in needed' : 'Last reading · refresh unavailable'}</div>
-    {options && <div className="account-options">
-      {account.kind === 'account' && <>
-        <label className="field-inline">Warn at <select aria-label={`Alert threshold for ${accountName(account)}`} value={account.alertRemaining ?? ''} disabled={busy} onChange={event => void run({ type: 'account-settings', accountId: account.id, alertRemaining: event.target.value ? Number(event.target.value) : null, alertsMuted: account.alertsMuted })}><option value="">Default ({settings.warningRemaining}% left)</option>{[5, 10, 15, 20, 25, 30, 50].map(value => <option key={value} value={value}>{value}% left</option>)}</select></label>
-        <button className="text-button" disabled={busy} onClick={() => void run({ type: 'account-settings', accountId: account.id, alertRemaining: account.alertRemaining, alertsMuted: !account.alertsMuted })}>{account.alertsMuted ? <Bell size={14} /> : <BellOff size={14} />}{account.alertsMuted ? 'Unmute desktop alerts' : 'Mute desktop alerts'}</button>
-      </>}
-      <button className="text-button danger" disabled={busy} onClick={() => { if (confirm(`${account.companionProfile ? 'Disconnect' : 'Forget'} ${accountName(account)} and remove its local history?${account.companionProfile ? ' This ends its companion connection.' : active ? ' Tracking for this website will also turn off.' : ''}`)) void run({ type: 'forget', accountId: account.id }); }}><Trash2 size={14} />{account.companionProfile ? 'Disconnect' : 'Forget saved'} {account.kind === 'browser' ? 'activity' : 'account'}</button>
-    </div>}
-    {account.meters.length ? <div className="meter-list">{account.meters.map(meter => <MeterView key={meter.id} meter={meter} account={account} settings={settings} now={now} />)}</div> : <div className="no-reading"><CircleHelp size={18} /><p>{account.kind === 'browser' ? 'Activity will appear after a recognised request on this website. Account quotas are not available yet.' : 'This account has not exposed a usage reading. Its remaining allowance is unknown.'}</p></div>}
-    {account.provider === 'chatgpt' && <p className="scope-note">These readings cover Work / Codex. Ordinary chat limits are separate.</p>}
-    <footer className="account-footer"><span>Updated {age(account.updatedAt, now)}</span><button className="text-button" onClick={() => void loadHistory()}>History<ChevronDown size={12} /></button></footer>
-    {historyError && <p className="small-note">{historyError}</p>}
-    {points !== null && <div className="history-list"><p className="small-note">Latest reported readings, newest first.</p>{points.length ? [...points].reverse().slice(0, 8).map((point, index) => <div className="history-row" key={`${point.time}-${index}`}><time>{new Date(point.time).toLocaleString()}</time><span>{point.meters.filter(meter => meter.usedPercent !== null).map(meter => `${Math.round(100 - Math.min(100, meter.usedPercent!))}% left`).join(' · ') || 'No percentage reported'}</span></div>) : <p className="small-note">History starts with your first successful quota reading.</p>}</div>}
-  </article>;
+function AccountRow({account,store,now,expanded,onExpand,run,busy,connect}:{account:Account;store:PublicStore;now:number;expanded:boolean;onExpand:()=>void;run:Run;busy:boolean;connect:(p:ProviderId,on:boolean)=>Promise<void>}){
+ const selected=account.pinnedMeterIds?.length?account.pinnedMeterIds.flatMap(id=>account.meters.find(m=>m.id===id)??[]):account.meters;
+ const meters=selected.slice(0,2);
+ return <article className={`account-row ${expanded?'account-row--expanded':''}`}><div className="account-summary"><button className="account-identity" aria-label={`Details for ${accountName(account)}`} aria-expanded={expanded} onClick={onExpand}><Mark provider={account.provider}/><span className="account-copy"><strong>{account.pinned&&<Pin size={10}/>} {accountName(account)}</strong><small>{accountStatus(account,now,store.settings.refreshMinutes)}{account.updatedAt?` · ${age(account.updatedAt,now)}`:''}</small></span><ChevronDown size={13} className={expanded?'chevron-open':''}/></button><div className="row-meters">{meters.map(m=><Reading key={`${m.scope}/${m.id}`} account={account} meter={m} settings={store.settings} now={now}/>)}{!meters.length&&<span className="no-quota">{account.kind==='browser'?'No requests observed':'Quota not reported'}</span>}</div></div>{expanded&&<AccountDetails account={account} store={store} run={run} busy={busy} now={now} connect={connect}/>}</article>
 }
-
-function Websites({ store, run, busy, demo, notify }: { store: PublicStore; run: Run; busy: boolean; demo: boolean; notify: (message: string) => void }) {
-  async function toggle(provider: ProviderId) {
-    if (demo) { notify('Sample mode cannot request website access. Exit the preview to enable tracking.'); return; }
-    const enabled = !store.providers[provider].enabled;
-    if (enabled) {
-      const granted = await browser.permissions.request({ origins: [providers[provider].origin] });
-      if (!granted) { notify('Chrome site access was not granted. Nothing was connected.'); return; }
-    }
-    await run({ type: 'enable', provider, enabled });
-  }
-  return <div className="website-list"><OpenAICompanion run={run} busy={busy} demo={demo} notify={notify} />{PROVIDER_IDS.map(provider => {
-    const definition = providers[provider];
-    const state = store.providers[provider];
-    return <article className="website-card" key={provider}><div className="website-top"><ProviderMark provider={provider} /><div><h3>{definition.name}</h3><span className="small-note">{definition.support === 'prototype' ? 'Account readings · prototype' : 'Browser activity only'}</span></div><button className={`switch ${state.enabled ? 'switch--on' : ''}`} role="switch" aria-checked={state.enabled} aria-label={`Track ${definition.name}`} disabled={busy} onClick={() => void toggle(provider).catch(error => notify(error instanceof Error ? error.message : 'Could not change website access.'))}><span /></button></div><p>{definition.detail}</p>{state.message && state.enabled && <div className="provider-message">{state.message}</div>}<div className="website-bottom"><a className="text-button" href={definition.home} target="_blank" rel="noreferrer">Open website<ExternalLink size={12} /></a>{state.enabled && <button className="text-button" disabled={busy} onClick={() => void run({ type: 'refresh', provider })}><RefreshCw size={12} />Refresh</button>}</div></article>;
-  })}<div className="info-panel"><ShieldCheck size={20} /><div><strong>Your existing login, your browser.</strong><p>Allow access once for each website you choose. MyLimits reads supported usage information without opening a separate login window. Turning a website off removes its site access.</p></div></div></div>;
+function HistoryView({store,demo}:{store:PublicStore;demo:boolean}){
+ const [id,setId]=useState(store.accounts[0]?.id??'');const [points,setPoints]=useState<HistoryPoint[]>([]);const [error,setError]=useState('');
+ useEffect(()=>{let active=true;setError('');setPoints([]);if(id&&!demo)void history(id).then(p=>{if(active)setPoints(p)},()=>{if(active)setError('Local history could not be read.')});return()=>{active=false}},[id,demo]);
+ return <section className="panel"><h2>Reading history</h2><p className="muted">Readings are snapshots, not a complete log of everything you did. Gaps stay unknown.</p><label>Account<select value={id} onChange={e=>setId(e.target.value)}><option value="">Choose account</option>{store.accounts.map(a=><option key={a.id} value={a.id}>{accountName(a)}</option>)}</select></label>{error&&<p role="alert">{error}</p>}{points.length?<table><thead><tr><th>Observed</th><th>Recorded values</th></tr></thead><tbody>{points.map((p,i)=><tr key={i}><td>{new Date(p.time).toLocaleString()}</td><td>{p.meters.map(m=>`${m.id}: ${m.usedPercent===null?'unknown':`${m.usedPercent}% used`}`).join(' · ')}</td></tr>)}</tbody></table>:<div className="empty-small">{demo?'Preview does not create history.':'No saved readings in this view yet.'}</div>}</section>
 }
-
-function Alerts({ store, run, busy, demo, notify }: { store: PublicStore; run: Run; busy: boolean; demo: boolean; notify: (message: string) => void }) {
-  const [draft, setDraft] = useState(store.settings);
-  useEffect(() => setDraft(store.settings), [store.settings.warningRemaining, store.settings.criticalRemaining, store.settings.refreshMinutes, store.settings.theme, store.settings.desktopAlerts]);
-  async function toggleDesktop() {
-    if (demo) { notify('Sample mode does not request notification access.'); return; }
-    const enabled = !store.settings.desktopAlerts;
-    if (enabled && !await browser.permissions.request({ permissions: ['notifications'] })) { notify('Chrome notification access was not granted.'); return; }
-    const saved = await run({ type: 'settings', settings: { ...store.settings, desktopAlerts: enabled } });
-    if (saved && !enabled) await browser.permissions.remove({ permissions: ['notifications'] });
-  }
-  async function save(event: FormEvent) {
-    event.preventDefault();
-    if (await run({ type: 'settings', settings: { ...draft, desktopAlerts: store.settings.desktopAlerts } })) notify('Alert preferences saved.');
-  }
-  return <div className="settings-panel"><div className="setting-row"><div className="setting-icon"><Bell size={20} /></div><div className="setting-description"><h3>Desktop alerts</h3><p>A quiet reminder when a reported allowance is running low.</p></div><button className={`switch ${store.settings.desktopAlerts ? 'switch--on' : ''}`} role="switch" aria-checked={store.settings.desktopAlerts} aria-label="Enable desktop alerts" disabled={busy} onClick={() => void toggleDesktop().catch(error => notify(error instanceof Error ? error.message : 'Could not change notifications.'))}><span /></button></div><form onSubmit={event => void save(event).catch(error => notify(error instanceof Error ? error.message : 'Preferences could not be saved.'))}><div className="settings-fields"><label>Early warning<span className="input-suffix"><input type="number" min={1} max={95} required value={draft.warningRemaining} onChange={event => setDraft({ ...draft, warningRemaining: Number(event.target.value) })} /><span>% left</span></span></label><label>Critical warning<span className="input-suffix"><input type="number" min={1} max={draft.warningRemaining} required value={draft.criticalRemaining} onChange={event => setDraft({ ...draft, criticalRemaining: Number(event.target.value) })} /><span>% left</span></span></label><label>Refresh interval<select value={draft.refreshMinutes} onChange={event => setDraft({ ...draft, refreshMinutes: Number(event.target.value) })}>{[2, 5, 10, 15, 30, 60].map(value => <option key={value} value={value}>{value} minutes</option>)}</select></label><label>Appearance<select value={draft.theme} onChange={event => setDraft({ ...draft, theme: event.target.value as Settings['theme'] })}><option value="system">Follow device</option><option value="light">Light</option><option value="dark">Dark</option></select></label></div><button className="button button--primary" disabled={busy} type="submit">Save preferences<Check size={15} /></button></form><p className="small-note settings-note">Visual warnings always appear in the dashboard. Desktop alerts use fresh, reported quotas and fire once per threshold in each reset window. Browser activity counts cannot tell us when an account is running low.</p></div>;
+function Preferences({store,run,busy,demo,notify}:{store:PublicStore;run:Run;busy:boolean;demo:boolean;notify:(s:string)=>void}){
+ const [draft,setDraft]=useState(store.settings);const settingsKey=JSON.stringify(store.settings);useEffect(()=>setDraft(store.settings),[settingsKey]);
+ async function desktop(){if(demo){notify('Sample mode never requests permissions.');return}const enabled=!store.settings.desktopAlerts;if(enabled&&!await browser.permissions.request({permissions:['notifications']})){notify('Notification permission was not granted.');return}if(await run({type:'settings',settings:{...store.settings,desktopAlerts:enabled}})){if(!enabled)await browser.permissions.remove({permissions:['notifications']});}}
+ const quiet=draft.quietHours??{enabled:false,start:'22:00',end:'08:00'};
+ return <section className="panel"><h2>Make it yours</h2><p className="muted">Settings stay in this browser. No MyLimits account is required.</p><div className="setting-line"><div><strong>Desktop alerts</strong><p>Fresh reported limits only. Once per threshold and window.</p></div><button role="switch" aria-label="Enable desktop alerts" aria-checked={store.settings.desktopAlerts} className={`switch ${store.settings.desktopAlerts?'switch--on':''}`} disabled={busy} onClick={()=>void desktop().catch(()=>notify('Could not change notification access.'))}><span/></button></div><form onSubmit={e=>{e.preventDefault();void run({type:'settings',settings:draft}).then(ok=>{if(ok)notify('Preferences saved.')})}}><div className="form-grid"><label>Early warning<input type="number" min={1} max={95} required value={draft.warningRemaining} onChange={e=>setDraft({...draft,warningRemaining:Number(e.target.value)})}/></label><label>Critical warning<input type="number" min={1} max={draft.warningRemaining} required value={draft.criticalRemaining} onChange={e=>setDraft({...draft,criticalRemaining:Number(e.target.value)})}/></label><label>Display<select value={draft.displayMode??'remaining'} onChange={e=>setDraft({...draft,displayMode:e.target.value as Settings['displayMode']})}><option value="remaining">Remaining</option><option value="used">Used</option></select></label><label>Refresh interval<select value={draft.refreshMinutes} onChange={e=>setDraft({...draft,refreshMinutes:Number(e.target.value)})}>{[2,5,10,15,30,60].map(n=><option key={n} value={n}>{n} minutes</option>)}</select></label><label>Appearance<select value={draft.theme} onChange={e=>setDraft({...draft,theme:e.target.value as Settings['theme']})}><option value="system">Follow device</option><option value="light">Light</option><option value="dark">Dark</option></select></label></div><label className="check-label"><input type="checkbox" checked={draft.resetAlerts??false} onChange={e=>setDraft({...draft,resetAlerts:e.target.checked})}/>Notify when a reset is confirmed by a fresh reading</label><label className="check-label"><input type="checkbox" checked={quiet.enabled} onChange={e=>setDraft({...draft,quietHours:{...quiet,enabled:e.target.checked}})}/>Quiet hours (local time)</label>{quiet.enabled&&<div className="form-grid"><label>Quiet from<input type="time" required value={quiet.start} onChange={e=>setDraft({...draft,quietHours:{...quiet,start:e.target.value}})}/></label><label>Quiet until<input type="time" required value={quiet.end} onChange={e=>setDraft({...draft,quietHours:{...quiet,end:e.target.value}})}/></label></div>}<button className="button button--primary" disabled={busy}>Save preferences<Check size={14}/></button></form><div className="privacy-note"><ShieldCheck size={18}/><p>Provider access is optional. Website login expiry can stop tracking. The companion is optional; cloud collection is not part of this version.</p></div></section>
 }
-
-export function App({ view = 'dashboard' }: { view?: View }) {
-  const [store, setStore] = useState<PublicStore | null>(null);
-  const [demo, setDemo] = useState(location.hash === '#demo');
-  const [page, setPage] = useState<Page>('overview');
-  const [filter, setFilter] = useState<ProviderId | 'all'>('all');
-  const [query, setQuery] = useState('');
-  const [lowOnly, setLowOnly] = useState(false);
-  const [sort, setSort] = useState<LimitSort>('default');
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [toast, setToast] = useState('');
-  const [now, setNow] = useState(Date.now());
-  const [windowId, setWindowId] = useState<number | undefined>();
-  useEffect(() => {
-    if (demo) { setStore(demoState()); setError(''); return; }
-    const load = () => void command({ type: 'state' }).then(setStore, reason => setError(reason instanceof Error ? reason.message : 'Could not load MyLimits.'));
-    load();
-    const listener = () => load();
-    browser.storage.onChanged.addListener(listener);
-    void browser.windows.getCurrent().then(window => setWindowId(window.id));
-    return () => browser.storage.onChanged.removeListener(listener);
-  }, [demo]);
-  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 15_000); return () => clearInterval(timer); }, []);
-  useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(''), 4500); return () => clearTimeout(timer); }, [toast]);
-  useEffect(() => {
-    document.documentElement.dataset.theme = store?.settings.theme ?? 'system';
-  }, [store?.settings.theme]);
-
-  async function run(action: Command) {
-    if (demo) {
-      if (action.type === 'rename') setStore(current => current ? { ...current, accounts: current.accounts.map(account => account.id === action.accountId ? { ...account, alias: action.alias } : account) } : current);
-      else if (action.type === 'account-settings') setStore(current => current ? { ...current, accounts: current.accounts.map(account => account.id === action.accountId ? { ...account, alertRemaining: action.alertRemaining, alertsMuted: action.alertsMuted } : account) } : current);
-      else if (action.type === 'settings') setStore(current => current ? { ...current, settings: action.settings } : current);
-      else if (action.type === 'forget') setStore(current => current ? { ...current, accounts: current.accounts.filter(account => account.id !== action.accountId) } : current);
-      else setToast('This is a preview with sample readings.');
-      return true;
-    }
-    setBusy(true); setError('');
-    try { setStore(await command(action)); return true; }
-    catch (reason) { const message = reason instanceof Error ? reason.message : 'Action could not be completed.'; setError(message); return false; }
-    finally { setBusy(false); }
-  }
-  const safeRun: Run = run;
-  const accounts = store?.accounts.filter(account => account.kind === 'account') ?? [];
-  const current = accounts.filter(account => account.connection === 'active');
-  const low = current.filter(account => account.meters.some(meter => meter.evidence === 'reported' && isFresh(account, meter, now, store!.settings.refreshMinutes) && remainingPercent(meter) !== null && remainingPercent(meter)! <= (account.alertRemaining ?? store!.settings.warningRemaining)));
-  const resetTimes = current.flatMap(account => account.meters.filter(meter => isFresh(account, meter, now, store!.settings.refreshMinutes) && meter.resetsAt !== null).map(meter => meter.resetsAt!));
-  const visible = store ? selectAccounts(store.accounts.filter(account => filter === 'all' || account.provider === filter), store.settings, now, query, lowOnly, sort) : [];
-  const quotas = visible.filter(account => account.kind === 'account');
-  const browserActivity = visible.filter(account => account.kind === 'browser');
-  const messages = store ? PROVIDER_IDS.filter(provider => store.providers[provider].enabled && store.providers[provider].message && providers[provider].support === 'prototype') : [];
-
-  return <div className={`app app--${view} ${page === 'overview' ? 'app--compact' : ''}`}>
-    <header className="app-header"><a className="brand" href="#" onClick={event => { event.preventDefault(); setPage('overview'); }}><span className="brand-mark"><Gauge size={23} strokeWidth={1.7} /></span><span>MyLimits<span className="brand-caption">A little more headroom.</span></span></a><div className="header-actions">{view === 'popup' && windowId !== undefined && <button className="icon-button" aria-label="Open side panel" onClick={() => void browser.sidePanel.open({ windowId }).catch(() => setToast('Open the full dashboard using the link below.'))}><Layers3 size={17} /></button>}<button className="icon-button" aria-label="Refresh all websites" disabled={busy || !store} onClick={() => void safeRun({ type: 'refresh' })}><RefreshCw size={17} className={busy ? 'spin' : ''} /></button></div></header>
-    {demo && <div className="demo-banner"><span>Preview · sample accounts and readings</span><button onClick={() => { location.hash = ''; setDemo(false); setStore(null); }} aria-label="Exit sample preview"><X size={14} /></button></div>}
-    <nav className="nav-tabs" aria-label="MyLimits pages">{([{ id: 'overview', label: 'Overview', icon: Gauge }, { id: 'websites', label: 'Websites', icon: Layers3 }, { id: 'alerts', label: 'Preferences', icon: Bell }] as const).map(item => <button key={item.id} className={page === item.id ? 'active' : ''} aria-current={page === item.id ? 'page' : undefined} onClick={() => setPage(item.id)}><item.icon size={15} />{item.label}</button>)}</nav>
-    <main>
-      {page !== 'overview' && <div className="page-heading"><span className="eyebrow">{page === 'websites' ? 'MAKE YOURSELF AT HOME' : 'A HEADS-UP, YOUR WAY'}</span><h1>{page === 'websites' ? 'Your websites.' : 'Stay ahead of limits.'}</h1><p>{page === 'websites' ? 'Choose what to track. Your existing website login does the rest.' : 'Set the reminders that fit the way you work.'}</p></div>}
-      {error && <div className="error-panel" role="alert">{error}<button className="icon-button" aria-label="Dismiss error" onClick={() => setError('')}><X size={14} /></button></div>}
-      {!store ? <div className="loading-state"><LoaderCircle className="spin" size={24} /><p>{error ? 'The extension is not responding.' : 'Getting your local dashboard ready…'}</p>{error && <button className="button" onClick={() => { setDemo(true); setError(''); }}>Preview with sample data</button>}</div> : page === 'websites' ? <Websites store={store} run={run} busy={busy} demo={demo} notify={setToast} /> : page === 'alerts' ? <Alerts store={store} run={run} busy={busy} demo={demo} notify={setToast} /> : <>
-        <div className="summary-grid"><div><Layers3 size={16} /><strong>{accounts.length}</strong><span>accounts</span></div><div className={low.length ? 'summary-warning' : ''}><Activity size={16} /><strong>{low.length}</strong><span>running low</span></div><div><Clock3 size={16} /><strong className="reset-stat">{resetTimes.length ? countdown(Math.min(...resetTimes), now) : '—'}</strong><span>next reset</span></div></div>
-        {store.accounts.length > 0 && <>
-          <div className="limit-tools">
-            <input type="search" aria-label="Search accounts and limits" placeholder="Find account or limit…" value={query} onChange={event => setQuery(event.target.value)} />
-            <select aria-label="Sort limits" value={sort} onChange={event => setSort(event.target.value as LimitSort)}><option value="default">Current first</option><option value="remaining">Lowest left</option><option value="reset">Next reset</option><option value="name">Name</option></select>
-          </div>
-          <div className="limit-filters"><select aria-label="Filter by website" value={filter} onChange={event => setFilter(event.target.value as ProviderId | 'all')}><option value="all">All websites</option>{PROVIDER_IDS.filter(provider => store.accounts.some(account => account.provider === provider)).map(provider => <option key={provider} value={provider}>{providers[provider].name}</option>)}</select><button className={lowOnly ? 'active' : ''} aria-pressed={lowOnly} onClick={() => setLowOnly(!lowOnly)}><Bell size={12} />Low only</button><span>{quotas.reduce((count, account) => count + account.meters.length, 0)} limits</span></div>
-          <div className="compact-accounts" aria-label="Account limits">{quotas.map(account => <article className="compact-account" key={account.id}>
-            <button className="compact-account-heading" aria-label={`Details for ${accountName(account)}`} aria-expanded={expanded === account.id} onClick={() => setExpanded(expanded === account.id ? null : account.id)}><ProviderMark provider={account.provider} /><strong>{accountName(account)}</strong><span>{account.companionProfile ? (account.connection === 'active' ? 'Companion' : 'Offline') : account.connection === 'active' ? 'Current' : 'Saved'}</span><ChevronDown size={14} /></button>
-            <div className="compact-meters">{account.meters.map(meter => {
-              const remaining = remainingPercent(meter);
-              const fresh = isFresh(account, meter, now, store.settings.refreshMinutes);
-              const { warning, critical } = alertThresholds(account, store.settings);
-              const level = !fresh ? 'stale' : remaining !== null && remaining <= critical ? 'critical' : remaining !== null && remaining <= warning ? 'warning' : 'healthy';
-              return <div key={meter.id} className={`compact-meter meter--${level}`}><div><span className="compact-meter-label" title={meter.label}>{meter.label}</span><strong>{remaining === null ? 'Unknown' : `${Math.round(remaining)}%`}<small>{remaining === null ? '' : ' left'}</small></strong></div>{remaining !== null && <div className="meter-track" role="progressbar" aria-label={`${accountName(account)}: ${meter.label}, percent remaining${fresh ? '' : ' at last reading'}`} aria-valuenow={Math.round(remaining)} aria-valuemin={0} aria-valuemax={100}><div style={{ width: `${remaining}%` }} /></div>}<div className="compact-meter-meta"><span>{fresh ? 'Reported' : `Last reading · ${age(account.updatedAt, now)}`}</span><span>{meter.resetsAt !== null && meter.resetsAt > now ? `Reset ${countdown(meter.resetsAt, now)}` : countdown(meter.resetsAt, now)}</span></div></div>;
-            })}{account.meters.length === 0 && <p className="small-note">Remaining allowance unknown. Expand for details.</p>}</div>
-          </article>)}</div>
-          {quotas.some(account => account.provider === 'chatgpt') && <p className="compact-note">ChatGPT readings cover Work / Codex. Saved readings may be out of date.</p>}
-          {expanded && visible.some(account => account.id === expanded) && <div className="expanded-account"><div className="section-line"><h2>Account details</h2><button className="text-button" onClick={() => setExpanded(null)}>Close<X size={13} /></button></div><AccountCard key={expanded} account={visible.find(account => account.id === expanded)!} settings={store.settings} now={now} run={safeRun} demo={demo} busy={busy} /></div>}
-          {browserActivity.length > 0 && <details className="activity-details"><summary>Browser activity · {browserActivity.length} websites · quotas unknown</summary><div className="account-grid">{browserActivity.map(account => <AccountCard key={account.id} account={account} settings={store.settings} now={now} run={safeRun} demo={demo} busy={busy} />)}</div></details>}
-        </>}
-        {messages.length > 0 && <details className="activity-details"><summary>Website status · {messages.length} need attention</summary>{messages.map(provider => <div className="provider-message overview-message" key={provider}><ProviderMark provider={provider} /><div><strong>{providers[provider].name}</strong><p>{store.providers[provider].message}</p></div><button className="text-button" disabled={busy} onClick={() => void safeRun({ type: 'refresh', provider })}>Retry</button></div>)}</details>}
-        {store.accounts.length === 0 && <div className="empty-state"><div className="empty-illustration"><Gauge size={48} strokeWidth={1.3} /><span className="empty-dot dot-a" /><span className="empty-dot dot-b" /><span className="empty-dot dot-c" /></div><h2>A clear view starts here.</h2><p>Add the websites you use. MyLimits will reuse their existing browser logins and show the usage information they make available.</p><button className="button button--primary" onClick={() => setPage('websites')}>Choose your websites<ArrowRight size={16} /></button><button className="text-button preview-link" onClick={() => { setDemo(true); location.hash = 'demo'; }}>Preview with sample data</button></div>}
-        {visible.length === 0 && store.accounts.length > 0 && <p className="small-note">No matching readings. Try clearing search or turning off Low only.</p>}
-        {store.accounts.length > 0 && <button className="add-website" onClick={() => setPage('websites')}><Layers3 size={17} /><span>Manage websites</span><ArrowRight size={15} /></button>}
-      </>}
-    </main>
-    <footer className="app-footer"><span><ShieldCheck size={13} />Stored on this device</span>{view !== 'dashboard' ? <a href={browser.runtime.getURL('/dashboard.html')} target="_blank" rel="noreferrer">Full dashboard<ExternalLink size={12} /></a> : <span>MyLimits v0.1.0</span>}</footer>
-    {toast && <div className="toast" role="status">{toast}<button className="icon-button" aria-label="Dismiss notice" onClick={() => setToast('')}><X size={14} /></button></div>}
-  </div>;
+export function App({view='dashboard'}:{view?:'popup'|'dashboard'|'sidepanel'}){
+ const [store,setStore]=useState<PublicStore|null>(null);const [demo,setDemo]=useState(location.hash==='#demo');const [page,setPage]=useState<Page>('overview');const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [toast,setToast]=useState('');const [now,setNow]=useState(Date.now());const [expanded,setExpanded]=useState<string|null>(null);const [query,setQuery]=useState('');const [lowOnly,setLowOnly]=useState(false);const [sort,setSort]=useState<LimitSort>('default');const [filter,setFilter]=useState<ProviderId|'all'>('all');
+ useEffect(()=>{if(demo){setStore(demoState());setError('');return}let active=true;const load=()=>void command({type:'state'}).then(s=>{if(active)setStore(s)},e=>{if(active)setError(e instanceof Error?e.message:'Could not load MyLimits.')});load();const listener=()=>load();browser.storage.onChanged.addListener(listener);return()=>{active=false;browser.storage.onChanged.removeListener(listener)}},[demo]);
+ useEffect(()=>{const escape=(e:KeyboardEvent)=>{if(e.key==='Escape'){const button=document.querySelector<HTMLButtonElement>('[aria-expanded="true"]');setExpanded(null);button?.focus();}};document.addEventListener('keydown',escape);return()=>document.removeEventListener('keydown',escape)},[]);
+ useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),15000);return()=>clearInterval(timer)},[]);
+ useEffect(()=>{if(!toast)return;const timer=setTimeout(()=>setToast(''),5000);return()=>clearTimeout(timer)},[toast]);
+ useEffect(()=>{document.documentElement.dataset.theme=store?.settings.theme??'system'},[store?.settings.theme]);
+ async function run(action:Command):Promise<boolean>{
+  if(demo){setStore(current=>{if(!current)return current;if(action.type==='rename')return {...current,accounts:current.accounts.map(a=>a.id===action.accountId?{...a,alias:action.alias}:a)};if(action.type==='settings')return {...current,settings:action.settings};if(action.type==='account-preferences'){const {type:_type,accountId,...patch}=action;return {...current,accounts:current.accounts.map(a=>a.id===accountId?{...a,...patch}:a)}}if(action.type==='account-settings')return {...current,accounts:current.accounts.map(a=>a.id===action.accountId?{...a,alertRemaining:action.alertRemaining,alertsMuted:action.alertsMuted}:a)};return current});setToast('Preview changes stay in this preview.');return true}
+  setBusy(true);setError('');try{setStore(await command(action));return true}catch(e){setError(e instanceof Error?e.message:'Action could not be completed.');return false}finally{setBusy(false)}
+ }
+ async function connect(provider:ProviderId,on:boolean){if(demo){setToast('Exit preview to connect a website.');return}if(on&&!await browser.permissions.request({origins:[providers[provider].origin]})){setToast('Site access was not granted. Nothing was connected.');return}await run({type:'enable',provider,enabled:on});}
+ function fullDashboard(){void browser.tabs.create({url:browser.runtime.getURL('/dashboard.html')});}
+ const fresh=(a:Account)=>a.meters.filter(m=>m.evidence==='reported'&&isFresh(a,m,now,store?.settings.refreshMinutes??5));
+ const low=store?.accounts.filter(a=>fresh(a).some(m=>(remainingPercent(m)??Infinity)<=(a.alertRemaining??store.settings.warningRemaining))).length??0;
+ const nextReset=Math.min(...(store?.accounts.flatMap(a=>fresh(a).map(m=>m.resetsAt??Infinity))??[]));
+ const latest=Math.max(0,...(store?.accounts.map(a=>a.updatedAt)??[]));
+ const accounts=store?selectAccounts(store.accounts.filter(a=>filter==='all'||a.provider===filter),store.settings,now,query,lowOnly,sort):[];
+ const row=(a:Account)=><AccountRow key={a.id} account={a} store={store!} now={now} expanded={expanded===a.id} onExpand={()=>setExpanded(expanded===a.id?null:a.id)} run={run} busy={busy} connect={connect}/>;
+ return <div className={`app app--${view}`}><header className="app-header"><div className="brand"><span className="brand-mark"><Gauge size={22}/></span><div><h1>MyLimits<span className="version-label">2</span></h1><p>Your limits, in one place.</p></div></div><div className="header-actions"><span className="local-label"><span/>On device</span><button className="icon-button" aria-label="Refresh all limits" title="Refresh all limits" disabled={busy||demo||!store} onClick={()=>void run({type:'refresh'})}><RefreshCw size={16} className={busy?'spin':''}/></button></div></header>
+  {demo&&<div className="preview-banner"><span>Preview · sample accounts and readings</span><button aria-label="Exit sample preview" onClick={()=>{setDemo(false);setExpanded(null)}}>Exit preview<X size={12}/></button></div>}
+  <nav className="tabs" aria-label="Main navigation">{([['overview','Overview',LayoutDashboard],['accounts','Accounts',SlidersHorizontal],['history','History',History],['settings','Settings',SettingsIcon]] as const).map(([id,label,Icon])=><button key={id} aria-current={page===id?'page':undefined} className={page===id?'active':''} onClick={()=>{setPage(id);setExpanded(null)}}><Icon size={14}/>{label}</button>)}</nav>
+  {error&&<div role="alert" className="error-banner"><span>{error}</span><button className="icon-button" aria-label="Dismiss error" onClick={()=>setError('')}><X size={14}/></button></div>}
+  <main className="main-content">{!store?<div className="empty"><Gauge size={28}/><h2>{error?'Unable to load saved data':'Opening your overview…'}</h2><p>Saved data is preserved. Reload the extension if recovery is needed.</p></div>:<>
+   {page==='overview'&&<>{store.accounts.length>0?<><div className="summary-strip"><span><i className={low?'status-dot status-dot--low':'status-dot'}/>{low?`${low} account${low===1?'':'s'} running low`:`${store.accounts.filter(a=>fresh(a).length).length} with fresh limits`}</span><span>Next reset <strong>{Number.isFinite(nextReset)?countdown(nextReset,now):'not reported'}</strong></span></div><div className="overview-tools"><label className="search-box"><Search size={14}/><input aria-label="Search accounts" placeholder="Find an account…" value={query} onChange={e=>setQuery(e.target.value)}/></label><button className={`filter-button ${lowOnly?'selected':''}`} aria-pressed={lowOnly} onClick={()=>setLowOnly(!lowOnly)}>Low only</button><select aria-label="Sort limits" value={sort} onChange={e=>setSort(e.target.value as LimitSort)}><option value="default">Your order</option><option value="remaining">Least remaining</option><option value="reset">Next reset</option><option value="name">Name</option></select></div><div className="account-list">{accounts.map(row)}{!accounts.length&&<div className="empty-small">No accounts match these filters.</div>}</div></>:<div className="empty"><div className="empty-illustration"><Gauge size={38}/><span>Ready when you are</span></div><h2>A clear view starts here.</h2><p>Choose your AI websites. Your existing browser login does the rest.</p><button className="button button--primary" onClick={()=>setPage('accounts')}><Plus size={15}/>Add a website</button><button className="text-button" onClick={()=>setDemo(true)}>Preview with sample data</button><small>No MyLimits account. No required companion.</small></div>}</>}
+   {page==='accounts'&&<div className="accounts-page"><div className="section-heading"><h2>Your websites</h2><p>Allow access once. Reuse the login already in this browser.</p></div>{PROVIDER_IDS.map(p=><article className="website-card" key={p}><div className="website-top"><Mark provider={p}/><div className="grow"><h3>{providers[p].name}</h3><span className="small-note">{providers[p].support==='prototype'?'Quota reader · prototype':'Local activity only'}</span></div><button className={`switch ${store.providers[p].enabled?'switch--on':''}`} role="switch" aria-checked={store.providers[p].enabled} aria-label={`Track ${providers[p].name}`} disabled={busy} onClick={()=>void connect(p,!store.providers[p].enabled).catch(()=>setToast('Could not change site access.'))}><span/></button></div><p>{providers[p].detail}</p>{store.providers[p].message&&<p className="provider-message">{store.providers[p].message}</p>}<a className="text-button" href={providers[p].home} target="_blank" rel="noreferrer">Open website<ExternalLink size={12}/></a>{store.providers[p].enabled&&<button className="text-button" disabled={busy} onClick={()=>void run({type:'refresh',provider:p})}>Refresh</button>}</article>)}<details className="advanced"><summary>Advanced · optional OpenAI companion</summary><OpenAICompanion run={run} busy={busy} demo={demo} notify={setToast}/></details><p className="privacy-note"><ShieldCheck size={17}/>Website sessions can expire. Remembered accounts keep their dated readings.</p>{store.accounts.length>0&&<><h2 className="section-heading">Saved accounts</h2>{store.accounts.map(row)}</>}</div>}
+   {page==='history'&&<HistoryView store={store} demo={demo}/>}{page==='settings'&&<Preferences store={store} run={run} busy={busy} demo={demo} notify={setToast}/>}
+  </>}</main>
+  <footer className="app-footer"><button className="text-button" onClick={()=>setPage('accounts')}><Plus size={13}/>Add account</button><span className="footer-age">{latest?`Last reading ${age(latest,now)}`:'Local-first tracking'}</span>{view!=='dashboard'?<button className="text-button" onClick={fullDashboard}>Full dashboard<ExternalLink size={12}/></button>:<select aria-label="Filter provider" value={filter} onChange={e=>setFilter(e.target.value as ProviderId|'all')}><option value="all">All providers</option>{PROVIDER_IDS.map(p=><option value={p} key={p}>{providers[p].name}</option>)}</select>}</footer>
+  {toast&&<div role="status" className="toast">{toast}</div>}{store?.historyIssue&&<div role="status" className="history-warning">{store.historyIssue}</div>}
+ </div>
 }

@@ -6,8 +6,8 @@ credential upload has been performed.
 ## Active checkpoint
 
 - Requested phase: Phase 1 (authorized by the user).
-- Current work package: P1-06 — verified.
-- Next action: P1-07 — build the compact shared interface and account controls.
+- Current work package: P1-07 — verified.
+- Next action: P1-08 — implement quiet hours, snooze and confirmed reset notifications.
 - Working branch/commit: `v2/phase-1`; see checkpoint history and Git commits.
 - Authoritative scope: [master plan](V2-IMPLEMENTATION-PLAN.md),
   [Phase 1](PHASE-1.md), [Phase 2](PHASE-2.md).
@@ -27,9 +27,9 @@ implemented independent work while leaving that specific check pending.
 | P1-02 | 12 | verified | See checkpoint below.
 | P1-03 | 10 | verified | See checkpoint below.
 | P1-04 | 10 | verified | See checkpoint below.
-| P1-05 | 10 | implemented | See checkpoint below.
+| P1-05 | 10 | verified | See checkpoint below.
 | P1-06 | 10 | verified | See checkpoint below.
-| P1-07 | 12 | not_started | |
+| P1-07 | 12 | verified | See checkpoint below.
 | P1-08 | 8 | not_started | |
 | P1-09 | 8 | not_started | |
 | P1-10 | 12 | not_started | |
@@ -132,3 +132,15 @@ Next: P1-06 — implement persisted refresh policy and request coordination.
 State: **verified**. Added a two-slot refresh coordinator, same-source coalescing/cancellation, persisted generation/attempt/backoff state, Retry-After handling and startup/open/tab recovery policies. Added fake-clock and concurrency tests; type checking and 54 core tests pass. Browser observation updates retain their original reported-meter age and are stored in source snapshots. Account controls from P1-05 are ready for UI integration.
 
 Next: P1-07 — build the compact shared interface and account controls.
+
+## P1-05 checkpoint — 15 October 2026
+
+State: **verified**. Completed UI integration in P1-07: rename, pins, order, per-account thresholds, source disconnect, reconnect and workspace controls are available. Production browser regressions for rename persistence, denied access, native independent accounts and remembered disconnect pass.
+
+Next: P1-08 — implement timing-aware notification delivery.
+
+## P1-07 checkpoint — 15 October 2026
+
+State: **verified**. Rebuilt shared popup/dashboard/side-panel surfaces with compact account rows, two pinned meters, clear source age/status, Accounts/History/Settings screens, optional advanced companion, keyboard Escape and light/dark themes. Type check, production build and all 10 adapted regression browser fixtures pass. Visually inspected the captured dashboard preview. Added an explicit six-account fit and pin-persistence integration case for the final gate; actual Windows DPI remains unverified.
+
+Next: P1-08 — implement quiet hours, snooze and confirmed reset notifications.
