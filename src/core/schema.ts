@@ -49,6 +49,7 @@ export const StoreSchema: z.ZodType<Store> = z.object({
   version: z.literal(2), installSalt: z.string().min(1), accounts: z.array(AccountSchema).max(100),
   connections: z.array(ConnectionRecordSchema).max(200), workspaces: z.array(WorkspaceSchema).max(200), snapshots: z.array(UsageSnapshotSchema).max(400),
   providers: z.record(ProviderSchema, ProviderStateSchema), settings: SettingsSchema, historyIssue: z.string().max(300).nullable(),
+  resetLedger: z.record(z.string(), z.object({ window:z.string().nullable(), resetsAt:time.nullable(), observedAt:time, usedPercent:z.number().finite().min(0).max(1000).nullable() })).default({}),
   alertLedger: z.record(z.string(), z.object({ window: z.string(), sent: z.array(z.number()) })),
   observationLedger: z.array(z.string()).max(300),
 });

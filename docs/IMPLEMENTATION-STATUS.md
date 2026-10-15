@@ -6,8 +6,8 @@ credential upload has been performed.
 ## Active checkpoint
 
 - Requested phase: Phase 1 (authorized by the user).
-- Current work package: P1-07 — verified.
-- Next action: P1-08 — implement quiet hours, snooze and confirmed reset notifications.
+- Current work package: P1-08 — verified.
+- Next action: P1-09 — finish paginated history, export and data controls.
 - Working branch/commit: `v2/phase-1`; see checkpoint history and Git commits.
 - Authoritative scope: [master plan](V2-IMPLEMENTATION-PLAN.md),
   [Phase 1](PHASE-1.md), [Phase 2](PHASE-2.md).
@@ -30,7 +30,7 @@ implemented independent work while leaving that specific check pending.
 | P1-05 | 10 | verified | See checkpoint below.
 | P1-06 | 10 | verified | See checkpoint below.
 | P1-07 | 12 | verified | See checkpoint below.
-| P1-08 | 8 | not_started | |
+| P1-08 | 8 | verified | See checkpoint below.
 | P1-09 | 8 | not_started | |
 | P1-10 | 12 | not_started | |
 | **Phase 1 total** | **100** | **not_started** | |
@@ -144,3 +144,9 @@ Next: P1-08 — implement timing-aware notification delivery.
 State: **verified**. Rebuilt shared popup/dashboard/side-panel surfaces with compact account rows, two pinned meters, clear source age/status, Accounts/History/Settings screens, optional advanced companion, keyboard Escape and light/dark themes. Type check, production build and all 10 adapted regression browser fixtures pass. Visually inspected the captured dashboard preview. Added an explicit six-account fit and pin-persistence integration case for the final gate; actual Windows DPI remains unverified.
 
 Next: P1-08 — implement quiet hours, snooze and confirmed reset notifications.
+
+## P1-08 checkpoint — 15 October 2026
+
+State: **verified**. Implemented overnight local quiet hours, per-account snooze, scoped deduplication with legacy-ledger compatibility, conservative fresh-reading reset confirmation and used/remaining badge semantics. Failed notification delivery restores its ledger entry for retry. Added timing, no-false-reset and migration-dedup tests; all 58 core tests and type checking pass. No timestamp-only reset claim is made.
+
+Next: P1-09 — finish paginated history, export and data controls.

@@ -1,3 +1,4 @@
+import { isQuiet, alertKey, confirmedReset } from './alert-policy';
 import { acceptSnapshot, projectAccounts } from './connections';
 import { type Account, type Meter, type ProviderId, type Store, accountName, alertThresholds, isFresh, remainingPercent } from './model';
 
@@ -78,20 +79,21 @@ export function recordObservation(store: Store, provider: ProviderId, id: string
   };
 }
 
-export interface LimitAlert { id: string; title: string; message: string; accountId: string; meterId: string; }
+export interface LimitAlert { id: string; title: string; message: string; accountId: string; meterId: string; ledgerKey: string; kind: 'low' | 'reset'; }
 export function collectAlerts(store: Store, now: number): { store: Store; alerts: LimitAlert[] } {
-  if (!store.settings.desktopAlerts) return { store, alerts: [] };
+  if (!store.settings.desktopAlerts || isQuiet(store.settings, now)) return { store, alerts: [] };
   const ledger = structuredClone(store.alertLedger);
   const alerts: LimitAlert[] = [];
+  const resetLedger = structuredClone(store.resetLedger);
   for (const account of store.accounts) {
-    if (account.alertsMuted) continue;
+    if (account.alertsMuted || (account.snoozedUntil ?? 0) > now) continue;
     for (const meter of account.meters) {
       if (meter.evidence !== 'reported' || !isFresh(account, meter, now, store.settings.refreshMinutes)) continue;
       const remaining = remainingPercent(meter);
       if (remaining === null) continue;
-      const key = `${account.id}/${meter.id}`;
+      const key = alertKey(account, meter);
       const window = meter.resetsAt === null ? 'unknown' : String(meter.resetsAt);
-      const prior = ledger[key];
+      const prior = ledger[key] ?? ledger[`${account.id}/${meter.id}`];
       const entry = prior?.window === window ? { window, sent: [...prior.sent] } : { window, sent: [] as number[] };
       const configured = alertThresholds(account, store.settings);
       const thresholds = [...new Set([configured.warning, configured.critical])].sort((a, b) => a - b);
@@ -100,7 +102,7 @@ export function collectAlerts(store: Store, now: number): { store: Store; alerts
       const crossed = thresholds.filter(threshold => remaining <= threshold && !entry.sent.includes(threshold));
       if (crossed.length) {
         const threshold = crossed[0]!;
-        alerts.push({ id: `limit:${key}:${window}:${threshold}`, accountId: account.id, meterId: meter.id,
+        alerts.push({ id: `limit:${key}:${window}:${threshold}`, accountId: account.id, meterId: meter.id, ledgerKey: key, kind: 'low',
           title: `${accountName(account)} is running low`,
           message: `${meter.label}: ${Math.round(remaining)}% left${meter.resetsAt ? `. Resets ${new Date(meter.resetsAt).toLocaleString()}` : ''}.`,
         });
@@ -108,15 +110,24 @@ export function collectAlerts(store: Store, now: number): { store: Store; alerts
         entry.sent = [...new Set([...entry.sent, ...thresholds.filter(value => remaining <= value)])];
       }
       ledger[key] = entry;
+      const reset = { window: meter.windowId ?? (meter.resetsAt === null ? null : String(meter.resetsAt)), resetsAt: meter.resetsAt,
+        observedAt: meter.observedAt ?? account.updatedAt, usedPercent: meter.usedPercent };
+      if (store.settings.resetAlerts && confirmedReset(resetLedger[key], reset) && !crossed.length) alerts.push({
+        id: `reset:${key}:${reset.window}`, accountId: account.id, meterId: meter.id, ledgerKey: key, kind: 'reset',
+        title: `${accountName(account)} reset confirmed`, message: `${meter.label}: a fresh provider reading reports a new allowance window.`,
+      });
+      resetLedger[key] = reset;
     }
   }
-  return { store: { ...store, alertLedger: ledger }, alerts };
+  return { store: { ...store, alertLedger: Object.fromEntries(Object.entries(ledger).slice(-6000)), resetLedger: Object.fromEntries(Object.entries(resetLedger).slice(-6000)) }, alerts };
 }
 
 export function badge(store: Store, now: number): { text: string; color: string } {
   const readings = store.accounts.flatMap(account => account.meters.filter(meter => meter.evidence === 'reported'
-    && isFresh(account, meter, now, store.settings.refreshMinutes)).map(meter => remainingPercent(meter))).filter((value): value is number => value !== null);
+    && isFresh(account, meter, now, store.settings.refreshMinutes)).map(meter => ({ account, remaining: remainingPercent(meter) }))).filter((r): r is {account:Account;remaining:number} => r.remaining !== null);
   if (!readings.length) return { text: '', color: '#64748b' };
-  const lowest = Math.min(...readings);
-  return { text: `${Math.round(lowest)}%`, color: lowest <= store.settings.criticalRemaining ? '#dc5a52' : lowest <= store.settings.warningRemaining ? '#b97819' : '#237c64' };
+  const lowest = readings.reduce((a,b) => a.remaining <= b.remaining ? a : b);
+  const threshold = alertThresholds(lowest.account,store.settings);
+  const value = store.settings.displayMode === 'used' ? 100-lowest.remaining : lowest.remaining;
+  return { text: `${Math.round(value)}%`, color: lowest.remaining <= threshold.critical ? '#dc5a52' : lowest.remaining <= threshold.warning ? '#b97819' : '#237c64' };
 }

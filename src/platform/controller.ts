@@ -22,7 +22,7 @@ async function renderBadge(): Promise<void> {
   const value = badge(await readStore(), Date.now());
   await browser.action.setBadgeText({ text: value.text });
   await browser.action.setBadgeBackgroundColor({ color: value.color });
-  await browser.action.setTitle({ title: value.text ? `MyLimits · ${value.text} left in the most constrained reported allowance` : 'MyLimits · your usage, in one place' });
+  await browser.action.setTitle({ title: value.text ? `MyLimits · ${value.text} ${(await readStore()).settings.displayMode === 'used' ? 'used' : 'left'} in the most constrained reported allowance` : 'MyLimits · your usage, in one place' });
 }
 
 async function sendAlerts(): Promise<void> {
@@ -30,18 +30,19 @@ async function sendAlerts(): Promise<void> {
   // Serialize the decision and delivery, so overlapping refreshes cannot alert twice.
   await updateStore(async store => {
     const result = collectAlerts(store, Date.now());
-    const failedMeters = new Set<string>();
+    const failed: typeof result.alerts = [];
     for (const alert of result.alerts) {
       try {
         await browser.notifications.create(alert.id, {
           type: 'basic', iconUrl: browser.runtime.getURL('/icon/128.png'), title: alert.title, message: alert.message,
         });
-      } catch { failedMeters.add(`${alert.accountId}/${alert.meterId}`); }
+      } catch { failed.push(alert); }
     }
     // Failed deliveries can retry next refresh; a failure must not silently consume an alert.
-    for (const key of failedMeters) {
-      if (store.alertLedger[key]) result.store.alertLedger[key] = store.alertLedger[key];
-      else delete result.store.alertLedger[key];
+    for (const alert of failed) {
+      const key = alert.ledgerKey;
+      if (alert.kind === 'reset') { if(store.resetLedger[key])result.store.resetLedger[key]=store.resetLedger[key]!;else delete result.store.resetLedger[key]; }
+      else { if(store.alertLedger[key])result.store.alertLedger[key]=store.alertLedger[key]!;else delete result.store.alertLedger[key]; }
     }
     return { store: result.store, value: undefined };
   });

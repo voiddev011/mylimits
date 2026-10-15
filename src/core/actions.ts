@@ -28,5 +28,6 @@ export function forgetAccount(store:Store,id:string):Store {
  }
  return {...next,accounts:next.accounts.filter(a=>a.id!==id),snapshots:next.snapshots.filter(s=>s.accountId!==id),
   connections:next.connections.filter(c=>!(c.kind==='companion'&&c.profileId===a.companionProfile)),
+  resetLedger:Object.fromEntries(Object.entries(next.resetLedger).filter(([key])=>!key.startsWith(`${id}/`))),
   alertLedger:Object.fromEntries(Object.entries(next.alertLedger).filter(([key])=>!key.startsWith(`${id}/`)))};
 }

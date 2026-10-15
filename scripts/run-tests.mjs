@@ -9,3 +9,4 @@ import '../src/core/migrations.test.ts';
 import '../src/providers/reader.test.ts';
 import '../src/core/actions.test.ts';
 import '../src/core/scheduler.test.ts';
+import '../src/core/alert-policy.test.ts';

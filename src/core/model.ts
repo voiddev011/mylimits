@@ -63,6 +63,7 @@ export interface Store {
   workspaces: Workspace[];
   snapshots: UsageSnapshot[];
   historyIssue: string | null;
+  resetLedger: Record<string, { window: string | null; resetsAt: number | null; observedAt: number; usedPercent: number | null }>;
   installSalt: string;
   accounts: Account[];
   providers: Record<ProviderId, ProviderState>;
@@ -73,7 +74,7 @@ export interface Store {
 export function emptyStore(salt: string): Store {
   return {
     version: 2, installSalt: salt, accounts: [],
-    connections: PROVIDER_IDS.map(provider => websiteConnection(provider)), workspaces: [], snapshots: [], historyIssue: null,
+    connections: PROVIDER_IDS.map(provider => websiteConnection(provider)), workspaces: [], snapshots: [], historyIssue: null, resetLedger: {},
     providers: Object.fromEntries(PROVIDER_IDS.map(id => [id, {
       enabled: false, status: 'disabled', activeAccountId: null, checkedAt: null, message: null, failures: 0, nextRetryAt: null,
     }])) as Store['providers'],
