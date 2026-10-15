@@ -9,7 +9,7 @@ export const SyncPreferencesSchema=z.object({settings:SettingsSchema.optional(),
 export type SyncItem=z.infer<typeof SyncItemSchema>;
 export function syncItem(account:Account,snapshot:UsageSnapshot):SyncItem {
  // Deliberately reconstruct; never upload the writable state or native auth.
- return SyncItemSchema.parse({account:{name:account.alias||account.defaultName,plan:account.plan},snapshot:{
+ return SyncItemSchema.parse({account:{name:account.alias||account.defaultName||account.provider,plan:account.plan},snapshot:{
   schemaVersion:2,snapshotId:snapshot.snapshotId,providerId:snapshot.providerId,accountId:snapshot.accountId,
   connectionId:snapshot.connectionId,workspaceId:snapshot.workspaceId,observedAt:snapshot.observedAt,receivedAt:snapshot.receivedAt,
   connectorVersion:snapshot.connectorVersion,meters:snapshot.meters.map(m=>MeterSchema.parse(m)),

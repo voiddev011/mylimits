@@ -6,8 +6,8 @@ credential upload has been performed.
 ## Active checkpoint
 
 - Requested phase: Phase 2 (authorized by the user: “Start with next phase”).
-- Current work package: P2-03 — verified.
-- Next action: P2-04 — implement opt-in device pairing, snapshot queues and responsive dashboard.
+- Current work package: P2-04 — verified.
+- Next action: P2-05 — research and implement viable additional quota readers without inventing consumer limits.
 - Working branch/commit: `v2/phase-2`; Phase 1 and main preserved.
 - Authoritative scope: [master plan](V2-IMPLEMENTATION-PLAN.md),
   [Phase 1](PHASE-1.md), [Phase 2](PHASE-2.md).
@@ -37,7 +37,7 @@ implemented independent work while leaving that specific check pending.
 | P2-01 | 8 | verified | See checkpoint below. |
 | P2-02 | 12 | verified | See checkpoint below. |
 | P2-03 | 12 | verified | See checkpoint below. |
-| P2-04 | 8 | not_started | |
+| P2-04 | 8 | verified | See checkpoint below. |
 | P2-05 | 12 | not_started | |
 | P2-06 | 10 | not_started | |
 | P2-07 | 10 | not_started | |
@@ -224,3 +224,15 @@ Next: P2-03 — implement leased jobs and tenant-bound credential rotation fixtu
 State: **verified**. Changed server/migrations/002_jobs_credentials.sql, src/jobs.ts/credentials.ts/worker.ts, app/service deletion/refresh paths, package script, tests/jobs.test.ts and docs/SERVER-SETUP.md. Implemented PostgreSQL leases/coalescing, persisted per-provider budgets, six-attempt bounded retry, auth pause, generation/identity validation and redacted failures. Tenant-bound AES-GCM envelopes require an external KMS interface; no production KMS or provider collector is configured. Synthetic-only collectors/KMS are guarded against non-test environments. Revocation cleanup is bounded and cannot remove a replacement credential generation; explicit data deletion removes envelopes. Server typecheck and 22 real PostgreSQL API/job tests pass, including worker crash, rotation race, throttling, late result after disconnect and stale cleanup. Root typecheck passes. Production provider OAuth and live renewal remain gated/unimplemented until P2-01 prerequisites exist.
 
 Next: P2-04 — implement opt-in device pairing, snapshot queues and responsive dashboard.
+
+## P2-04 checkpoint — 15 October 2026
+
+State: **in_progress**. P2-02/03 checkpoints pushed to remote v2/phase-2 at 7f8ed4f. Implement build-configured optional snapshot sync, one-time user-approved device pairing, private device credentials, persisted acknowledgement/deletion queues and a same-origin responsive dashboard. Local-only/preview paths must issue no sync requests. Do not merge source identities by matching local hashes or refresh the age of old samples.
+
+Next: P2-04 — implement pairing, persisted sync, preference conflicts and mobile dashboard.
+
+## P2-04 checkpoint — 15 October 2026
+
+State: **verified**. Changed core sync.ts/sync.test.ts/sync-contracts.ts/sync-origin.ts/remote-view.ts, private platform sync transport/controller/messages, SyncSettings/App UI, WXT fixed-origin configuration and env declaration; server pairing/source-tombstone migrations, pairing/web/OIDC/API/service code, responsive React dashboard, Vite config/dependencies and real phone/API tests; SERVER-SETUP and PRIVACY docs. Sync is off by default with no endpoint/extra host grant unless explicitly configured at build time. Pairing is user-approved, expiring, secret-bound and single-use. Acks/backoff/deletion survive restart; lost acknowledgements are covered by source tombstones. Preferences are explicit/revisioned; server-origin changes cannot receive old tokens. Verification: root typecheck + 70 core tests pass; server typecheck + 25 real PostgreSQL API/job tests pass; phone dashboard real-service browser test passes; production extension build passes (570.91 kB) and all 15 extension browser fixtures pass. Visually reviewed phone UI and fixed setup clutter/button wrapping; repeated phone check passes. Real OIDC/provider sign-in and deployed cross-device service remain unconfigured, not live-verified. No hosted provider collector was enabled.
+
+Next: P2-05 — research and implement viable additional quota readers without inventing consumer limits.

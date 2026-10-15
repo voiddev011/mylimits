@@ -17,6 +17,7 @@ export async function upload(pool:pg.Pool,p:Principal,raw:unknown,now=Date.now()
   const accepted:{snapshotId:string;accountId:string;connectionId:string;duplicate:boolean}[]=[];
   for(const item of input.items){
    const s=item.snapshot;
+   if((await db.query('SELECT 1 FROM source_tombstones WHERE owner_id=$1 AND device_id=$2 AND source_id=$3',[p.owner,input.deviceId,s.accountId])).rows.length)throw new ApiError(410,'account_deleted');
    if(s.observedAt>now+60000||s.receivedAt>now+60000||s.observedAt<now-90*86400000)throw new ApiError(400,'invalid_reading_time');
    await db.query('INSERT INTO accounts(id,owner_id,device_id,source_id,provider,name,plan) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(owner_id,device_id,source_id) DO NOTHING',[uuid(),p.owner,input.deviceId,s.accountId,s.providerId,item.account.name,item.account.plan]);
    const account=(await db.query('SELECT * FROM accounts WHERE owner_id=$1 AND device_id=$2 AND source_id=$3 FOR UPDATE',[p.owner,input.deviceId,s.accountId])).rows[0];
@@ -54,8 +55,7 @@ export async function snapshots(db:DB,p:Principal,q:{accountId:string;limit:numb
  const hasMore=result.rows.length>q.limit,rows=result.rows.slice(0,q.limit),last=rows.at(-1);
  return {points:rows.map(r=>({id:r.id,accountId:r.account_id,connectionId:r.connection_id,observedAt:Number(r.observed_at),serverReceivedAt:Number(r.received_at),snapshot:r.payload})),hasMore,cursor:hasMore&&last?{time:Number(last.observed_at),id:last.id}:null};
 }
-export async function deleteAccount(pool:pg.Pool,p:Principal,id:string){
- await transaction(pool,async db=>{
+export async function deleteAccountInTransaction(db:DB,p:Principal,id:string){
   const r=await db.query('SELECT device_id FROM accounts WHERE owner_id=$1 AND id=$2 FOR UPDATE',[p.owner,id]);
   if(!r.rows.length)throw new ApiError(404,'account_not_found');if(p.kind==='device'&&p.deviceId!==r.rows[0].device_id)throw new ApiError(403,'wrong_device');
   await db.query('UPDATE accounts SET deleted_at=now(),name=$3,plan=NULL WHERE owner_id=$1 AND id=$2',[p.owner,id,'Deleted account']);
@@ -64,5 +64,5 @@ export async function deleteAccount(pool:pg.Pool,p:Principal,id:string){
   for(const table of ['encrypted_credentials','connection_cleanup'])await db.query(`DELETE FROM ${table} WHERE owner_id=$1 AND connection_id IN (SELECT id FROM connections WHERE owner_id=$1 AND account_id=$2)`,[p.owner,id]);
   await db.query('DELETE FROM snapshots WHERE owner_id=$1 AND account_id=$2',[p.owner,id]);
   await db.query('UPDATE preferences SET data=jsonb_set(data,\'{names}\',COALESCE(data->\'names\',\'{}\')-$2::text),revision=revision+1 WHERE owner_id=$1',[p.owner,id]);
- });
 }
+export async function deleteAccount(pool:pg.Pool,p:Principal,id:string){return transaction(pool,db=>deleteAccountInTransaction(db,p,id))}

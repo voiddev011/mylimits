@@ -1,10 +1,12 @@
 import { defineConfig } from 'wxt';
 import tailwindcss from '@tailwindcss/vite';
+import { validateSyncOrigin,syncPermission } from './src/core/sync-origin';
+const syncOrigin=validateSyncOrigin(process.env.MYLIMITS_SYNC_ORIGIN??'');
 
 export default defineConfig({
   modules: ['@wxt-dev/module-react'],
   zip: { artifactTemplate: '{{name}}-{{packageVersion}}-{{browser}}.zip' },
-  vite: () => ({ plugins: [tailwindcss()] }),
+  vite: () => ({ plugins: [tailwindcss()],define:{__MYLIMITS_SYNC_ORIGIN__:JSON.stringify(syncOrigin)} }),
   manifest: {
     name: 'MyLimits',
     version: '2.0.0',
@@ -18,6 +20,7 @@ export default defineConfig({
       'https://gemini.google.com/*',
       'https://grok.com/*',
       'https://www.perplexity.ai/*',
+      ...(syncOrigin?[syncPermission(syncOrigin)]:[]),
     ],
     action: { default_title: 'MyLimits' },
     icons: { 16: 'icon/16.png', 32: 'icon/32.png', 48: 'icon/48.png', 128: 'icon/128.png' },
