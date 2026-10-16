@@ -532,12 +532,14 @@ test('large text persists, privacy masks every surface, and 200 percent enlargem
  const fixture={...emptyStore('v3-layout-private'),accounts:demoState().accounts};
  fixture.accounts[0]!.alias='Private writing workspace with a very long account name';
  await worker.evaluate(async s=>chrome.storage.local.set({'mylimits:state:v2':s}),fixture);
- const page=await context.newPage();await page.setViewportSize({width:1120,height:920});await page.goto(`chrome-extension://${extensionId}/dashboard.html#settings`);
+ const page=await context.newPage();await page.setViewportSize({width:1120,height:920});await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
+ await page.getByLabel('Search accounts').fill(fixture.accounts[0]!.alias);await page.getByRole('button',{name:'Settings',exact:true}).click();
  await page.getByLabel('Text size',{exact:true}).selectOption('large');await page.getByLabel('Privacy mode',{exact:true}).selectOption('on');await page.getByRole('button',{name:'Save preferences'}).click();
+ await page.getByRole('button',{name:'Overview',exact:true}).click();await expect(page.getByLabel('Search accounts')).toHaveValue('');await page.getByRole('button',{name:'Settings',exact:true}).click();
  await page.reload();await expect(page.locator('html')).toHaveAttribute('data-text-size','large');await expect(page.getByLabel('Privacy mode',{exact:true})).toHaveValue('on');
  for(const tab of ['Overview','Accounts','History']){await page.getByRole('button',{name:tab,exact:true}).click();for(const a of fixture.accounts)await expect(page.getByText(a.alias,{exact:false})).toHaveCount(0);}
  await expect(page.getByRole('button',{name:'Export JSON',exact:true})).toBeDisabled();
- await page.getByRole('button',{name:'Overview',exact:true}).click();await page.getByRole('button',{name:'Details for Account 1',exact:true}).click();await expect(page.getByRole('button',{name:'Rename Account 1',exact:true})).toBeDisabled();
+ await page.getByRole('button',{name:'Overview',exact:true}).click();await expect(page.getByLabel('Search accounts')).toHaveValue('');await page.getByRole('button',{name:'Details for Account 1',exact:true}).click();await expect(page.getByRole('button',{name:'Rename Account 1',exact:true})).toBeDisabled();
  await page.setViewportSize({width:560,height:920});await page.evaluate(()=>{document.documentElement.style.fontSize='32px'});
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
  await expect(page.getByRole('button',{name:'Settings',exact:true})).toBeVisible();

@@ -70,7 +70,7 @@ export function AccountConnect({ store, run, busy, demo, notify, onClose }: {
       <button className="text-button" disabled={disabled} onClick={() => void run({type:'account-setup-cancel',setupId:pending.id})}>Cancel setup</button>
     </div> : independent ? <OpenAICompanion run={run} busy={disabled} demo={demo} notify={notify} nickname={nickname}/> : <div className="connect-steps">
       <p>{activity ? 'Count requests from this browser.' : 'Website detection uses the account currently signed in.'}</p>
-      {!activity && <label>Nickname (optional)<input aria-label="New account nickname" placeholder="For example: Personal or Work" maxLength={60} value={nickname} onChange={e => setNickname(e.target.value)}/></label>}
+      {!activity && <label>Nickname (optional)<input aria-label="New account nickname" placeholder="For example: Personal or Work" maxLength={60} disabled={store.settings.privacyMode} value={store.settings.privacyMode ? '' : nickname} onChange={e => setNickname(e.target.value)}/></label>}
       <button className="button button--primary" disabled={disabled} onClick={() => void start('detect')}><RefreshCw size={14}/>{activity ? 'Enable browser activity' : 'Detect current account'}</button>
       {!activity && <button className="button" disabled={disabled || !store.providers[provider].activeAccountId} onClick={() => void start('another')}><Plus size={14}/>Save another website account</button>}
       {!activity && !store.providers[provider].activeAccountId && <small>Detect your current account first to keep the two accounts separate.</small>}

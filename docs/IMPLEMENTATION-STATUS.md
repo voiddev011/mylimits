@@ -479,3 +479,37 @@ blocked rather than advertised. Next: implement V3-01 and V3-02.
   installation or real account authorization.
 - Added follow-up fixtures for on-site Hide persistence and new native sign-in
   protocol; final whole-suite and variant/archive checks are next.
+
+### V3-05 local delivery checkpoint
+
+- Full real Chromium suite: **26/26 passed**. Added on-site Hide/reload and new
+  helper-owned auth window protocol coverage. Follow-up privacy query/nickname
+  concealment type/build/focused browser check also passed.
+- Chrome/Edge/Firefox builds, manifest checks, actual Chrome/Firefox ZIP checks
+  and SHA256 generation passed. Genuine logos included; Guide prompt tools absent.
+- Installer final local compile passed (196,690,078 bytes); bundled dependency
+  digests and license files included. Windows interactive acceptance is pending.
+- Optional server local check: TypeScript/auth test passed; API/job tests failed
+  startup because no isolated PostgreSQL URL was configured. CI is running those
+  against its isolated PostgreSQL service; do not report local full server success.
+- Published implementation checkpoint `1b9f9e6aac14b8bd2c805624f458c2ff6facb970`
+  on `v3/redesign`, based on user's actual current main. GitHub/local tree equality
+  was verified. Main not merged. Checks run: 38930787730 (in progress at checkpoint).
+- Added `INSTALL.md` and `V3-HANDOFF.md`; current README/start/privacy/helper docs
+  describe 3.0. Plan records decisions, duplicate-identity boundary and source links.
+- Next: publish final privacy/handoff changes; verify CI artifacts and record the
+  precise remaining Windows/provider acceptance checks. No store publication.
+
+### V3 CI integration correction
+
+- Run 38930787730: extension verify job passed; connected-services PostgreSQL API
+  and phone-web checks passed, but transport fixture timed out trying to click
+  snapshot pairing inside the newly collapsed Advanced section. Updated the
+  fixture to open “Snapshot sync · advanced” first. Pairing semantics unchanged.
+- Windows job had passed native checks and real PowerShell parsing/GUI construction
+  and was still compiling the bundled installer at this checkpoint.
+- Final privacy safeguard also hides pre-existing search/nickname fields; focused
+  browser test passed. All final variant builds/archive checks passed again:
+  Chrome ZIP 298,948 bytes; Firefox ZIP 298,298 bytes.
+- Next: push privacy/handoff/fixture correction, confirm complete CI and record
+  artifacts. No real provider or Windows interactive test is implied by CI.

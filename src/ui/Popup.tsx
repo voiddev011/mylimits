@@ -23,7 +23,7 @@ export function Popup() {
   const low = store?.accounts.filter(a => fresh(a).some(m => (remainingPercent(m) ?? Infinity) <= (a.alertRemaining ?? store.settings.warningRemaining))).length ?? 0;
   const nextReset = Math.min(...(store?.accounts.flatMap(a => fresh(a).flatMap(m => m.resetsAt === null ? [] : [m.resetsAt])) ?? []));
   const latest = Math.max(0, ...(store?.accounts.map(a => a.updatedAt) ?? []));
-  const accounts = store ? selectAccounts(store.accounts, store.settings, now, query, lowOnly, 'default') : [];
+  const accounts = store ? selectAccounts(store.accounts, store.settings, now, store.settings.privacyMode ? '' : query, lowOnly, 'default') : [];
   function dashboard(section = 'overview', accountId?: string) {
     void openDashboard(section, accountId, demo).catch(() => notify('Could not open the dashboard.'));
   }
@@ -34,7 +34,7 @@ export function Popup() {
     <main className="quick-main">{!store ? <div className="empty-small">{error ? 'Unable to load saved limits.' : 'Loading your limits…'}</div> : <>
       {!!store.accounts.length && <div className="quick-summary"><button className={`quick-low ${lowOnly ? 'selected' : ''}`} aria-label="Low only" aria-pressed={lowOnly} onClick={() => setLowOnly(!lowOnly)}><Bell size={12}/>{low ? `${low} running low` : 'No low limits'}{lowOnly && <X size={10}/>}</button><span>{Number.isFinite(nextReset) ? <>Next reset <strong>{countdown(nextReset, now)}</strong></> : 'Remaining allowance'}</span></div>}
       {store.accountSetup && <div className="pending-setup"><span>Account setup in progress</span><button className="text-button" onClick={() => dashboard('add')}>Continue setup</button></div>}
-      {store.accounts.length > 6 && <label className="search-box quick-search"><Search size={13}/><input aria-label="Search accounts" placeholder="Find an account" value={query} onChange={e => setQuery(e.target.value)}/></label>}
+      {store.accounts.length > 6 && <label className="search-box quick-search"><Search size={13}/><input aria-label="Search accounts" placeholder="Find an account" disabled={store.settings.privacyMode} value={store.settings.privacyMode ? '' : query} onChange={e => setQuery(e.target.value)}/></label>}
       <div className="quick-accounts">{accounts.map(account => {
         const meters = visibleMeters(account);
         const status = accountStatus(account, now, store.settings.refreshMinutes);

@@ -69,3 +69,34 @@ contrast and target-size guidance; QuillBot site controls/Brave close-button hel
 CodexBar account-switch/cached-reading issues and managed-account documentation;
 OpenAI Sign in with ChatGPT storage/deployment boundaries; official provider brand
 sources. Preserve scope and license provenance in local asset documentation.
+
+## Implementation decisions
+
+- Implemented the five work packages in order. See status and V3-HANDOFF for
+  exact checks and delivery, not the aspirational acceptance list above.
+- Official Codex `account/read` currently returns type/email/plan, not a verified
+  universal workspace identity. Use isolated Codex homes and per-login browser
+  profiles; matching in-memory email hints generate a possible-duplicate warning,
+  never automatic merges or a claim of verified ownership across workspaces.
+- Independent Claude stays unavailable until there is a permitted, reliable,
+  live-tested connector. No blanket “after logout” promise was added.
+- Windows installer uses zlib compression for practical package/build time while
+  retaining the complete upstream native runtime layout. Bundled installer is
+  approximately 188 MiB; basic extension ZIP is about 300 kB and needs no helper.
+
+## Research references
+
+- [NN/g: progressive disclosure](https://www.nngroup.com/articles/progressive-disclosure/)
+- [NN/g: glanceable typography](https://www.nngroup.com/articles/glanceable-fonts/)
+- [W3C: resize text](https://www.w3.org/WAI/WCAG22/Understanding/resize-text.html)
+- [QuillBot: disable on a site](https://help.quillbot.com/hc/en-us/articles/39342585604375-How-do-I-disable-the-Quillbot-Chrome-extension-on-a-specific-website)
+- [QuillBot: Brave close-button issue](https://help.quillbot.com/hc/en-us/articles/21063817920919-Issue-Unable-to-close-the-QuillBot-sidebar-in-the-Brave-browser)
+- [CodexBar account issue #798](https://github.com/steipete/CodexBar/issues/798)
+- [CodexBar cached reading issue #1600](https://github.com/steipete/CodexBar/issues/1600)
+- [CodexBar Claude session issue #3663](https://github.com/steipete/CodexBar/issues/3663)
+- [OpenAI: profiles and sessions](https://developers.openai.com/siwc/token-sharing-open-source/profiles-and-sessions)
+- [Official Codex account protocol](https://github.com/openai/codex/blob/main/codex-rs/app-server-protocol/schema/typescript/v2/Account.ts)
+- [OpenAI brand](https://openai.com/brand/), [Cursor brand](https://cursor.com/brand/)
+
+Provider icon URLs and attribution are in PROVIDER-ASSETS.md. These sources inform
+behavior and design decisions; no competitor application code was copied.
