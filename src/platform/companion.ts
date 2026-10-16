@@ -13,7 +13,7 @@ let port: ReturnType<typeof browser.runtime.connectNative> | undefined;
 let generation = 0;
 let onSnapshot: (profiles: CompanionProfile[] | null) => Promise<void> = async () => {};
 const pending = new Map<string, { resolve: (value: unknown) => void; reject: (reason: Error) => void; timer: ReturnType<typeof setTimeout> }>();
-const unavailable = () => new Error('OpenAI companion is unavailable. Install and start it, then retry in Websites.');
+const unavailable = () => new Error('OpenAI companion is unavailable. Install and start it, then retry in Accounts.');
 export function listenCompanion(listener: typeof onSnapshot) { onSnapshot = listener; }
 export async function companionStatus() {
   return { enabled: !!(await browser.storage.local.get(KEY))[KEY], connected: !!port };
@@ -82,4 +82,5 @@ export async function addCompanionAccount() {
   const url = new URL(result.authUrl);
   if (url.protocol !== 'https:' || !['auth.openai.com', 'chatgpt.com'].includes(url.hostname) || url.username || url.password || (url.port && url.port !== '443')) throw new Error('Unsupported OpenAI sign-in URL.');
   await browser.tabs.create({ url: result.authUrl });
+  return result.profile;
 }

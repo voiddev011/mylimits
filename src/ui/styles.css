@@ -9,3 +9,21 @@
 .history-insights{display:grid;gap:14px;margin:18px 0}.insight-card{padding:14px;border:1px solid var(--border);border-radius:12px;min-width:0}.insight-card svg{width:100%;max-height:150px;color:var(--accent);display:block}.insight-card p{overflow-wrap:anywhere}.history-insights select{max-width:100%}
 
 .guide-panel{display:grid;gap:14px}.guide-panel textarea{width:100%;resize:vertical;min-height:72px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:inherit;font:inherit;box-sizing:border-box}.guide-panel details{padding:12px 0}.guide-panel label{display:grid;gap:6px;margin:8px 0}.guide-panel li{margin:6px 0}
+
+.connect-sheet{padding:20px;max-width:650px;margin:auto}
+.connect-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.connect-heading h2{font-size:18px;overflow-wrap:anywhere}
+.connect-intro{font-size:11px;line-height:1.6;color:var(--muted);margin-bottom:16px}
+.connect-providers{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.connect-provider{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:9px;padding:14px;text-align:left;background:transparent;color:var(--text);min-width:0}
+.connect-provider:hover{background:var(--accent-bg);border-color:var(--accent)}
+.connect-provider>span:nth-child(2){flex:1;min-width:0}
+.connect-provider strong{display:block;font-size:12px;font-weight:600}
+.connect-provider small{display:block;font-size:10px;margin-top:3px}
+.connect-steps{display:flex;flex-direction:column;align-items:stretch;gap:16px;font-size:12px}
+.connect-steps>p{font-size:11px;line-height:1.65;color:var(--muted)}
+.connect-steps .connection-boundary{font-size:10px;border-top:1px solid var(--line);padding-top:12px}
+.setup-success{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--accent)}
+.detected-name{font-size:15px;overflow-wrap:anywhere}
+.pending-setup{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;font-size:10px;background:var(--accent-bg);color:var(--accent)}
+@media(max-width:440px){.connect-providers{grid-template-columns:1fr}}

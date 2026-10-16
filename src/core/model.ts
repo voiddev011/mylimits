@@ -60,7 +60,12 @@ export interface ProviderState {
   failures: number;
   nextRetryAt: number | null;
 }
+export interface AccountSetup {
+  id: string; provider: ProviderId; mode: 'detect' | 'another'; nickname: string;
+  previousAccountId: string | null; startedAt: number;
+}
 export interface Store {
+  accountSetup?: AccountSetup | null;
   version: 2;
   connections: ConnectionRecord[];
   workspaces: Workspace[];

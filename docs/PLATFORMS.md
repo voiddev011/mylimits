@@ -7,7 +7,7 @@ acceptance are **pending**; building/linting is not live support certification.
 
 ## Extension install
 
-Chrome/Brave: extract `mylimits-2.1.0-chrome.zip`, open `chrome://extensions` or
+Chrome/Brave: extract `mylimits-2.2.0-chrome.zip`, open `chrome://extensions` or
 `brave://extensions`, enable Developer mode, Load unpacked, choose the folder
 containing manifest.json. Edge: `edge://extensions`, use the Edge build folder
 `.output/edge-mv3` (the Chromium package can also be tested there).

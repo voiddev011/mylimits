@@ -1,8 +1,3 @@
-/* Give the browser a fixed intrinsic popup width before React mounts.
-   Viewport-relative caps can otherwise lock the popup into its initial tiny width. */
-html, body {
-  width: 520px;
-  min-width: 520px;
-  margin: 0;
-}
+/* Set an intrinsic width before React mounts to avoid a narrow browser popup. */
+html, body { width: 400px; min-width: 400px; margin: 0; }
 #root { width: 100%; }
