@@ -1,34 +1,42 @@
-# MyLimits 2.1 — Phase 2 preview
+# MyLimits 2.2 — Compact accounts preview
 
 Your AI usage readings, named accounts and reset times in one compact view.
-Phase 2 lives on **`v2/phase-2`**. [Handoff](PHASE-2-HANDOFF.md) records the actual
-checks and pending live acceptance. All maintained Markdown lives in `docs/`;
-commands run from the repository root.
+This upgrade lives on **`v2/compact-accounts`**. See the
+[compact accounts handoff](COMPACT-ACCOUNTS-HANDOFF.md) for installation, actual
+verification and remaining provider limitations. All maintained Markdown lives
+in `docs/`; run commands from the repository root.
 
-## Install without Node
+## Install / update
 
-1. Download **[mylimits-extension-packages](https://github.com/voiddev011/mylimits/actions/runs/38846628036/artifacts/12023223325)** from the verified Phase 2 run.
-   Private repository downloads require GitHub sign-in. Verify the run and artifact
-   exist; a green job alone is not a download.
-2. Extract the artifact, then extract `mylimits-2.1.0-chrome.zip`. Keep the resulting
-   folder somewhere permanent; it must contain `manifest.json` directly.
-3. Chrome: `chrome://extensions`. Brave: `brave://extensions`. Enable Developer
-   mode → Load unpacked → choose that folder. Edge can test the Chromium package
-   using `edge://extensions`. [Firefox and platform details](PLATFORMS.md).
-4. Pin MyLimits → Accounts → enable a website and approve its exact site access.
-   It reuses the login already in this browser. Open the signed-in provider page
-   yourself if its connector needs page context. No companion or MyLimits account
-   is required for local tracking.
-5. Preview with sample data to inspect it without connecting an account. Samples
-   are fictional and never become saved connected accounts.
+For the current upgrade, download the **mylimits-extension-packages** artifact from
+the verified [Checks run 38922290094](https://github.com/voiddev011/mylimits/actions/runs/38922290094/artifacts/12054622767).
+Extract the artifact, then extract `mylimits-2.2.0-chrome.zip` into a permanent
+folder. It must contain `manifest.json` directly. The 2.1 Phase 2 artifact is an
+older build; it does not contain this redesign.
 
-For updates, replace files **inside the existing unpacked folder**, then Reload
-in Extensions. Keep its path and extension ID. Do not remove the extension first;
-that deletes local data. Back up your browser profile before a preview upgrade.
-V1/Phase 1 state migrates without changing existing IDs or account nicknames.
+Chrome: `chrome://extensions`. Brave: `brave://extensions`. Edge:
+`edge://extensions`. Enable Developer mode → Load unpacked → choose that folder.
+For an update, replace the files inside your existing unpacked folder, then click
+Reload. Keep the path and extension ID; uninstalling deletes your local data.
+[Firefox/platform instructions](PLATFORMS.md).
+
+Open MyLimits → **+** → choose a service → **Detect current account**. Allow its
+site access; MyLimits reuses the existing website login. For another account,
+choose **Connect another account**, switch/sign in on the provider website, then
+return and confirm the detected account. Both names/readings remain visible;
+website mode refreshes only the current login. The picker also offers an optional
+independent OpenAI connection through the existing companion.
+
+No MyLimits account or companion is required for basic tracking. Preview accounts
+are fictional and never become saved connected accounts.
 
 ## Features
 
+- A 400px quick popup: limits, reset times, refresh, + and Full dashboard. Six
+  standard rows fit without scrolling. History/settings/guidance live in the full
+  dashboard; clicking an account opens its details there.
+- Automatic detection and explicit account setup with saved progress, identity
+  checks and nickname confirmation.
 - Compact account rows, separate nicknames, order/pins, selected meters, search,
   low filtering, themes, optional low/critical and confirmed-reset notifications.
 - Independent readings by source/workspace; unavailable accounts retain dated
@@ -78,7 +86,7 @@ npm ci
 npm run dev                 # fast rebuilds while developing
 npm run check               # types, core/native tests, production Chrome build
 npm run test:browser         # needs Playwright Chromium and a built extension
-npm run zip                 # .output/mylimits-2.1.0-chrome.zip
+npm run zip                 # .output/mylimits-2.2.0-chrome.zip
 npm run build:firefox
 npm run zip:firefox
 ```

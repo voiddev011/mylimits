@@ -47,7 +47,12 @@ export const UsageSnapshotSchema: z.ZodType<UsageSnapshot> = z.object({
   schemaVersion: z.literal(2), snapshotId: id, providerId: ProviderSchema, accountId: id, connectionId: id,
   workspaceId: id.nullable(), observedAt: time, receivedAt: time, connectorVersion: z.string().min(1).max(60), meters: z.array(MeterSchema).max(60),
 });
+export const AccountSetupSchema = z.object({
+  id: z.string().uuid(), provider: ProviderSchema, mode: z.enum(['detect','another']), nickname: z.string().trim().max(60),
+  previousAccountId: id.nullable(), startedAt: time,
+});
 const CurrentStoreSchema: z.ZodType<Store> = z.object({
+  accountSetup: AccountSetupSchema.nullable().optional(),
   version: z.literal(2), installSalt: z.string().min(1), accounts: z.array(AccountSchema).max(100),
   connections: z.array(ConnectionRecordSchema).max(200), workspaces: z.array(WorkspaceSchema).max(200), snapshots: z.array(UsageSnapshotSchema).max(400),
   providers: z.record(ProviderSchema, ProviderStateSchema), settings: SettingsSchema, historyIssue: z.string().max(300).nullable(),

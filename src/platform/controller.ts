@@ -16,6 +16,7 @@ import { mergeCompanion, markCompanionUnavailable } from '../core/companion';
 import { addCompanionAccount, companionRequest, companionStatus, enableCompanion, listenCompanion, refreshCompanion } from './companion';
 import { widgetSettings,updateWidgetSettings,reconcileWidgets,readWidget,listenWidgets } from './widget';
 import { snapshotSync } from './sync';
+import { startAccountSetup, saveAccountSetup } from '../core/account-setup';
 
 const coordinator = new RefreshCoordinator(2);
 const observedProviders: readonly ProviderId[] = ['gemini', 'grok', 'perplexity'];
@@ -75,7 +76,9 @@ export async function refreshProvider(provider: ProviderId, manual = false, reas
     await updateStore(store => ({ store: { ...store, connections: store.connections.map(c => c.id === connectionId && c.generation === stamp ? { ...c, status:'checking',lastAttemptAt:Date.now() } : c),
       providers: { ...store.providers, [provider]: { ...store.providers[provider], status:'checking',checkedAt:Date.now() } } }, value:undefined }));
     try {
-      const selected = before.workspaces.find(w => w.id === connection.workspaceId);
+      // Another account can have different workspaces. Do not carry the old selection through setup.
+      const switchingAccount=before.accountSetup?.provider===provider;
+      const selected = switchingAccount?undefined:before.workspaces.find(w => w.id === connection.workspaceId);
       const snapshot = await readProvider(provider, { workspaceRemoteId: selected?.remoteId,readingMode:before.providers[provider].readingMode }, signal);
       const meters = snapshot.meters.map(m => MeterSchema.parse(m));
       const id = await accountId(provider, snapshot.identity, before.installSalt);
@@ -211,6 +214,18 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
   switch (command.type) {
     case 'widget-settings': return command.settings?updateWidgetSettings(()=>command.settings!):widgetSettings();
     case 'state': return publicStore();
+    case 'account-setup-start': {
+      if (!await browser.permissions.contains({origins:[providers[command.provider].origin]})) throw new Error('Allow site access before detecting an account.');
+      await updateStore(store => ({store:startAccountSetup(store,command.provider,command.mode,command.nickname,crypto.randomUUID(),Date.now()),value:undefined}));
+      const state = await readStore();
+      if (!state.providers[command.provider].enabled) await setProvider(command.provider,true);
+      else void refreshProvider(command.provider,true).catch(()=>{});
+      break;
+    }
+    case 'account-setup-save':
+      await updateStore(store => ({store:saveAccountSetup(store,command.setupId,command.accountId),value:undefined})); break;
+    case 'account-setup-cancel':
+      await updateStore(store => ({store:store.accountSetup?.id===command.setupId?{...store,accountSetup:null}:store,value:undefined})); break;
     case 'opened': void refreshAll(false, 'open').catch(() => {}); return publicStore();
     case 'reader-mode': {
       coordinator.cancel(`website:${command.provider}`);
@@ -256,7 +271,12 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
       else await browser.alarms.clear(COMPANION_ALARM);
       await enableCompanion(command.enabled);
       break;
-    case 'companion-add': await addCompanionAccount(); break;
+    case 'companion-add': {
+      const profile = await addCompanionAccount();
+      await refreshCompanion();
+      if (command.nickname) await updateStore(store=>({store:{...store,accounts:store.accounts.map(a=>a.companionProfile===profile?{...a,alias:command.nickname!}:a)},value:undefined}));
+      break;
+    }
     case 'companion-remove': await companionRequest('remove', command.profile); await refreshCompanion(); break;
     case 'refresh': {
       const source = command.connectionId ? (await readStore()).connections.find(c => c.id === command.connectionId) : undefined;

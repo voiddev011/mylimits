@@ -19,3 +19,9 @@ test('ChatGPT transient bearer is used only for the usage request and not return
 test('retry timing honors delta/date, rejects invalid values and bounds extreme waits',()=>{
  const now=1800000000000;assert.equal(retryTime('60',now),now+60000);assert.equal(retryTime('invalid',now),null);assert.equal(retryTime('999999999',now),now+86400000);
 });
+test('Claude and ChatGPT reject a website account switch during quota retrieval',async()=>{
+ let reads=0;
+ await assert.rejects(readAccountProvider('claude',{},async path=>path==='/api/account'?{uuid:++reads===1?'user-a':'user-b'}:path==='/api/organizations'?orgs:usage),/account changed/);
+ reads=0;
+ await assert.rejects(readAccountProvider('chatgpt',{},async path=>path==='/api/auth/session'?{user:{id:++reads===1?'user-a':'user-b'},accessToken:'fixture-only'}:{rate_limit:{}}),/account changed/);
+});

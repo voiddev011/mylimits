@@ -1,11 +1,13 @@
 import type { Account, ConnectionRecord, Store } from './model';
 export type PublicConnection = Omit<ConnectionRecord, 'generation' | 'profileId'>;
 export interface PublicState {
+  accountSetup?: Store['accountSetup'];
   version: 2; accounts: Account[]; providers: Store['providers']; settings: Store['settings'];
   connections: PublicConnection[]; workspaces: { id: string; provider: string; name: string }[]; historyIssue: string | null;
 }
 export function toPublicState(store: Store): PublicState {
   return {
+    accountSetup: structuredClone(store.accountSetup ?? null),
     version: 2, settings: structuredClone(store.settings), providers: structuredClone(store.providers), historyIssue: store.historyIssue,
     workspaces: store.workspaces.map(({ id, provider, name }) => ({ id, provider, name })),
     connections: store.connections.map(c => ({ id:c.id, provider:c.provider,kind:c.kind,accountId:c.accountId,workspaceId:c.workspaceId,workspaceIds:[...c.workspaceIds],
