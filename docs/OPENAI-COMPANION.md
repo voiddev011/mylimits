@@ -7,7 +7,16 @@ but **not yet verified with a real signed-in account**, ordinary website logout,
 other-device usage, or token renewal. These are acceptance tests, not guarantees.
 Ordinary ChatGPT chat limits are not established by the returned Codex buckets.
 
-## Windows setup (Chrome or Brave)
+## Optional Windows setup GUI (Phase 2)
+
+The unsigned per-user installer adds Start-menu Setup and Uninstall entries.
+It discovers the MyLimits extension from browser metadata, with a manual ID fallback.
+Node 24+ and the official Codex CLI are prerequisites. See [platform packaging and
+acceptance](PLATFORMS.md) for the artifact, setup and deletion behavior. No real
+Windows/native/provider verification is claimed. Basic extension tracking never
+requires this installer.
+
+## Manual Windows setup (Chrome, Brave or Edge)
 
 The Windows installer and API fallback are implemented, but Windows Task Scheduler,
 registry registration, native host launch and real OpenAI sign-in still need a live
@@ -31,7 +40,7 @@ Use Node.js 24+. Run from a normal PowerShell terminal as your own user, not Adm
    npm run companion:install -- --extension-id YOUR_EXTENSION_ID --browser brave
    ```
 
-   Use `--browser chrome` for Chrome. The installer locates npm's `codex.cmd`, then
+   Use `--browser chrome` for Chrome or `--browser edge` for Edge. The installer locates npm's `codex.cmd`, then
    runs its JavaScript CLI using Node directly, avoiding Windows command-shim issues.
    An absolute `--codex` path can point to `codex.exe` or the Codex `bin/codex.js` file.
 4. The installer registers only your user's browser host and requests a per-user

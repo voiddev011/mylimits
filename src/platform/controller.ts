@@ -329,6 +329,7 @@ export function startController(): void {
   browser.alarms.onAlarm.addListener(alarm => { if(alarm.name===SYNC_ALARM)void snapshotSync.run().catch(()=>{});if (alarm.name === COMPANION_ALARM) void refreshCompanion().catch(() => {}); if (alarm.name === REFRESH_ALARM) void refreshAll().catch(() => undefined); });
   browser.permissions.onRemoved.addListener(permissions => {
     void (async () => {
+      if((permissions as {data_collection?:string[]}).data_collection?.length)await snapshotSync.enable(false);
       if (permissions.permissions?.includes('nativeMessaging')) await enableCompanion(false);
       if (permissions.permissions?.includes('notifications')) await updateStore(store => ({ store: { ...store, settings: { ...store.settings, desktopAlerts: false } }, value: undefined }));
       const widgets=await widgetSettings();const kept:ProviderId[]=[];for(const provider of widgets.providers)if(await browser.permissions.contains({origins:[providers[provider].origin]}))kept.push(provider);await updateWidgetSettings(s=>({...s,providers:kept}));

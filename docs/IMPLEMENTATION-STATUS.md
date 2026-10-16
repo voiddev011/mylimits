@@ -6,8 +6,8 @@ credential upload has been performed.
 ## Active checkpoint
 
 - Requested phase: Phase 2 (authorized by the user: “Start with next phase”).
-- Current work package: P2-08 — verified.
-- Next action: P2-09 — implement Firefox fallbacks, Edge registration and normal optional Windows installer packaging.
+- Current work package: P2-09 — verified.
+- Next action: P2-10 — run integrated hardening, server/browser checks, release packaging and handoff.
 - Working branch/commit: `v2/phase-2`; Phase 1 and main preserved.
 - Authoritative scope: [master plan](V2-IMPLEMENTATION-PLAN.md),
   [Phase 1](PHASE-1.md), [Phase 2](PHASE-2.md).
@@ -42,7 +42,7 @@ implemented independent work while leaving that specific check pending.
 | P2-06 | 10 | verified | See checkpoint below. |
 | P2-07 | 10 | verified | See checkpoint below. |
 | P2-08 | 8 | verified | See checkpoint below. |
-| P2-09 | 10 | not_started | |
+| P2-09 | 10 | verified | See checkpoint below. |
 | P2-10 | 10 | not_started | |
 | **Phase 2 total** | **100** | **in_progress** | Ordered implementation; external provider gates recorded separately. |
 
@@ -115,13 +115,13 @@ State: **verified**. Added strict legacy parsing, a V1 backup, V2 state/pointer 
 
 Next: P1-04 — adapt existing readers and native snapshots to V2 reconciliation.
 
-## P1-04 checkpoint — 15 October 2026
+## P1-04 checkpoint — 16 October 2026
 
 State: **verified**. Adapted existing readers to V2 snapshots and preserved independent native sources. Added Claude workspace choice from validated membership, strict unavailable-selection handling, fixed-origin request-local authentication, sanitized choices and retry timing. Native cold-start readings retain their original age. Type checking and 47 core tests pass; legacy cold-start assertion now compares retained normalized readings, preserving its original behavior guarantee.
 
 Next: P1-05 — add source-aware account and connection commands.
 
-## P1-05 checkpoint — 15 October 2026
+## P1-05 checkpoint — 16 October 2026
 
 State: **implemented**. Added validated account pin/order/snooze preferences, source disconnect and verified workspace commands, plus generation-safe website enable/disable and forget behavior. Native disconnect now retains remembered readings; forgetting explicitly deletes data. Added action regressions for names, workspace membership, invalid reorder and collector shutdown. User-facing controls are integrated in P1-07; no live revocation is claimed.
 
@@ -284,3 +284,15 @@ Next: P2-08 — implement restricted widget state/actions, registration, UI and 
 State: **verified**. Changed runtime widget entrypoint, pure public projection/settings schemas, background registration/permissions/messages, Settings controls and focused tests/docs. Defaults off; exact-host scripts, Shadow DOM, corner/collapse/hide persistence, public status/two meters only, trusted-click controls, singleton/remount cleanup and debounced local reading updates. No page bridge, full-store messages, raw storage subscription, provider calls or composer reads. Typecheck passed; 87 core tests passed; build passed at 716.2 kB; real Chromium two-tab synthetic-page fixture passed for hostile CSS, SPA/remount, trusted vs synthetic clicks, public-only messages and disable cleanup. Headless permission approval unavailable: fixture grants a single synthetic host in an isolated copied build; ordinary permission denial remains covered. Consumer permission UI and live provider/widget checks remain pending.
 
 Next: P2-09 — implement Firefox fallbacks, Edge registration and normal optional Windows installer packaging.
+
+## P2-09 checkpoint — 16 October 2026
+
+State: **in_progress**. Implement browser-specific manifests/capability handling, Edge native registration, public-metadata extension discovery and GUI install/uninstall/start-menu packaging. Preserve Linux/authentication behavior. Windows desktop/live provider access are not available and must remain pending rather than treated as tested.
+
+Next: P2-09 — implement and verify browser fallbacks and unsigned Windows installer artifacts.
+
+## P2-09 checkpoint — 16 October 2026
+
+State: **verified**. Changed browser-specific WXT builds/permissions and Firefox sync data-consent checks; optional native UI fallback; Edge host registration; extension-metadata discovery; Windows GUI setup/uninstall, NSIS packaging/checksums and Windows CI parser/GUI/compiler steps; platform/companion docs and tests. Chrome/Edge/Firefox MV3 builds pass and package-contract checker passes; Firefox 140+ uses sidebar/event page and excludes unsupported native setup. 88 core and 17 companion tests passed. Actual unsigned NSIS EXE compiled locally (158753 bytes) with SHA-256; installer/Start-menu use current-user paths, no elevation, automatic profile selection plus manual fallback and explicit credential deletion choice. Local apt index lacked NSIS; temporary official Debian packages supplied compiler, without changing system packages. Real Windows clean install/update/uninstall/browser/native acceptance and real Firefox/provider behavior remain pending; Windows PowerShell parser/GUI checks execute in CI, not claimed locally passed. Installer prerequisites remain Node 24+ and official Codex CLI, documented as optional advanced setup.
+
+Next: P2-10 — run integrated hardening, server/browser checks, release packaging and handoff.

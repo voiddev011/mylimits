@@ -19,3 +19,5 @@ import '../src/core/insights.test.ts';
 import '../src/core/guide.test.ts';
 
 import '../src/core/widget.test.ts';
+
+import '../src/core/browser-capabilities.test.ts';

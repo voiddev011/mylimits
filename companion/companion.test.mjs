@@ -203,3 +203,9 @@ test('local bridge authorization rejects missing and incorrect tokens', async t 
   assert.equal(authenticated({ type: 'status' }, token, hello.nonce), false);
   assert.ok(!JSON.stringify([hello, response]).includes(token));
 });
+test('extension discovery reads only exact MyLimits metadata and rejects malformed identities',async()=>{
+ const {extensionCandidates}=await import('./discovery.mjs');
+ const input={extensions:{settings:{['a'.repeat(32)]:{manifest:{name:'MyLimits'},accessToken:'DO_NOT_EXPOSE'},['b'.repeat(32)]:{manifest:{name:'Other'}},'bad-id':{manifest:{name:'MyLimits'}}}},cookies:'NEVER_COPY'};
+ const found=extensionCandidates(input,'edge','Default');assert.equal(found.length,1);assert.equal(found[0].browser,'edge');assert.ok(!JSON.stringify(found).includes('DO_NOT_EXPOSE'));assert.ok(!JSON.stringify(found).includes('NEVER_COPY'));
+ const {registryRoots}=await import('./windows.mjs');assert.equal(registryRoots.edge,'HKCU\\Software\\Microsoft\\Edge\\NativeMessagingHosts');
+});
