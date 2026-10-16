@@ -2,7 +2,7 @@
 
 ## Short path: packaged extension
 
-Download the [verified MyLimits 3.0 extension package](https://github.com/voiddev011/mylimits/actions/runs/38931432647/artifacts/12058862247)
+Download the [verified MyLimits 3.0 extension package](https://github.com/voiddev011/mylimits/actions/runs/38932629756/artifacts/12059023187)
 from the `v3/redesign` Checks run. Extract it, then extract
 `mylimits-3.0.0-chrome.zip` into a permanent folder containing `manifest.json`.
 

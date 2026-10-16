@@ -546,3 +546,17 @@ blocked rather than advertised. Next: implement V3-01 and V3-02.
   live provider and interactive desktop acceptance are the explicit remaining
   release checks in V3-HANDOFF.md. No Phase 2/server deployment/store submission
   or main merge was performed.
+
+### V3 published final application and artifacts
+
+- Final source pushed: `702d971dfddf18216fb28d7df3fbb9c12b7a4c1f`; tree
+  `baeaa4773a6d18a3b4d2dbb6d4e4c7d30013c9f8` equals local `75fb9cd`.
+- Run **38932629756** final extension verification passed, including all 26 browser
+  checks and the actual dark-preference SVG pixel assertion. Final downloadable
+  extension artifact: **12059023187**. Install/README links now target that build.
+- Previous complete run **38931432647** passed all three jobs; its Windows helper
+  artifact **12058892440** has identical native application/package source.
+  Latest Windows rebuild is redundant verification of that unchanged helper.
+- Last commit is documentation/evidence only; no further application changes.
+  No main merge or public store submission. Release's pending live-account and
+  interactive desktop acceptance is fully enumerated in V3-HANDOFF.md.
