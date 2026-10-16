@@ -1,13 +1,13 @@
 # MyLimits 2.0 implementation status
 
-Updated: **15 October 2026**. **Phase 1 verified; Phase 2 implementation in progress.** No cloud deployment or
+Updated: **16 October 2026**. **Phase 1 verified; Phase 2 implementation in progress.** No cloud deployment or
 credential upload has been performed.
 
 ## Active checkpoint
 
 - Requested phase: Phase 2 (authorized by the user: “Start with next phase”).
-- Current work package: P2-05 — verified.
-- Next action: P2-06 — implement segmented history, reset timeline, retention and conservative pacing.
+- Current work package: P2-06 — verified.
+- Next action: P2-07 — implement local task guidance and explicit prompt/handoff utilities.
 - Working branch/commit: `v2/phase-2`; Phase 1 and main preserved.
 - Authoritative scope: [master plan](V2-IMPLEMENTATION-PLAN.md),
   [Phase 1](PHASE-1.md), [Phase 2](PHASE-2.md).
@@ -39,7 +39,7 @@ implemented independent work while leaving that specific check pending.
 | P2-03 | 12 | verified | See checkpoint below. |
 | P2-04 | 8 | verified | See checkpoint below. |
 | P2-05 | 12 | verified | See checkpoint below. |
-| P2-06 | 10 | not_started | |
+| P2-06 | 10 | verified | See checkpoint below. |
 | P2-07 | 10 | not_started | |
 | P2-08 | 8 | not_started | |
 | P2-09 | 10 | not_started | |
@@ -248,3 +248,15 @@ Next: P2-05 — inspect primary/source evidence for Grok, Perplexity, Gemini and
 State: **verified**. Changed providers/additional.ts and tests, reader/transport/catalog, core meter display/model/schema/public/history export, frozen V1 schema and V1/V2 migration tests, controller/messages and account source controls, WXT Cursor origin, web count display and browser fixtures. Implemented Grok subscriptions identity plus default-mode quota POST, Perplexity signed-in identity plus remaining-count quotas, and Cursor stable subject/coding-plan/spend reader. Identity is rechecked after usage to reject mid-read account switches. Count-only/monetary/percentage values remain distinct; unknown totals/reset times are not inferred. Grok/Perplexity activity-only mode remains available; old browser-only bindings preserve that mode. Cursor is the explicit fallback for Gemini’s unverified consumer account/quota path. All three are source/fixture-tested prototypes, not live-verified. Added source evidence and current capability matrix under docs/. Root typecheck and 78 core tests pass; server typecheck and 25 PostgreSQL tests pass; production build passes (580.36 kB); all 16 extension browser fixtures pass, including counts/mode switch and original V1 migration. Connector version tag updated to website-v2.1; final integrated build will include it. Live plan/tab/logout/other-device checks remain pending.
 
 Next: P2-06 — implement segmented history, reset timeline, retention and conservative pacing.
+
+## P2-06 checkpoint — 15 October 2026
+
+State: **in_progress**. Preserve existing pagination/export and all known gaps. Add 30/90-day retention, bounded downsampled series, separate reported spend, reset timeline and minimum-evidence range estimates. Unknown windows, local activity, sparse/stale/reset-crossing or source-changed data must not produce fabricated forecasts or messages-left estimates.
+
+Next: P2-06 — implement history series and pacing using same-source/window samples only.
+
+## P2-06 checkpoint — 16 October 2026
+
+State: **verified**. Changed core insights/history-data/model/schema, history platform/controller/messages, HistoryCharts/HistoryView/preferences/styles, server retention and tests. Separate account/source/workspace/scope/window/evidence/currency series; bounded downsampling and honest gaps; minimum four fresh readings over 30 minutes with bounded robust rate quartiles and padded range. Selectable immediate local 30/90-day retention; server prunes older history on upload while keeping one dated last-known reading per source. No messages-left, subscription fees or token cost invented. Typecheck passed; 82 core tests passed; 26 PostgreSQL server tests passed; production build passed at 590.23 kB; three existing history browser fixtures and new chart/retention fixture passed with Playwright Chromium. System Chromium failed to load extensions, so browser verification used downloaded Chromium instead. Live provider access remains unavailable.
+
+Next: P2-07 — implement local task guidance and explicit prompt/handoff utilities.

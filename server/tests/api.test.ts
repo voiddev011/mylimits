@@ -131,3 +131,13 @@ test('source tombstones cover lost acknowledgements and deletion before first up
  const unseen='not-yet-uploaded';assert.equal((await a.inject({method:'DELETE',url:'/v1/source-data',headers:headers(d.token),payload:{sourceAccountId:unseen}})).statusCode,200);
  assert.equal((await send(a,d,[{...item(16),snapshot:{...item(16).snapshot,accountId:unseen}}])).statusCode,410);
 });
+
+test('snapshot history retention is 30/90 days with a protected last-known source reading',async t=>{
+ const a=app(t),d=await device(a),at=Date.now();
+ const old=await send(a,d,[item(1,at-40*86400000)]);assert.equal(old.statusCode,200,old.body);
+ assert.equal((await pool.query('SELECT count(*)::int AS n FROM snapshots')).rows[0].n,1);
+ await send(a,d,[item(2,at)]);assert.equal((await pool.query('SELECT count(*)::int AS n FROM snapshots')).rows[0].n,1);
+ const {emptyStore}=await import('../../src/core/model');
+ await a.inject({method:'PATCH',url:'/v1/preferences',headers:headers(),payload:{expectedRevision:0,data:{settings:{...emptyStore('test').settings,historyRetentionDays:90}}}});
+ await send(a,d,[item(3,at-40*86400000)]);assert.equal((await pool.query('SELECT count(*)::int AS n FROM snapshots')).rows[0].n,2);
+});

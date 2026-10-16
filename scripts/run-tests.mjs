@@ -13,3 +13,5 @@ import '../src/core/alert-policy.test.ts';
 import '../src/core/history-data.test.ts';
 import '../src/core/sync.test.ts';
 import '../src/providers/additional.test.ts';
+
+import '../src/core/insights.test.ts';

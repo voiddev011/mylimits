@@ -37,6 +37,7 @@ export async function upload(pool:pg.Pool,p:Principal,raw:unknown,now=Date.now()
    await db.query('INSERT INTO snapshots(id,owner_id,account_id,connection_id,device_id,source_snapshot_id,observed_at,received_at,payload) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)',[uuid(),p.owner,account.id,conn.id,input.deviceId,s.snapshotId,s.observedAt,now,JSON.stringify(s)]);
    accepted.push({snapshotId:s.snapshotId,accountId:account.id,connectionId:conn.id,duplicate:false});
   }
+  await pruneSnapshots(db,p.owner,now);
   return {accepted,mode:'snapshot-only' as const};
  });
 }
@@ -66,3 +67,12 @@ export async function deleteAccountInTransaction(db:DB,p:Principal,id:string){
   await db.query('UPDATE preferences SET data=jsonb_set(data,\'{names}\',COALESCE(data->\'names\',\'{}\')-$2::text),revision=revision+1 WHERE owner_id=$1',[p.owner,id]);
 }
 export async function deleteAccount(pool:pg.Pool,p:Principal,id:string){return transaction(pool,db=>deleteAccountInTransaction(db,p,id))}
+
+// Preserve one last-known reading per source for the dashboard; prune older history.
+export async function pruneSnapshots(db:DB,owner:string,now=Date.now()){
+ const preference=(await db.query('SELECT data FROM preferences WHERE owner_id=$1',[owner])).rows[0]?.data;
+ const days=preference?.settings?.historyRetentionDays===90?90:30;
+ await db.query(`DELETE FROM snapshots s WHERE owner_id=$1 AND observed_at<$2
+ AND EXISTS (SELECT 1 FROM snapshots newer WHERE newer.owner_id=s.owner_id AND newer.connection_id=s.connection_id
+ AND (newer.observed_at>s.observed_at OR (newer.observed_at=s.observed_at AND newer.id>s.id)))`,[owner,now-days*86400000]);
+}

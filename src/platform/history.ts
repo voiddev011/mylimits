@@ -14,8 +14,8 @@ function database():Promise<IDBDatabase>{return new Promise((resolve,reject)=>{
  request.onerror=()=>reject(new Error('Local history could not be opened.'));
 });}
 export async function ensureHistory(){const db=await database();db.close();}
-export async function saveHistory(point:HistoryPoint):Promise<void>{
- const safe=publicHistory(point);const cutoff=Date.now()-30*86400000;if(safe.time<cutoff)return;
+export async function saveHistory(point:HistoryPoint,retentionDays:30|90=30):Promise<void>{
+ const safe=publicHistory(point);const cutoff=Date.now()-retentionDays*86400000;if(safe.time<cutoff)return;
  const db=await database();try{await new Promise<void>((resolve,reject)=>{
   const tx=db.transaction('readings','readwrite'),store=tx.objectStore('readings');
   const snapshotKey=point.snapshotKey??`${point.accountId}/${point.connectionId??'legacy'}/${point.time}/${JSON.stringify(safe.meters)}`;
@@ -49,4 +49,16 @@ export async function historyExport(accountIds:string[],from?:number,to?:number)
  const result:HistoryPoint[]=[];
  for(const accountId of accountIds){let before:HistoryQuery['before'];do{const page=await readHistoryPage({accountId,from,to,before,limit:200});result.push(...page.points);before=page.cursor??undefined;if(result.length>50000)throw new Error('Export is too large. Choose a shorter date range.');}while(before);}
  return result;
+}
+
+export async function readHistorySeries(query:HistoryQuery){
+ const points:HistoryPoint[]=[];let before:HistoryQuery['before'];let hasMore=false;
+ do{const page=await readHistoryPage({...query,before,limit:200});points.push(...page.points);before=page.cursor??undefined;hasMore=page.hasMore;}while(before&&points.length<5000);
+ return {points,truncated:hasMore};
+}
+export async function pruneHistory(retentionDays:30|90){
+ const db=await database();try{await new Promise<void>((resolve,reject)=>{
+  const tx=db.transaction('readings','readwrite');const cursor=tx.objectStore('readings').index('time').openCursor(IDBKeyRange.upperBound(Date.now()-retentionDays*86400000,true));
+  cursor.onsuccess=()=>{const row=cursor.result;if(row){row.delete();row.continue()}};tx.oncomplete=()=>resolve();tx.onerror=()=>reject(new Error('History retention could not be applied.'));
+ });}finally{db.close()}
 }
