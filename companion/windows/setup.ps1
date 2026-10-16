@@ -15,8 +15,13 @@ if (!$node) {$node = Join-Path $env:ProgramFiles 'nodejs\node.exe';if (!(Test-Pa
 Label 'Choose an installed MyLimits extension (Chrome / Brave / Edge / Chromium):' 68
 $choices = New-Object Windows.Forms.ComboBox
 $choices.Location=New-Object Drawing.Point(20,108);$choices.Size=New-Object Drawing.Size(590,28);$choices.DropDownStyle='DropDownList';$form.Controls.Add($choices)
+function Read-Candidates([string]$json) {
+ foreach($entry in (ConvertFrom-Json -InputObject $json)) {
+  if($entry -and $entry.label -is [string] -and $entry.id -match '^[a-p]{32}$' -and $entry.browser -in @('chrome','brave','edge','chromium')) {Write-Output $entry}
+ }
+}
 $candidates=@()
-if ($node) {try {$candidates=@((& $node (Join-Path $root 'discovery.mjs')) | ConvertFrom-Json)}catch{}}
+if ($node) {try {$raw=& $node (Join-Path $root 'discovery.mjs');$candidates=@(Read-Candidates ($raw -join ''))}catch{}}
 foreach($c in $candidates){[void]$choices.Items.Add($c.label)}
 if($choices.Items.Count -gt 0){$choices.SelectedIndex=0}
 Label 'If detection misses an unpacked profile, select a browser and paste its ID from the Extensions page below. Leave blank to use detection.' 148

@@ -222,8 +222,8 @@ test('six account rows fit the popup and pins remain independent of nicknames', 
  const fixture={...emptyStore('six-fixture'),accounts:demoState().accounts};
  fixture.accounts.push({...fixture.accounts[0]!,id:'sixth',alias:'Claude Research',connection:'inactive'});
  await worker.evaluate(async s=>chrome.storage.local.set({'mylimits:state:v2':s}),fixture);
- const page=await context.newPage();await page.setViewportSize({width:520,height:600});await page.goto(`chrome-extension://${extensionId}/popup.html`);
- await expect(page.locator('.account-row')).toHaveCount(6);
+ const page=await context.newPage();await page.setViewportSize({width:520,height:600});const started=Date.now();await page.goto(`chrome-extension://${extensionId}/popup.html`);
+ await expect(page.locator('.account-row')).toHaveCount(6);await mkdir('artifacts',{recursive:true});await writeFile('artifacts/phase-2-performance.json',JSON.stringify({fixture:'six cached named accounts; Linux headless Chromium; network blocked',renderMilliseconds:Date.now()-started,viewport:{width:520,height:600}},null,2));
  expect(await page.locator('.main-content').evaluate(el=>el.scrollHeight<=el.clientHeight+1)).toBe(true);
  await page.getByRole('button',{name:'Details for GPT Projects',exact:true}).click();
  await page.getByRole('button',{name:'Pin account',exact:true}).click();

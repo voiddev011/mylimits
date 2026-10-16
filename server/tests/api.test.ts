@@ -141,3 +141,17 @@ test('snapshot history retention is 30/90 days with a protected last-known sourc
  await a.inject({method:'PATCH',url:'/v1/preferences',headers:headers(),payload:{expectedRevision:0,data:{settings:{...emptyStore('test').settings,historyRetentionDays:90}}}});
  await send(a,d,[item(3,at-40*86400000)]);assert.equal((await pool.query('SELECT count(*)::int AS n FROM snapshots')).rows[0].n,2);
 });
+test('concurrent source deletion and upload cannot recreate forgotten account readings',async t=>{
+ const a=app(t),d=await device(a);await send(a,d);
+ const [gone,reading]=await Promise.all([a.inject({method:'DELETE',url:'/v1/source-data',headers:headers(d.token),payload:{sourceAccountId:'local-source-account'}}),send(a,d,[item(19)])]);assert.equal(gone.statusCode,200,gone.body);assert.ok([200,410].includes(reading.statusCode));assert.equal((await pool.query('SELECT count(*)::int AS n FROM snapshots')).rows[0].n,0);assert.equal((await send(a,d,[item(20)])).statusCode,410);
+});
+test('deleting account data scrubs device names and retention maintenance runs without collectors',async t=>{
+ const a=app(t),d=await device(a),at=Date.now();await send(a,d,[item(1,at-20*86400000),item(2,at)]);
+ await pool.query('UPDATE snapshots SET observed_at=observed_at-$1 WHERE source_snapshot_id=$2',[20*86400000,'s-1']);
+ const {retentionPass}=await import('../src/retention');await retentionPass(pool);assert.equal((await pool.query('SELECT count(*)::int AS n FROM snapshots')).rows[0].n,1);
+ await a.inject({method:'DELETE',url:'/v1/account-data',headers:headers(),payload:{confirmation:'delete-all'}});assert.equal((await pool.query('SELECT name FROM devices WHERE id=$1',[d.id])).rows[0].name,'Revoked device');
+});
+test('per-owner device capacity is enforced and unconfigured login attempts are rate bounded',async t=>{
+ const a=app(t);for(let i=0;i<20;i++)await device(a);const rejected=await a.inject({method:'POST',url:'/v1/devices',headers:headers(),payload:{name:'Extra'}});assert.equal(rejected.statusCode,409);assert.equal(rejected.json().error,'device_capacity_reached');
+ for(let i=0;i<30;i++)assert.equal((await a.inject({url:'/auth/login'})).statusCode,503);assert.equal((await a.inject({url:'/auth/login'})).statusCode,429);
+});

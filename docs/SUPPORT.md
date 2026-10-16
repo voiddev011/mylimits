@@ -1,9 +1,9 @@
-# Provider support and acceptance — Phase 1
+# Provider support and acceptance — Phase 2
 
 Code/fixture verification does not establish live provider support. All quota
 readers remain **live-unverified prototypes** until tested with the relevant
 signed-in plan. See the dated [capability matrix](PROVIDER-CAPABILITIES.md) and
-[automated evidence](PHASE-1-HANDOFF.md).
+[automated evidence](PHASE-2-HANDOFF.md).
 
 ## Implemented sources
 
@@ -12,7 +12,10 @@ signed-in plan. See the dated [capability matrix](PROVIDER-CAPABILITIES.md) and
 | Claude website | Account, eligible workspace membership and selected workspace usage | Internal interfaces; exact plan access and logout behavior not live-verified |
 | ChatGPT website | Session identity and Work/Codex usage; code review when returned | Not ordinary chat, image, upload or tool quotas |
 | Optional OpenAI companion | Independent native profiles; Codex App Server quota snapshots | Real account authorization/renewal/logout and Windows native launch pending |
-| Gemini / Grok / Perplexity | Narrow recognized successful request counters | Browser-local activity only; no cap, token count or cross-device balance |
+| Grok | Returned default Grok 4 request allowance and verified subscription identity | Other mode/reset semantics and live access pending |
+| Perplexity | Returned remaining counts by named mode and verified user identity | Unknown totals/reset times remain unknown |
+| Cursor | Included/model coding-plan pools and provider-reported spend | Not a subscription fee; live access pending |
+| Gemini / explicit activity mode | Narrow recognized successful request counters | Browser-local activity only; no cap, token count or cross-device balance |
 
 Claude handles normalized `limits` and legacy `five_hour`/`seven_day` plus other
 returned buckets. Workspace selection is explicit after verified memberships;
@@ -47,7 +50,7 @@ Never include authorization/cookies or raw session responses in screenshots/logs
 
 | Check | Expected evidence | Current result |
 | --- | --- | --- |
-| Actual Windows Chrome and Brave popup at normal/high scale | Usable width, six representative rows at normal scale, long-name scroll, keyboard focus | Pending; Linux CSS layout fixtures are not Windows DPI tests |
+| Actual Windows Chrome, Brave and Edge popup at normal/high scale | Usable width, six representative rows at normal scale, long-name scroll, keyboard focus | Pending; Linux CSS layout fixtures are not Windows DPI tests |
 | Claude Free/Pro/Max/team membership and workspace changes | Compare returned windows/identity against provider usage screen | Pending |
 | OpenAI supported plans / personal and workspace identity | Compare Work/Codex and code-review pools; ordinary chat stays separate | Pending |
 | Provider tab closed, browser kept open | Reading changes only after a successful permitted background read | Pending per provider/source |
@@ -65,3 +68,20 @@ promote any row above to live-verified.
 
 Phase 2, including hosted feasibility and more provider quota readers, has not
 started. Do not add a cloud login workaround to bypass a failed website session.
+
+
+## Phase 2 manual release checks
+
+- Live Grok/Perplexity/Cursor plan and identity/window comparisons; permission,
+  tab-closed, logout, revocation, other-device use and rate-limit responses.
+- Firefox 140+ temporary install, sidebar, exact grants and configured sync consent;
+  Chromium fixture success does not verify Firefox or a real provider.
+- Windows clean install/update/uninstall of the unsigned optional companion,
+  Start-menu discovery, per-user registry/task, native handshake and OpenAI sign-in.
+- User-owned managed OIDC registration and a real app sign-in/renewal; synthetic
+  JWT signature and callback fixtures do not configure an external tenant.
+- Widget permission revocation and screen-reader/desktop keyboard behavior on
+  real provider pages; synthetic two-tab/style/navigation/isolation checks pass.
+
+See [platform details](PLATFORMS.md). No public deployment, store publication,
+certificate signing or live logout independence has been performed.

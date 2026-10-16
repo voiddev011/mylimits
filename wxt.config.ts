@@ -7,12 +7,12 @@ const syncOrigin=validateSyncOrigin(process.env.MYLIMITS_SYNC_ORIGIN??'');
 export default defineConfig({
   manifestVersion:3,
   modules: ['@wxt-dev/module-react'],
-  zip: { artifactTemplate: '{{name}}-{{packageVersion}}-{{browser}}.zip' },
+  zip: { zipSources:false,excludeSources:['artifacts/**','local-data/**','server/web-dist/**','**/.env*','**/*.pem','**/*.key'],artifactTemplate: '{{name}}-{{packageVersion}}-{{browser}}.zip' },
   vite: ({browser}) => ({ plugins: [tailwindcss()],define:{__MYLIMITS_SYNC_ORIGIN__:JSON.stringify(syncOrigin),__MYLIMITS_BROWSER__:JSON.stringify(browser)} }),
   manifest: ({browser}) => ({
     name: 'MyLimits',
-    version: '2.0.0',
-    version_name: '2.0 Phase 1 preview',
+    version: '2.1.0',
+    version_name: '2.1 Phase 2 preview',
     description: 'Keep your AI accounts, usage limits, and reset times in one place.',
     permissions: ['storage', 'alarms', 'scripting',...(browser==='firefox'?[]:['sidePanel'])],
     optional_permissions: ['notifications',...(browser==='firefox'?[]:['nativeMessaging'])],

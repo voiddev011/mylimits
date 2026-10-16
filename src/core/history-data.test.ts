@@ -16,3 +16,6 @@ test('per-meter observation/source survives export and malformed amounts stay un
  assert.equal(row.meters[0]!.observedAt,1799999990000);assert.equal(row.meters[0]!.connectionId,'website:claude');assert.equal(row.meters[0]!.usedPercent,null);assert.equal(row.meters[0]!.currency,null);assert.equal(row.meters[0]!.remaining,null);
  const csv=exportReadings([], [{...row,time:Date.parse('2026-11-01T06:30:00Z')}],'csv',1800000000000);assert.ok(csv.text.includes('2027-01-15T08:00:00.000Z')); // UTC data stays independent of the viewer’s DST.
 });
+test('reported currency spend stays distinct from allowance percentage and subscription fees',async()=>{
+ const {meterValue}=await import('./meter-display');const m={id:'spend',label:'On demand',scope:'api' as const,evidence:'reported' as const,usedPercent:25,used:2.5,total:10,remaining:null,unit:'currency' as const,currency:'USD',resetsAt:null,source:'Reported API spend'};assert.match(meterValue(m,'used'),/2.50.*spent/);assert.match(meterValue(m,'remaining'),/7.50.*left/);assert.equal(meterValue({...m,currency:null}),'Unknown currency');
+});

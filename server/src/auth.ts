@@ -1,5 +1,6 @@
+import { verifyToken } from './token-verification';
 import { randomBytes } from 'node:crypto';
-import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { createRemoteJWKSet } from 'jose';
 import type { Config } from './config';
 import { hash, type DB } from './db';
 export interface Principal{owner:string;kind:'web'|'device';deviceId?:string;}
@@ -9,7 +10,7 @@ export class ApiError extends Error {status:number;code:string;constructor(statu
 export function oidcVerifier(config:Config):Verify{
  const c=config.oidc;if(!c)return async()=>{throw new ApiError(503,'authentication_unconfigured')};
  const keys=createRemoteJWKSet(new URL(c.jwksUri));
- return async token=>{try{const {payload}=await jwtVerify(token,keys,{issuer:c.issuer,audience:c.audience,algorithms:['RS256','ES256'],requiredClaims:['sub','exp','iat']});if(!payload.sub)throw new Error();return {issuer:c.issuer,subject:payload.sub}}catch{throw new ApiError(401,'invalid_authentication')}};
+ return async token=>{try{return await verifyToken(token,keys,{issuer:c.issuer,audience:c.audience})}catch{throw new ApiError(401,'invalid_authentication')}};
 }
 export function ownerId(issuer:string,subject:string){return hash(`${issuer}\0${subject}`)}
 export async function authenticate(db:DB,authorization:string|undefined,cookie:string|undefined,verify:Verify):Promise<Principal>{

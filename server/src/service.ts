@@ -4,7 +4,7 @@ import { transaction,uuid,hash,type DB } from './db';
 import { ApiError,opaque,requireWeb,type Principal } from './auth';
 
 export async function registerDevice(db:DB,p:Principal,name:string){
- requireWeb(p);const id=uuid(),token=`ml_device_${opaque()}`;
+ requireWeb(p);await db.query('SELECT id FROM owners WHERE id=$1 FOR UPDATE',[p.owner]);const counts=(await db.query('SELECT count(*)::int AS total,count(*) FILTER (WHERE revoked_at IS NULL)::int AS active FROM devices WHERE owner_id=$1',[p.owner])).rows[0];if(counts.total>=200||counts.active>=20)throw new ApiError(409,'device_capacity_reached');const id=uuid(),token=`ml_device_${opaque()}`;
  await db.query('INSERT INTO devices(id,owner_id,name,token_hash) VALUES($1,$2,$3,$4)',[id,p.owner,name,hash(token)]);
  return {id,token,name};
 }
@@ -12,6 +12,7 @@ export async function upload(pool:pg.Pool,p:Principal,raw:unknown,now=Date.now()
  const input=SyncBatchSchema.parse(raw);
  if(p.kind==='device'&&p.deviceId!==input.deviceId)throw new ApiError(403,'wrong_device');
  return transaction(pool,async db=>{
+  await db.query('SELECT id FROM owners WHERE id=$1 FOR UPDATE',[p.owner]);
   const device=await db.query('SELECT id FROM devices WHERE owner_id=$1 AND id=$2 AND revoked_at IS NULL FOR UPDATE',[p.owner,input.deviceId]);
   if(!device.rows.length)throw new ApiError(403,'unknown_device');
   const accepted:{snapshotId:string;accountId:string;connectionId:string;duplicate:boolean}[]=[];
@@ -19,10 +20,14 @@ export async function upload(pool:pg.Pool,p:Principal,raw:unknown,now=Date.now()
    const s=item.snapshot;
    if((await db.query('SELECT 1 FROM source_tombstones WHERE owner_id=$1 AND device_id=$2 AND source_id=$3',[p.owner,input.deviceId,s.accountId])).rows.length)throw new ApiError(410,'account_deleted');
    if(s.observedAt>now+60000||s.receivedAt>now+60000||s.observedAt<now-90*86400000)throw new ApiError(400,'invalid_reading_time');
+   const known=(await db.query('SELECT id FROM accounts WHERE owner_id=$1 AND device_id=$2 AND source_id=$3',[p.owner,input.deviceId,s.accountId])).rows.length;
+   if(!known){const counts=(await db.query('SELECT count(*)::int AS total,count(*) FILTER (WHERE deleted_at IS NULL)::int AS active FROM accounts WHERE owner_id=$1',[p.owner])).rows[0];if(counts.total>=1000||counts.active>=100)throw new ApiError(409,'account_capacity_reached');}
    await db.query('INSERT INTO accounts(id,owner_id,device_id,source_id,provider,name,plan) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(owner_id,device_id,source_id) DO NOTHING',[uuid(),p.owner,input.deviceId,s.accountId,s.providerId,item.account.name,item.account.plan]);
    const account=(await db.query('SELECT * FROM accounts WHERE owner_id=$1 AND device_id=$2 AND source_id=$3 FOR UPDATE',[p.owner,input.deviceId,s.accountId])).rows[0];
    if(account.deleted_at)throw new ApiError(410,'account_deleted');
    if(account.provider!==s.providerId)throw new ApiError(409,'source_identity_conflict');
+   const sourceKnown=(await db.query('SELECT id FROM connections WHERE owner_id=$1 AND account_id=$2 AND device_id=$3 AND source_id=$4',[p.owner,account.id,input.deviceId,s.connectionId])).rows.length;
+   if(!sourceKnown&&(await db.query('SELECT count(*)::int AS n FROM connections WHERE owner_id=$1',[p.owner])).rows[0].n>=2000)throw new ApiError(409,'source_capacity_reached');
    await db.query('INSERT INTO connections(id,owner_id,account_id,device_id,source_id,workspace_id) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(owner_id,device_id,source_id,account_id) DO NOTHING',[uuid(),p.owner,account.id,input.deviceId,s.connectionId,s.workspaceId]);
    const conn=(await db.query('SELECT * FROM connections WHERE owner_id=$1 AND account_id=$2 AND device_id=$3 AND source_id=$4 FOR UPDATE',[p.owner,account.id,input.deviceId,s.connectionId])).rows[0];
    if(!conn.enabled)throw new ApiError(410,'connection_deleted');
@@ -37,7 +42,7 @@ export async function upload(pool:pg.Pool,p:Principal,raw:unknown,now=Date.now()
    await db.query('INSERT INTO snapshots(id,owner_id,account_id,connection_id,device_id,source_snapshot_id,observed_at,received_at,payload) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)',[uuid(),p.owner,account.id,conn.id,input.deviceId,s.snapshotId,s.observedAt,now,JSON.stringify(s)]);
    accepted.push({snapshotId:s.snapshotId,accountId:account.id,connectionId:conn.id,duplicate:false});
   }
-  await pruneSnapshots(db,p.owner,now);
+  await pruneSnapshots(db,p.owner,now);await boundSnapshots(db,p.owner);
   return {accepted,mode:'snapshot-only' as const};
  });
 }
@@ -57,6 +62,7 @@ export async function snapshots(db:DB,p:Principal,q:{accountId:string;limit:numb
  return {points:rows.map(r=>({id:r.id,accountId:r.account_id,connectionId:r.connection_id,observedAt:Number(r.observed_at),serverReceivedAt:Number(r.received_at),snapshot:r.payload})),hasMore,cursor:hasMore&&last?{time:Number(last.observed_at),id:last.id}:null};
 }
 export async function deleteAccountInTransaction(db:DB,p:Principal,id:string){
+  await db.query('SELECT id FROM owners WHERE id=$1 FOR UPDATE',[p.owner]);
   const r=await db.query('SELECT device_id FROM accounts WHERE owner_id=$1 AND id=$2 FOR UPDATE',[p.owner,id]);
   if(!r.rows.length)throw new ApiError(404,'account_not_found');if(p.kind==='device'&&p.deviceId!==r.rows[0].device_id)throw new ApiError(403,'wrong_device');
   await db.query('UPDATE accounts SET deleted_at=now(),name=$3,plan=NULL WHERE owner_id=$1 AND id=$2',[p.owner,id,'Deleted account']);
@@ -75,4 +81,10 @@ export async function pruneSnapshots(db:DB,owner:string,now=Date.now()){
  await db.query(`DELETE FROM snapshots s WHERE owner_id=$1 AND observed_at<$2
  AND EXISTS (SELECT 1 FROM snapshots newer WHERE newer.owner_id=s.owner_id AND newer.connection_id=s.connection_id
  AND (newer.observed_at>s.observed_at OR (newer.observed_at=s.observed_at AND newer.id>s.id)))`,[owner,now-days*86400000]);
+}
+
+export async function boundSnapshots(db:DB,owner:string){
+ await db.query(`DELETE FROM snapshots WHERE id IN (SELECT s.id FROM snapshots s WHERE s.owner_id=$1
+ AND EXISTS (SELECT 1 FROM snapshots newer WHERE newer.owner_id=s.owner_id AND newer.connection_id=s.connection_id AND (newer.observed_at>s.observed_at OR (newer.observed_at=s.observed_at AND newer.id>s.id)))
+ ORDER BY observed_at DESC,id DESC OFFSET 20000)`,[owner]);
 }

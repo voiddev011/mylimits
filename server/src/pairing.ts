@@ -16,6 +16,7 @@ export function pairingRoutes(app:FastifyInstance,pool:pg.Pool){
  app.post('/pairing/poll',async r=>{
   limit(r);const b=z.object({id:z.string().uuid(),secret:z.string().min(32).max(100)}).strict().parse(r.body);
   return transaction(pool,async db=>{
+   const candidate=(await db.query('SELECT approved_owner FROM pair_requests WHERE id=$1 AND secret_hash=$2 AND expires_at>$3 AND consumed_at IS NULL',[b.id,hash(b.secret),Date.now()])).rows[0];if(!candidate)throw new ApiError(410,'pairing_expired');if(!candidate.approved_owner)return {status:'pending'};await db.query('SELECT id FROM owners WHERE id=$1 FOR UPDATE',[candidate.approved_owner]);
    const pair=(await db.query('SELECT * FROM pair_requests WHERE id=$1 AND secret_hash=$2 AND expires_at>$3 AND consumed_at IS NULL FOR UPDATE',[b.id,hash(b.secret),Date.now()])).rows[0];if(!pair)throw new ApiError(410,'pairing_expired');
    if(!pair.approved_owner)return {status:'pending'};
    const device=await registerDevice(db,{owner:pair.approved_owner,kind:'web'},pair.name);await db.query('UPDATE pair_requests SET consumed_at=$2 WHERE id=$1',[b.id,Date.now()]);return {status:'connected',deviceId:device.id,token:device.token};
