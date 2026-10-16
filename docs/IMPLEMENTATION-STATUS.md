@@ -5,12 +5,13 @@ credential upload has been performed.
 
 ## Active checkpoint
 
-- Requested phase: Phase 2 (authorized by the user: “Start with next phase”).
-- Current work package: P2-10 — verified.
-- Next action: Phase 2 complete — stop and await the user; live/provider/desktop checks remain listed in PHASE-2-HANDOFF.md.
-- Working branch/commit: `v2/phase-2`; Phase 1 and main preserved.
-- Authoritative scope: [master plan](V2-IMPLEMENTATION-PLAN.md),
-  [Phase 1](PHASE-1.md), [Phase 2](PHASE-2.md).
+- Requested work: user-authorized compact popup and explicit multi-account setup upgrade.
+- Current work package: 2.2 delivered paths verified; independent Claude/other-provider authorization remains unavailable.
+- Next action: use the packaged preview; live provider/Windows acceptance remains pending. No additional product work is assumed.
+- Working branch: `v2/compact-accounts`; published code `7a8f48fb76babfa9b02e29a02e01fc339bb68441`.
+- Main and completed Phase 1/2 branches preserved.
+- Current handoff: [compact accounts upgrade](COMPACT-ACCOUNTS-HANDOFF.md).
+- Historical scope: [master plan](V2-IMPLEMENTATION-PLAN.md), [Phase 1](PHASE-1.md), [Phase 2](PHASE-2.md).
 
 ## Task ledger
 
@@ -366,3 +367,46 @@ logout, renewal, shared cross-device scope and real Windows DPI remain pending.
 
 Next: inspect full browser results and screenshots, fix actual regressions, build
 browser variants/ZIPs, finish installation/handoff documentation and publish.
+
+
+## Compact popup and account setup — verified publication, 16 October 2026
+
+State: **verified for delivered paths**. All available local checks pass:
+`npm run check` (types, 97 core tests, 17 companion tests and production build),
+24 Chromium fixtures, Chrome/Edge/Firefox builds and package contracts, actual
+Chrome/Firefox ZIP/archive inspection and SHA-256 output. Actual browser/child
+process tests require the approved environment outside the restricted sandbox;
+the initial sandbox failures were environment failures, not skipped tests.
+Visually reviewed light six-account popup and dark popup/provider picker.
+
+Final workspace-switch hardening keeps the first account's workspace from being
+reused during detection/another-account setup. Browser coverage uses two Claude
+identities with different organizations, preserves Personal/Work nicknames after
+popup reload, and confirms only the new independent OpenAI profile receives its
+requested nickname. Ten-account overflow/search and fixed footer are tested.
+All source dates and unknown quotas remain honest. Schema stays V2 with optional
+setup metadata; existing IDs/names are preserved. No credential migration.
+
+Published code checkpoint: `7a8f48fb76babfa9b02e29a02e01fc339bb68441`, tree
+`508a9f35905ed328e3a6ac2427959cde8f206543`. Local code commit `7afefe0` has the
+same complete tree; the pre-existing local Phase 2 commit differs in metadata
+from GitHub but has the identical base tree. Publication used the GitHub connector
+with the actual remote Phase 2 parent, without force-pushing either history.
+
+All three jobs passed in [Checks run 38922290094](https://github.com/voiddev011/mylimits/actions/runs/38922290094):
+Linux extension/types/core/native/browser/packages; connected PostgreSQL service,
+phone and actual extension HTTP transport checks; Windows logic/PowerShell/NSIS.
+Verified nonexpired, nonempty extension artifact **12054622767** and optional
+unsigned native artifact **12055521330**. Local ZIPs: Chrome **230643 bytes**,
+Firefox **229948 bytes**, plus `.output/SHA256SUMS`.
+
+Independent OpenAI remains the existing optional companion path, not a new
+extension-only grant. Independent Claude/other-provider authorization, every
+ordinary ChatGPT limit, real provider sign-in/logout/renewal and actual desktop
+DPI/installation remain **unimplemented or live-unverified as explicitly listed**
+in the handoff. No production collector, backend deployment, store publication or
+signing was added. Main remains unchanged.
+
+Next: install/update using the current 2.2 artifact. Further independent-provider
+work needs a viable permitted authorization/quota source and live acceptance;
+never relabel saved website readings as independently updating accounts.

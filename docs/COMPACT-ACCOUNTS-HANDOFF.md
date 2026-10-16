@@ -106,14 +106,34 @@ then extract the Chrome ZIP and load its `manifest.json` folder. The previous
 - Chrome, Edge and Firefox builds and browser-specific manifest contracts pass.
 - Chrome/Firefox archives were inspected: six optional provider origins, no test
   grants, no secrets or artifacts. SHA-256 sidecars were generated.
-- Earlier complete Chromium run passed 22 tests; final run adds an independent
-  OpenAI nickname fixture and strengthens different-workspace account switching.
-  Final results will be recorded below and in IMPLEMENTATION-STATUS.
+- Final Chromium run: **24/24 passed**, including independent OpenAI nickname
+  isolation, two Claude identities with different workspaces, resume after popup
+  closure, six visible rows, ten-account overflow/search and dashboard links.
 - The sandbox blocks Chromium sockets and child Node execution; actual browser
   and companion checks use the approved process environment outside that sandbox.
 - Live provider account/logout/renewal and real Windows DPI/browser installation
   remain pending. A fixture passing is not a live provider guarantee.
 
-No server runtime or database migration changed; the existing backend service
-suite has not been rerun locally for this UI/source upgrade. CI retains its real
-service and transport checks.
+No server runtime or database migration changed. The service suite was not rerun
+locally; GitHub CI passed its real PostgreSQL, phone and actual HTTP transport
+checks on this code checkpoint.
+
+Healthy website refreshes now make four fixed requests for Claude and three for
+ChatGPT (including the final identity recheck), before any page fallback/retry.
+At the five-minute default, that is up to 1,152/864 requests per day respectively
+while running. Existing coalescing, cooldown and backoff remain in place.
+
+## Published verification and downloads
+
+Code checkpoint: **`7a8f48fb76babfa9b02e29a02e01fc339bb68441`**. All jobs in
+[Checks run 38922290094](https://github.com/voiddev011/mylimits/actions/runs/38922290094)
+passed: Linux extension, connected services and Windows logic/NSIS. This is not
+live provider or real Windows install certification.
+
+- [MyLimits 2.2 extension packages](https://github.com/voiddev011/mylimits/actions/runs/38922290094/artifacts/12054622767): verified nonempty/nonexpired Chrome/Firefox ZIPs plus checksums.
+- [Optional unsigned Windows companion](https://github.com/voiddev011/mylimits/actions/runs/38922290094/artifacts/12055521330): existing optional setup, not required for website tracking.
+
+Local Chrome ZIP: **230643 bytes**; Firefox ZIP: **229948 bytes**. Checksums are in
+`.output/SHA256SUMS`. Code tree `508a9f35905ed328e3a6ac2427959cde8f206543` matches
+the local checked code tree. Final documentation records these verified artifacts;
+main and the prior phase branches remain unchanged.
