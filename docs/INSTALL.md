@@ -2,8 +2,8 @@
 
 ## Short path: packaged extension
 
-Download the `mylimits-extension-packages` artifact from the successful **Checks**
-run on the `v3/redesign` branch. Extract it, then extract
+Download the [verified MyLimits 3.0 extension package](https://github.com/voiddev011/mylimits/actions/runs/38931432647/artifacts/12058862247)
+from the `v3/redesign` Checks run. Extract it, then extract
 `mylimits-3.0.0-chrome.zip` into a permanent folder containing `manifest.json`.
 
 Chrome: `chrome://extensions`; Brave: `brave://extensions`; Edge:
@@ -61,7 +61,7 @@ If that still fails, preserve a copy of `package-lock.json`, remove it and
 
 ## Optional independent OpenAI helper
 
-Use the `mylimits-companion-windows-unsigned` artifact from the same Checks run.
+Use the [verified Windows helper artifact](https://github.com/voiddev011/mylimits/actions/runs/38931432647/artifacts/12058892440).
 Windows x64 only: its installer bundles pinned Node 24.22.0 and official Codex
 0.163.0; no terminal/npm prerequisite. Run setup as your normal user, choose the
 installed extension (or paste its Extensions-page ID), then Register and start.
