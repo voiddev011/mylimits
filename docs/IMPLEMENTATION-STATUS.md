@@ -1,13 +1,13 @@
 # MyLimits 2.0 implementation status
 
-Updated: **16 October 2026**. **Phase 1 verified; Phase 2 implementation in progress.** No cloud deployment or
+Updated: **16 October 2026**. **Phases 1 and 2 verified in available automation; live/manual checks remain pending.** No cloud deployment or
 credential upload has been performed.
 
 ## Active checkpoint
 
 - Requested phase: Phase 2 (authorized by the user: “Start with next phase”).
-- Current work package: P2-10 — implemented.
-- Next action: P2-10 — verify initialized transport fixture in CI, then record successful run and artifact IDs.
+- Current work package: P2-10 — verified.
+- Next action: Phase 2 complete — stop and await the user; live/provider/desktop checks remain listed in PHASE-2-HANDOFF.md.
 - Working branch/commit: `v2/phase-2`; Phase 1 and main preserved.
 - Authoritative scope: [master plan](V2-IMPLEMENTATION-PLAN.md),
   [Phase 1](PHASE-1.md), [Phase 2](PHASE-2.md).
@@ -43,8 +43,8 @@ implemented independent work while leaving that specific check pending.
 | P2-07 | 10 | verified | See checkpoint below. |
 | P2-08 | 8 | verified | See checkpoint below. |
 | P2-09 | 10 | verified | See checkpoint below. |
-| P2-10 | 10 | implemented | See checkpoint below. |
-| **Phase 2 total** | **100** | **in_progress** | Ordered implementation; external provider gates recorded separately. |
+| P2-10 | 10 | verified | See checkpoint below. |
+| **Phase 2 total** | **100** | **verified** | 90 core + 17 companion + 19 browser + 30 server + 2 service/browser checks; all three CI jobs pass. External gates remain recorded. |
 
 Points are relative estimates, not elapsed time. Record changes to remaining
 estimates and the reason; do not alter completed effort or add filler to disguise
@@ -157,7 +157,7 @@ State: **verified**. Implemented real IndexedDB pagination with stable timestamp
 
 Next: P1-10 — run integrated checks, package and prepare the Phase 1 handoff.
 
-## P1-10 checkpoint — 15 October 2026
+## P1-10 checkpoint — 16 October 2026
 
 State: **in_progress**. Initial integrated gate passed: TypeScript, 62 core tests, 16 companion tests and production build; all 14 browser fixtures passed. Final inspection found two refresh edge cases: a manual/startup retry could bypass persisted backoff and page-context fallback dropped Retry-After. Hardened these and explicit offline reporting; added controller/history offline and shared-surface keyboard/layout checks. Final gate will be repeated after these code changes. Changed files: src/core/scheduler.ts and its test, src/providers/adapters.ts, tests/browser/extension.spec.ts, package manifests and wxt.config.ts; release documentation in progress.
 
@@ -326,3 +326,9 @@ Next: P2-10 — inspect replacement CI run, verify native/extension artifacts, t
 State: **implemented**. Windows CI now passes real PowerShell parsing/GUI regression checks and actual NSIS packaging, producing a nonempty unsigned installer artifact. Full extension CI passes with the clean Chrome/Firefox artifact. Actual transport CI exposed a fixture race: cached test state could be written before durable schema/history initialization. The fixture now waits for the initialized empty dashboard, seeds inactive cached data independently of provider grants, and waits for that named account before pairing. Local actual HTTP transport retest passes with original observation age and deletion; server typecheck passes. No runtime code changed for this fixture correction. Final all-job CI rerun pending.
 
 Next: P2-10 — verify initialized transport fixture in CI, then record successful run and artifact IDs.
+
+## P2-10 checkpoint — 16 October 2026
+
+State: **verified**. Final all-job CI passed on code checkpoint 20a810d83d70f57229171494771d0db18bd5bdd2: run 38846628036. Linux: 90 core, 17 companion, 19 Chromium fixtures; Chrome/Edge/Firefox builds and clean ZIP/checksum contracts. Connected services: types, 30 real-PostgreSQL/auth/job tests, responsive phone view and actual HTTP extension pairing/upload/delete. Windows: core/native gate, real PowerShell parse/GUI/candidate regressions and actual NSIS compiler all passed. Verified nonempty, nonexpired artifacts: extension packages 12023223325 and unsigned native installer 12023517174. README and final handoff contain exact install/download links, schemas/migrations, performance/resource limits and pending external acceptance. Main unchanged; no public deployment, production collectors, provider credentials, store publication or signing. Complete code is pushed; this final documentation checkpoint records actual results.
+
+Next: Phase 2 complete — stop and await the user; live/provider/desktop checks remain listed in PHASE-2-HANDOFF.md.

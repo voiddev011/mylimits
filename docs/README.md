@@ -7,8 +7,7 @@ commands run from the repository root.
 
 ## Install without Node
 
-1. Download **mylimits-extension-packages** from the latest successful
-   [Checks run on v2/phase-2](https://github.com/voiddev011/mylimits/actions?query=branch%3Av2%2Fphase-2).
+1. Download **[mylimits-extension-packages](https://github.com/voiddev011/mylimits/actions/runs/38846628036/artifacts/12023223325)** from the verified Phase 2 run.
    Private repository downloads require GitHub sign-in. Verify the run and artifact
    exist; a green job alone is not a download.
 2. Extract the artifact, then extract `mylimits-2.1.0-chrome.zip`. Keep the resulting

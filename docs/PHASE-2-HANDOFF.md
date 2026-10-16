@@ -1,9 +1,9 @@
 # Phase 2 handoff — MyLimits 2.1 preview
 
 Date: **16 October 2026**. Working branch: **`v2/phase-2`**. Main and Phase 1
-remain preserved. This phase implements P2-01 through P2-10 code; the release
-checkpoint is the commit containing this document. Final CI/artifact links are
-recorded below after their actual completion. No public deployment, store
+remain preserved. This phase implements P2-01 through P2-10 code; the verified code
+checkpoint is `20a810d83d70f57229171494771d0db18bd5bdd2`. The final documentation-only
+checkpoint records its successful CI and existing download artifacts below. No public deployment, store
 publication, purchase, production provider credential or signing certificate.
 
 ## Delivered behavior
@@ -41,7 +41,7 @@ publication, purchase, production provider credential or signing certificate.
 | --- | --- |
 | `npm run check` | Passed: types, 90 core tests, 17 native/companion tests, default production build |
 | `npm run test:browser` with Playwright Chromium | 19/19 passed: migration/restart, compact rows, aliases, source modes, history/retention, Guide privacy and widget isolation/two tabs |
-| Focused checks after lifecycle changes | Recorded in final status/CI checkpoint; do not infer live provider results |
+| Focused checks after lifecycle changes | Passed: source-mode observer registration/stop and two-tab widget; final full CI also passed |
 | `npm run check --prefix server` | Passed: server types and 30 real-PostgreSQL API/auth/job tests, fresh and repeated migrations |
 | `npm run test:web --prefix server` | 1 passed: real-DB responsive phone readings, pairing approval and sign-out |
 | `npm run test:transport --prefix server` | 1 passed: actual built extension pairs over HTTP, uploads original dated reading and deletes source data |
@@ -59,8 +59,10 @@ plus synthetic server-owned sessions; no production fixture login exists.
 
 Initial Windows CI found a null/empty detection-list bug in GUI setup. It is fixed
 with explicit candidate parsing and empty/multiple-list regression checks. Final
-Windows CI must pass parsing, headless GUI construction and installer compilation;
-these still do not certify real browser/native install behavior.
+Windows CI passed parsing, headless GUI construction, empty/multiple candidate
+regressions and installer compilation. These do not certify real browser/native
+install behavior. NSIS Windows source separators and the HTTP fixture’s durable
+initialization ordering were also corrected during CI hardening.
 
 ## Install / update
 
@@ -125,7 +127,7 @@ Disconnect/forget tombstones cannot be overwritten by old uploads/jobs.
 Measured Linux headless fixture: six cached account rows rendered in **230 ms** at
 520×600 CSS pixels, with all rows visible. This is a fixture measurement, not a
 Windows/DPI performance promise. Default uncompressed Chrome bundle: approximately
-**717 kB**, Firefox **715 kB**; ZIPs approximately **222/222 kB**. Optional web bundle
+**718 kB**, Firefox **716 kB**; ZIPs approximately **222/222 kB**. Optional web bundle
 approximately 324 kB JS (99 kB gzip). No chart dependency added.
 
 ## Pending external acceptance
@@ -143,6 +145,22 @@ logout-independent or production-cloud capability has been established.
 
 ## CI / published checkpoint
 
-Final CI run and artifact IDs: pending the final code checkpoint below. See
-[implementation status](IMPLEMENTATION-STATUS.md) for the latest verified link.
-Stop after this Phase 2 handoff; further work requires the user's next instruction.
+All three jobs passed in [Checks run 38846628036](https://github.com/voiddev011/mylimits/actions/runs/38846628036)
+for code checkpoint `20a810d83d70f57229171494771d0db18bd5bdd2`:
+
+- Linux extension: types, 90 core tests, 17 companion tests, 19 Chromium fixtures,
+  Chrome/Edge/Firefox builds, actual ZIP checks and checksums.
+- Connected services: types, 30 PostgreSQL/auth/job tests, phone view and actual
+  built-extension HTTP pairing/upload/delete. All passed.
+- Windows: the same core/companion gate, real PowerShell parser, GUI construction,
+  candidate regressions and actual NSIS packaging. All passed.
+
+Verified nonexpired, nonempty artifacts:
+
+- [Extension packages](https://github.com/voiddev011/mylimits/actions/runs/38846628036/artifacts/12023223325): Chrome/Firefox ZIPs and SHA256SUMS.
+- [Optional unsigned Windows companion](https://github.com/voiddev011/mylimits/actions/runs/38846628036/artifacts/12023517174): installer EXE and its SHA-256 sidecar.
+
+The local and published code trees match. Main remains
+`380125a8cdc411c7c49d6aac8e61e159315950e5`; no merge or force push occurred.
+All maintained Markdown remains directly in docs/. Stop after this handoff;
+further product work requires the user's next instruction.
