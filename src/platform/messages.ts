@@ -8,6 +8,9 @@ import type { HistoryPoint } from './history';
 const ms = z.number().finite().min(0).max(8.64e15);
 export const CommandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('state') }),
+  z.object({ type: z.literal('account-setup-start'), provider: ProviderSchema, mode: z.enum(['detect','another']), nickname: z.string().trim().max(60) }),
+  z.object({ type: z.literal('account-setup-save'), setupId: z.string().uuid(), accountId: z.string().min(1).max(240) }),
+  z.object({ type: z.literal('account-setup-cancel'), setupId: z.string().uuid() }),
   z.object({type:z.literal('widget-settings'),settings:WidgetSettingsSchema.optional()}),
   z.object({type:z.literal('widget-state'),provider:ProviderSchema}),
   z.object({type:z.literal('widget-action'),provider:ProviderSchema,action:z.enum(['collapse','expand','hide','open']),position:WidgetSettingsSchema.shape.position.optional()}),
@@ -26,7 +29,7 @@ export const CommandSchema = z.discriminatedUnion('type', [
 
   z.object({ type: z.literal('companion-status') }),
   z.object({ type: z.literal('companion-enable'), enabled: z.boolean() }),
-  z.object({ type: z.literal('companion-add') }),
+  z.object({ type: z.literal('companion-add'), nickname: z.string().trim().max(60).optional() }),
   z.object({ type: z.literal('companion-remove'), profile: z.string().uuid() }),
   z.object({ type: z.literal('refresh'), provider: ProviderSchema.optional(), connectionId: z.string().min(1).max(240).optional() }),
   z.object({ type: z.literal('enable'), provider: ProviderSchema, enabled: z.boolean() }),

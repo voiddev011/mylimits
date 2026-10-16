@@ -332,3 +332,37 @@ Next: P2-10 — verify initialized transport fixture in CI, then record successf
 State: **verified**. Final all-job CI passed on code checkpoint 20a810d83d70f57229171494771d0db18bd5bdd2: run 38846628036. Linux: 90 core, 17 companion, 19 Chromium fixtures; Chrome/Edge/Firefox builds and clean ZIP/checksum contracts. Connected services: types, 30 real-PostgreSQL/auth/job tests, responsive phone view and actual HTTP extension pairing/upload/delete. Windows: core/native gate, real PowerShell parse/GUI/candidate regressions and actual NSIS compiler all passed. Verified nonempty, nonexpired artifacts: extension packages 12023223325 and unsigned native installer 12023517174. README and final handoff contain exact install/download links, schemas/migrations, performance/resource limits and pending external acceptance. Main unchanged; no public deployment, production collectors, provider credentials, store publication or signing. Complete code is pushed; this final documentation checkpoint records actual results.
 
 Next: Phase 2 complete — stop and await the user; live/provider/desktop checks remain listed in PHASE-2-HANDOFF.md.
+
+## Compact popup and account setup upgrade — 16 October 2026
+
+State: **in_progress**. User requested a smaller essential-actions popup and explicit
+multi-account setup alongside automatic website detection. Working on
+`v2/compact-accounts` from clean `v2/phase-2`; main is preserved. Added a dedicated
+400px popup (500px height ceiling), shared live-store hook/readings, account links
+to dashboard details, plus/provider picker, persistent identity-bound account
+setup/nickname confirmation and optional OpenAI independent-connection entry.
+Provider choices: OpenAI Work/Codex, Claude subscription (including shared Claude
+Code scope where returned), Cursor, Grok, Perplexity; Gemini is explicitly local
+activity only. No new provider grant, hosted collector or credential storage.
+Website mode still updates only the current login; independent Claude and other
+provider grants remain unavailable, not simulated by saving a second label.
+
+Changed files: popup entrypoint/CSS; core model/schema/public/account-setup + tests;
+platform messages/controller/companion; reader/reader tests; App, AccountConnect,
+Popup, ProviderMark, Reading, useMyLimits, navigation and styles; browser fixtures
+and test runner. OpenAI companion addition accepts an optional nickname, scoped
+to the returned profile. Claude/OpenAI readers now recheck account identity after
+quota retrieval to reject mid-request switching.
+
+Actual checks so far: TypeScript passed; 96 core tests passed; production Chrome
+build passed. Restricted-sandbox native subprocess fixture failed (child exits
+without running); rerun outside sandbox passed all 17 companion tests unchanged.
+Restricted Chromium startup denied local sockets; outside-sandbox focused tests
+confirmed dashboard deep links and six-row bounds. The new manual-account flow
+completed, but its final assertion incorrectly searched the private workspace
+store for a raw organization ID; narrowed to public-facing account records.
+Full 22-test Chromium rerun is underway. Live provider accounts are unavailable;
+logout, renewal, shared cross-device scope and real Windows DPI remain pending.
+
+Next: inspect full browser results and screenshots, fix actual regressions, build
+browser variants/ZIPs, finish installation/handoff documentation and publish.
