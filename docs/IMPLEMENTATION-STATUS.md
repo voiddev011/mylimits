@@ -6,8 +6,8 @@ credential upload has been performed.
 ## Active checkpoint
 
 - Requested phase: Phase 2 (authorized by the user: “Start with next phase”).
-- Current work package: P2-06 — verified.
-- Next action: P2-07 — implement local task guidance and explicit prompt/handoff utilities.
+- Current work package: P2-07 — verified.
+- Next action: P2-08 — add an off-by-default isolated website widget with restricted public messages.
 - Working branch/commit: `v2/phase-2`; Phase 1 and main preserved.
 - Authoritative scope: [master plan](V2-IMPLEMENTATION-PLAN.md),
   [Phase 1](PHASE-1.md), [Phase 2](PHASE-2.md).
@@ -40,7 +40,7 @@ implemented independent work while leaving that specific check pending.
 | P2-04 | 8 | verified | See checkpoint below. |
 | P2-05 | 12 | verified | See checkpoint below. |
 | P2-06 | 10 | verified | See checkpoint below. |
-| P2-07 | 10 | not_started | |
+| P2-07 | 10 | verified | See checkpoint below. |
 | P2-08 | 8 | not_started | |
 | P2-09 | 10 | not_started | |
 | P2-10 | 10 | not_started | |
@@ -91,13 +91,13 @@ Next executable action:
 The original documentation-preparation checkpoint preceded implementation. The
 subsequent entries below record actual application work and verification.
 
-## P1-01 checkpoint — 15 October 2026
+## P1-01 checkpoint — 16 October 2026
 
 State: **verified**. Verified all 73 published baseline blobs match the workspace before preserving them in a local baseline commit. Created local and remote v2/phase-1 branches; main remains unchanged. Node 24.19.0/npm 11.9.0 and dependencies are available. Baseline typecheck, 35 core tests and production WXT build pass. Companion tests: 15/16 pass; the real child-process fixture fails in this sandbox (standalone spawnSync reports EPERM). Browser fixtures cannot launch Chromium: setsockopt is denied and Chromium exits SIGTRAP. These are concrete environment blockers, not live provider evidence. Direct Git fetch fails because the shell proxy is unreachable; publication uses the authorized GitHub connector. Added the capability matrix; all live/provider/Windows checks remain pending.
 
 Next: P1-02 — implement V2 domain and public contracts.
 
-## P1-01 checkpoint — 15 October 2026
+## P1-01 checkpoint — 16 October 2026
 
 State: **verified**. Resolved the baseline process-sandbox blockers by running the local fixture command with approved process permissions: companion tests now pass 16/16. Chromium fixtures are being retried with the same approved process access; no provider traffic or real accounts are used.
 
@@ -260,3 +260,15 @@ Next: P2-06 — implement history series and pacing using same-source/window sam
 State: **verified**. Changed core insights/history-data/model/schema, history platform/controller/messages, HistoryCharts/HistoryView/preferences/styles, server retention and tests. Separate account/source/workspace/scope/window/evidence/currency series; bounded downsampling and honest gaps; minimum four fresh readings over 30 minutes with bounded robust rate quartiles and padded range. Selectable immediate local 30/90-day retention; server prunes older history on upload while keeping one dated last-known reading per source. No messages-left, subscription fees or token cost invented. Typecheck passed; 82 core tests passed; 26 PostgreSQL server tests passed; production build passed at 590.23 kB; three existing history browser fixtures and new chart/retention fixture passed with Playwright Chromium. System Chromium failed to load extensions, so browser verification used downloaded Chromium instead. Live provider access remains unavailable.
 
 Next: P2-07 — implement local task guidance and explicit prompt/handoff utilities.
+
+## P2-07 checkpoint — 16 October 2026
+
+State: **in_progress**. Guidance stays local and read-only. Match actual quota scope to a task, explain stale/unknown exclusions, and expose user-supplied text preview/copy only. No conversation scraping, inference calls or fixed token savings.
+
+Next: P2-07 — build deterministic guidance and private prompt utilities, then verify.
+
+## P2-07 checkpoint — 16 October 2026
+
+State: **verified**. Changed core/guide.ts and tests, GuideView, dashboard navigation/styles, runner, architecture and browser fixture. Original deterministic task/scope rules, dated cited product metadata, speed/quality/usage mode suggestions, explicit exclusions, reported reset and optional matching local pacing context. Prompt templates/review and user-pasted handoff preview/copy/download remain component-memory-only; edits invalidate previews. No inference, scraping, fabricated token savings or model entitlement assumptions. Typecheck passed; 86 core tests passed; build passed at 601.9 kB; Guide browser privacy/explicit-preview test passed. Source product scope checked using primary OpenAI, Anthropic, Perplexity and Cursor docs; live model entitlements remain unverified.
+
+Next: P2-08 — add an off-by-default isolated website widget with restricted public messages.

@@ -184,3 +184,20 @@ The optional server applies the synced retention preference during upload;
 one last-known reading per source remains cached even if older, with its original
 observation date. This cache exception keeps offline accounts visible and does
 not turn an old reading into a fresh quota.
+
+## Local Guide
+
+The dashboard-only Guide uses dated product-scope metadata plus original rules,
+not model benchmarks. Work/Codex and Cursor pools are coding-only; Perplexity
+Pro/research counts are research-only. Fresh applicable readings are required;
+unknown, stale, exhausted, spend-only and user-excluded options get explicit
+reasons. Broad mode suggestions do not assert model access on a user's plan.
+Accounts remain independent options, without ranking unrelated percentages.
+Optional local pacing context must match the source, meter and reset window.
+
+The prompt reviewer counts words/characters, not fabricated tokens or savings.
+Text and handoff fields live only in component memory. They are absent from
+storage, export and sync. Editing a handoff invalidates its preview; copy/download
+is offered only after an explicit preview. Nothing is scraped, summarized by an
+AI or sent to another provider. Product/source links reviewed 16 October 2026 are
+included in the Guide itself; consult the provider for currently available modes.
