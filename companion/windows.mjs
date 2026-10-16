@@ -2,6 +2,7 @@
 export const registryRoots = {
   chrome: 'HKCU\\Software\\Google\\Chrome\\NativeMessagingHosts',
   chromium: 'HKCU\\Software\\Chromium\\NativeMessagingHosts',
+  edge: 'HKCU\\Software\\Microsoft\\Edge\\NativeMessagingHosts',
   brave: 'HKCU\\Software\\BraveSoftware\\Brave-Browser\\NativeMessagingHosts',
 };
 export const psLiteral = value => "'" + value.replaceAll("'", "''") + "'";

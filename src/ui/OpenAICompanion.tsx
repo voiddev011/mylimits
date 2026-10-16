@@ -23,7 +23,8 @@ export function OpenAICompanion({ run, busy, demo, notify }: {
       await check();
     } finally { setWorking(false); }
   }
-  return <article className="website-card companion-card"><div className="website-top"><div><h3>OpenAI companion</h3><span className="small-note">Independent account connection · Windows / Linux setup</span></div></div>
+  if(__MYLIMITS_BROWSER__==='firefox')return <article className="website-card"><h3>Optional companion</h3><p>Native setup is currently packaged for desktop Chromium browsers on Windows/Linux. Use Firefox’s website tracking without a companion; Firefox native registration is not supplied.</p></article>;
+  return <article className="website-card companion-card"><div className="website-top"><div><h3>OpenAI companion</h3><span className="small-note">Independent account connection · Windows / Linux setup · Chrome / Brave / Edge</span></div></div>
     <p>Optional separate OpenAI authorization for returned Work / Codex limits. Website logout, renewal and shared usage from other devices still need live verification. Basic website tracking works without this service.</p>
     <p className="small-note">Install the companion first using the setup guide. It refreshes about once a minute while your computer is awake and online. Other ChatGPT limits may not be available.</p>
     <div className="website-bottom"><span className="small-note">{demo ? 'Sample mode' : status.connected ? 'Companion connected' : status.enabled ? 'Companion unavailable — check installation' : 'Not connected'}</span></div>

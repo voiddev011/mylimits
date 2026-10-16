@@ -44,3 +44,17 @@ jobs:
           node-version: 24
       - run: npm ci
       - run: npm run check
+      - name: Parse Windows scripts and construct setup GUI without installing
+        shell: powershell
+        run: ./scripts/test-windows-setup.ps1
+      - name: Install NSIS compiler
+        run: choco install nsis --no-progress -y
+      - name: Package unsigned optional Windows companion
+        run: npm run package:companion
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mylimits-companion-windows-unsigned
+          path: |
+            artifacts/mylimits-companion-windows-unsigned.exe
+            artifacts/mylimits-companion-windows-unsigned.exe.sha256
+          if-no-files-found: error
