@@ -25,6 +25,7 @@ export const AccountSchema: z.ZodType<Account> = z.object({
 export const SettingsSchema: z.ZodType<Settings> = z.object({
   warningRemaining: z.number().int().min(1).max(95), criticalRemaining: z.number().int().min(1).max(95),
   desktopAlerts: z.boolean(), refreshMinutes: z.number().int().min(2).max(60), theme: z.enum(['system', 'dark', 'light']),
+  textSize: z.enum(['standard','large']).optional(), privacyMode: z.boolean().optional(),
   historyRetentionDays:z.union([z.literal(30),z.literal(90)]).optional(),
   displayMode: z.enum(['remaining', 'used']).optional(), resetAlerts: z.boolean().optional(),
   quietHours: z.object({ enabled: z.boolean(), start: clock, end: clock }).optional(),

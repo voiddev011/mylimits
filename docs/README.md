@@ -1,56 +1,27 @@
-# MyLimits 2.2 — Compact accounts preview
+# MyLimits 3.0 — Clean dashboard preview
 
-Your AI usage readings, named accounts and reset times in one compact view.
-This upgrade lives on **`v2/compact-accounts`**. See the
-[compact accounts handoff](COMPACT-ACCOUNTS-HANDOFF.md) for installation, actual
-verification and remaining provider limitations. All maintained Markdown lives
-in `docs/`; run commands from the repository root.
+Your AI limits, named accounts and resets in one place. Development branch:
+**`v3/redesign`**. [Install/update](INSTALL.md) · [Implementation plan](V3-IMPLEMENTATION-PLAN.md)
+· [Current status](IMPLEMENTATION-STATUS.md) · [Handoff](V3-HANDOFF.md).
+All maintained Markdown lives directly in `docs/`; commands run from the repo root.
 
-## Install / update
+## What changed
 
-For the current upgrade, download the **mylimits-extension-packages** artifact from
-the verified [Checks run 38922290094](https://github.com/voiddev011/mylimits/actions/runs/38922290094/artifacts/12054622767).
-Extract the artifact, then extract `mylimits-2.2.0-chrome.zip` into a permanent
-folder. It must contain `manifest.json` directly. The 2.1 Phase 2 artifact is an
-older build; it does not contain this redesign.
-
-Chrome: `chrome://extensions`. Brave: `brave://extensions`. Edge:
-`edge://extensions`. Enable Developer mode → Load unpacked → choose that folder.
-For an update, replace the files inside your existing unpacked folder, then click
-Reload. Keep the path and extension ID; uninstalling deletes your local data.
-[Firefox/platform instructions](PLATFORMS.md).
-
-Open MyLimits → **+** → choose a service → **Detect current account**. Allow its
-site access; MyLimits reuses the existing website login. For another account,
-choose **Connect another account**, switch/sign in on the provider website, then
-return and confirm the detected account. Both names/readings remain visible;
-website mode refreshes only the current login. The picker also offers an optional
-independent OpenAI connection through the existing companion.
-
-No MyLimits account or companion is required for basic tracking. Preview accounts
-are fictional and never become saved connected accounts.
-
-## Features
-
-- A 400px quick popup: limits, reset times, refresh, + and Full dashboard. Six
-  standard rows fit without scrolling. History/settings/guidance live in the full
-  dashboard; clicking an account opens its details there.
-- Automatic detection and explicit account setup with saved progress, identity
-  checks and nickname confirmation.
-- Compact account rows, separate nicknames, order/pins, selected meters, search,
-  low filtering, themes, optional low/critical and confirmed-reset notifications.
-- Independent readings by source/workspace; unavailable accounts retain dated
-  readings. Five-minute default polling with backoff and cancellation.
-- History comparisons, separate reset windows and gaps, reset timeline, 30/90-day
-  retention, cautious pacing ranges and JSON/CSV export. No invented messages left.
-- Local dashboard Guide: task/mode advice, prompt templates/review and an explicit
-  user-pasted handoff preview/copy/download. No paid AI calls or chat scraping.
-- Optional website widget: exact selected websites, collapse/corners/hide, saved
-  public values only. Off by default in Settings; conversation inputs are untouched.
-- Optional self-hosted snapshot sync and responsive phone dashboard. Pair a device
-  after separate MyLimits sign-in; original observation age is preserved.
-- Optional advanced OpenAI native companion, including an unsigned Windows setup
-  GUI and Start-menu uninstall flow. [Setup](OPENAI-COMPANION.md).
+- Essential 440px popup: larger names/readings, refresh, + and Full dashboard.
+  Normal-size six-account fixtures fit; larger collections or Large text scroll.
+- Four readable dashboard sections: Overview, Accounts, History, Settings.
+  Guide/prompt tools removed. Standard/Large text size is saved.
+- Genuine bundled provider icons; no remote logo requests.
+- Needs attention filter, local reset clock in details, privacy mode masking names
+  and notifications, version/help and safe diagnostics.
+- Optional floating button on selected AI sites. Clicking shows **Coming soon**.
+  Off by default, no account needed, no account/prompt/conversation reading.
+- Website detection and independent connections are clearly separated. Saved
+  website accounts retain dated readings when a different account is signed in.
+- Updated optional OpenAI helper uses isolated sign-in browser profiles. Windows
+  x64 installer bundles its Node/Codex prerequisites. Live acceptance is pending.
+- Existing account names, pins, history and alerts are preserved. Optional snapshot
+  sync remains advanced and does not keep AI provider accounts logged in.
 
 ## Provider boundaries
 

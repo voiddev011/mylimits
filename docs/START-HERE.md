@@ -1,3 +1,10 @@
+# Current work: MyLimits 3.0
+
+Latest authorized upgrade: `v3/redesign`. Read [V3-IMPLEMENTATION-PLAN.md](V3-IMPLEMENTATION-PLAN.md),
+[IMPLEMENTATION-STATUS.md](IMPLEMENTATION-STATUS.md) and [V3-HANDOFF.md](V3-HANDOFF.md).
+The Phase 1/2 instructions below describe earlier releases; do not restore Guide
+or the old quota widget from them. Use [INSTALL.md](INSTALL.md) to test this build.
+
 # Start here — GPT-6.1 Sol execution guide
 
 This is the implementation handoff for MyLimits 2.0. It is designed for one

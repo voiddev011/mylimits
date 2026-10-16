@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { browser } from 'wxt/browser';
 import { command, type Command, type PublicStore } from '../platform/messages';
+import { privatePresentation } from '../core/presentation';
 import { demoState } from './demo';
 
 /** One live projection for both the quick popup and the full dashboard. */
@@ -26,6 +27,7 @@ export function useMyLimits() {
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 15000); return () => clearInterval(timer); }, []);
   useEffect(() => { if (!toast) return; const timer = setTimeout(() => notify(''), 5000); return () => clearTimeout(timer); }, [toast]);
   useEffect(() => { document.documentElement.dataset.theme = store?.settings.theme ?? 'system'; }, [store?.settings.theme]);
+  useEffect(() => { document.documentElement.dataset.textSize = store?.settings.textSize ?? 'standard'; }, [store?.settings.textSize]);
   async function run(action: Command): Promise<boolean> {
     if (demo) {
       setStore(current => {
@@ -43,5 +45,5 @@ export function useMyLimits() {
     catch (e) { setError(e instanceof Error ? e.message : 'Action could not be completed.'); return false; }
     finally { setBusy(false); }
   }
-  return { store, demo, setDemo, busy, error, setError, toast, notify, now, run };
+  return { store: store?.settings.privacyMode ? privatePresentation(store) : store, demo, setDemo, busy, error, setError, toast, notify, now, run };
 }

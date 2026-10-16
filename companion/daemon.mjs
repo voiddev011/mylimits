@@ -1,12 +1,13 @@
 import net from 'node:net';
 import { chmod, unlink } from 'node:fs/promises';
 import { localToken, authenticated, challenge } from './local-auth.mjs';
+import { openAuthBrowser } from './auth-browser.mjs';
 import { Companion } from './service.mjs';
 import { dataDir, socketPath } from './paths.mjs';
 import { frame, frameReader, validRequest } from './protocol.mjs';
 
 process.umask(0o077);
-const companion = new Companion({ directory: dataDir, executable: process.argv[2] || 'codex' });
+const companion = new Companion({ directory: dataDir, executable: process.argv[2] || 'codex', launchAuth: openAuthBrowser });
 await companion.load();
 const token = await localToken(dataDir, true);
 // Refuse a second daemon; only remove an owner-controlled socket after ECONNREFUSED.

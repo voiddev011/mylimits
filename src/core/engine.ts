@@ -1,3 +1,4 @@
+import { privateAccountName } from './presentation';
 import { isQuiet, alertKey, confirmedReset } from './alert-policy';
 import { acceptSnapshot, projectAccounts } from './connections';
 import { type Account, type Meter, type ProviderId, type Store, accountName, alertThresholds, isFresh, remainingPercent } from './model';
@@ -103,8 +104,8 @@ export function collectAlerts(store: Store, now: number): { store: Store; alerts
       if (crossed.length) {
         const threshold = crossed[0]!;
         alerts.push({ id: `limit:${key}:${window}:${threshold}`, accountId: account.id, meterId: meter.id, ledgerKey: key, kind: 'low',
-          title: `${accountName(account)} is running low`,
-          message: `${meter.label}: ${Math.round(remaining)}% left${meter.resetsAt ? `. Resets ${new Date(meter.resetsAt).toLocaleString()}` : ''}.`,
+          title: `${(store.settings.privacyMode ? privateAccountName(store.accounts, account.id) : accountName(account))} is running low`,
+          message: `${store.settings.privacyMode ? 'Limit' : meter.label}: ${Math.round(remaining)}% left${meter.resetsAt ? `. Resets ${new Date(meter.resetsAt).toLocaleString()}` : ''}.`,
         });
         // One alert at the most severe crossed level, rather than two at once.
         entry.sent = [...new Set([...entry.sent, ...thresholds.filter(value => remaining <= value)])];
@@ -114,7 +115,7 @@ export function collectAlerts(store: Store, now: number): { store: Store; alerts
         observedAt: meter.observedAt ?? account.updatedAt, usedPercent: meter.usedPercent };
       if (store.settings.resetAlerts && confirmedReset(resetLedger[key], reset) && !crossed.length) alerts.push({
         id: `reset:${key}:${reset.window}`, accountId: account.id, meterId: meter.id, ledgerKey: key, kind: 'reset',
-        title: `${accountName(account)} reset confirmed`, message: `${meter.label}: a fresh provider reading reports a new allowance window.`,
+        title: `${(store.settings.privacyMode ? privateAccountName(store.accounts, account.id) : accountName(account))} reset confirmed`, message: `${store.settings.privacyMode ? 'Limit' : meter.label}: a fresh provider reading reports a new allowance window.`,
       });
       resetLedger[key] = reset;
     }

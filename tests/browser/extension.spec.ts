@@ -92,9 +92,8 @@ test('preferences persist and account warnings remain separately configurable', 
 
 test('denying website permission creates no account and popup fits its viewport', async ({ context, worker, extensionId }) => {
   const page = await context.newPage();
-  await page.setViewportSize({ width: 400, height: 500 });
-  await page.goto(`chrome-extension://${extensionId}/popup.html`);
-  await page.getByRole('button', { name: 'Add account', exact: true }).click();
+  await page.setViewportSize({ width: 440, height: 560 });
+  await page.goto(`chrome-extension://${extensionId}/dashboard.html#add`);
   await page.getByRole('button', { name: /Claude · Claude Code/ }).click();
   await page.evaluate(() => { chrome.permissions.request = async () => false; });
   await page.getByRole('button', { name: 'Detect current account', exact: true }).click();
@@ -121,7 +120,7 @@ test('capture dashboard preview and reject invalid or foreign UI messages', asyn
 
 test('quick popup shows six accounts without dashboard clutter or scrolling', async ({ context, extensionId }) => {
   const page = await context.newPage();
-  await page.setViewportSize({ width: 400, height: 500 });
+  await page.setViewportSize({ width: 440, height: 560 });
   await page.goto(`chrome-extension://${extensionId}/popup.html#demo`);
   await expect(page.locator('.meter-chip')).toHaveCount(7);
   await expect(page.getByRole('navigation')).toHaveCount(0);
@@ -199,9 +198,9 @@ test('native snapshots update independent accounts and disconnect without exposi
     body: document.body.getBoundingClientRect().width,
     app: document.querySelector('.app')!.getBoundingClientRect().width,
   }));
-  expect(widths).toEqual({ document: 400, body: 400, app: 400 });
+  expect(widths).toEqual({ document: 440, body: 440, app: 440 });
   await page.getByRole('button', { name: 'Add account', exact: true }).click();
-  expect(await page.locator('.app').evaluate(element => element.getBoundingClientRect().width)).toBe(400);
+  expect(await page.locator('.app').evaluate(element => element.getBoundingClientRect().width)).toBe(440);
 });
 
 test('unavailable native API shows reload guidance without a TypeError', async ({ context, worker, extensionId }) => {
@@ -227,7 +226,7 @@ test('popup honors dashboard pins without changing account nicknames', async ({c
  const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
  await page.getByRole('button',{name:'Details for GPT Projects',exact:true}).click();
  await page.getByRole('button',{name:'Pin account',exact:true}).click();
- await page.setViewportSize({width:400,height:500});await page.goto(`chrome-extension://${extensionId}/popup.html`);
+ await page.setViewportSize({width:440,height:560});await page.goto(`chrome-extension://${extensionId}/popup.html`);
  await expect(page.locator('.quick-account')).toHaveCount(6);
  await expect(page.locator('.quick-account').first()).toContainText('GPT Projects');
  await page.reload();await expect(page.locator('.quick-account').first()).toContainText('GPT Projects');
@@ -316,7 +315,7 @@ test('shared views preserve dark theme, long names and keyboard focus at narrow 
  fixture.settings.theme='dark';fixture.accounts[0]!.alias='A long account nickname to verify narrow extension surfaces';
  await worker.evaluate(async s=>chrome.storage.local.set({'mylimits:state:v2':s}),fixture);
  const page=await context.newPage();
- for(const [surface,width] of [['dashboard',1120],['sidepanel',360],['popup',400]] as const){
+ for(const [surface,width] of [['dashboard',1120],['sidepanel',360],['popup',440]] as const){
   await page.setViewportSize({width,height:600});await page.goto(`chrome-extension://${extensionId}/${surface}.html`);
   if(surface==='popup'){
    await expect(page.getByRole('button',{name:`View ${fixture.accounts[0]!.alias} in full dashboard`,exact:true})).toBeVisible();
@@ -362,33 +361,41 @@ test('history insights separate windows, show cautious pacing and persist 90-day
  await page.getByRole('button',{name:'Settings',exact:true}).click();await page.getByLabel('History retention').selectOption('90');await page.getByRole('button',{name:'Save preferences'}).click();await page.getByRole('button',{name:'History',exact:true}).click();await expect(page.getByText(/90-day local retention/)).toBeVisible();
 });
 
-test('Guide keeps private text local and handoff requires an explicit preview',async({context,worker,extensionId})=>{
- const fixture={...emptyStore('guide-private-fixture'),accounts:demoState().accounts};await worker.evaluate(async s=>chrome.storage.local.set({'mylimits:state:v2':s}),fixture);
- const requests:string[]=[];context.on('request',r=>{if(/^https?:/.test(r.url()))requests.push(r.url())});
- const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html`);await page.getByRole('button',{name:'Guide',exact:true}).click();await page.getByText('Prompt template and local review',{exact:true}).click();await page.getByLabel('Prompt to review').fill('PRIVATE_GUIDE_TEXT_2026');await expect(page.getByText(/words · .* characters/)).toBeVisible();
- await page.getByText('Prepare a handoff',{exact:true}).click();await expect(page.getByRole('button',{name:'Copy handoff',exact:true})).toHaveCount(0);await page.getByLabel('Goal',{exact:true}).fill('PRIVATE_HANDOFF_GOAL');await page.getByLabel('Selected excerpt',{exact:true}).fill('Deliberately selected only');await page.getByRole('button',{name:'Preview handoff',exact:true}).click();await expect(page.getByLabel('Handoff preview')).toHaveValue(/Deliberately selected only/);await page.getByLabel('Selected excerpt',{exact:true}).fill('Changed');await expect(page.getByRole('button',{name:'Copy handoff',exact:true})).toHaveCount(0);
- await page.getByRole('button',{name:'Overview',exact:true}).click();await page.getByRole('button',{name:'Guide',exact:true}).click();await page.getByText('Prompt template and local review',{exact:true}).click();await expect(page.getByLabel('Prompt to review')).toHaveValue('');
- const data=await worker.evaluate(async()=>JSON.stringify(await chrome.storage.local.get(null)));expect(data).not.toContain('PRIVATE_GUIDE_TEXT');expect(data).not.toContain('PRIVATE_HANDOFF_GOAL');expect(requests).toEqual([]);
+test('Guide is removed and its legacy link lands on Overview without prompt tools',async({context,worker,extensionId})=>{
+ const fixture={...emptyStore('removed-guide'),accounts:demoState().accounts};await worker.evaluate(async s=>chrome.storage.local.set({'mylimits:state:v2':s}),fixture);
+ const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html#guide`);
+ await expect(page.getByRole('button',{name:'Guide',exact:true})).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'Overview',exact:true})).toHaveAttribute('aria-current','page');
+ await expect(page.getByLabel('Prompt to review')).toHaveCount(0);
 });
 
 test.describe('Website widget fixture',()=>{
 test.use({grantedProviderOrigin:'https://claude.ai/*'});
 test('widget opt-in isolates page CSS, rejects page actions and removes on disable',async({context,worker,extensionId})=>{
- const fixture=emptyStore('widget-private-salt');fixture.accounts=[demoState().accounts[0]!];fixture.providers.claude={...fixture.providers.claude,enabled:true,status:'active',activeAccountId:fixture.accounts[0]!.id};fixture.connections[0]={...fixture.connections[0]!,enabled:true,status:'active',accountId:fixture.accounts[0]!.id,lastAttemptAt:Date.now()};await worker.evaluate(async s=>chrome.storage.local.set({'mylimits:state:v2':s}),fixture);
+ const fixture=emptyStore('widget-private-salt');await worker.evaluate(async s=>chrome.storage.local.set({'mylimits:state:v2':s}),fixture);
  const dashboard=await context.newPage();await dashboard.goto(`chrome-extension://${extensionId}/dashboard.html`);
  // Isolated fixture build grants only this synthetic website; headless Chrome cannot approve permission UI.
  expect(await worker.evaluate(()=>chrome.permissions.contains({origins:['https://claude.ai/*']}))).toBe(true);
  await context.route('https://claude.ai/**',r=>r.fulfill({contentType:'text/html',body:'<html><head><style>section,button,strong,p{display:none!important}body{background:white;color:black}</style></head><body><textarea id="composer">DO NOT READ</textarea></body></html>'}));
  const website=await context.newPage();await website.goto('https://claude.ai/new');await expect(website.locator('#mylimits-usage-widget')).toHaveCount(0);
- await dashboard.getByRole('button',{name:'Settings',exact:true}).click();await dashboard.getByLabel('Widget on Claude',{exact:true}).check();await expect(website.getByRole('region',{name:'MyLimits usage widget'})).toBeVisible();await expect(website.getByText('Session · 5 hours: 68%')).toBeVisible();expect(await website.locator('#composer').inputValue()).toBe('DO NOT READ');await mkdir('artifacts',{recursive:true});await website.screenshot({path:'artifacts/phase-2-widget.png'});
- await website.getByRole('button',{name:'Collapse',exact:true}).evaluate(b=>b.dispatchEvent(new MouseEvent('click',{bubbles:true})));await expect(website.getByRole('button',{name:'Collapse',exact:true})).toBeVisible(); // synthetic page click is ignored
- await website.getByRole('button',{name:'Collapse',exact:true}).click();await expect(website.getByRole('button',{name:'Expand',exact:true})).toBeVisible();await website.getByRole('button',{name:'Expand',exact:true}).click();await website.getByLabel('Widget position').selectOption('top-left');
+ await dashboard.getByRole('button',{name:'Settings',exact:true}).click();await dashboard.getByLabel('Preview on Claude',{exact:true}).check();
+ const launcher=website.getByRole('button',{name:'MyLimits preview',exact:true});await expect(launcher).toBeVisible();
+ await launcher.evaluate(b=>b.dispatchEvent(new MouseEvent('click',{bubbles:true})));await expect(website.getByText('Coming soon',{exact:true})).toHaveCount(0);
+ await launcher.click();await expect(website.getByText('Coming soon',{exact:true})).toBeVisible();
+ expect(await website.locator('#composer').inputValue()).toBe('DO NOT READ');
+ await website.screenshot({path:'artifacts/v3-floating-preview.png'});
+ await website.keyboard.press('Escape');await expect(launcher).toHaveAttribute('aria-expanded','false');await expect(launcher).toBeFocused();
+ await launcher.click();await website.locator('#composer').click();await expect(launcher).toHaveAttribute('aria-expanded','false');
+ await launcher.click();await website.getByLabel('Preview position').focus();await website.keyboard.press('End');await website.keyboard.press('Tab');
+ await expect.poll(()=>website.locator('#mylimits-usage-widget').evaluate(e=>getComputedStyle(e).left)).toBe('16px');
  const second=await context.newPage();await second.goto('https://claude.ai/new');await expect(second.locator('#mylimits-usage-widget')).toBeVisible();
  await website.evaluate(()=>{history.pushState({},'', '/chat/fixture');document.getElementById('mylimits-usage-widget')?.remove()});await expect(website.locator('#mylimits-usage-widget')).toHaveCount(1);
- const tabId=await worker.evaluate(async()=> (await chrome.tabs.query({url:'https://claude.ai/*'}))[0]!.id!);const message=await worker.evaluate(async tabId=>(await chrome.scripting.executeScript({target:{tabId},func:async()=>{const denied=await chrome.runtime.sendMessage({type:'state'}),reading=await chrome.runtime.sendMessage({type:'widget-state',provider:'claude'});return {denied,reading}}}))[0]!.result,tabId);expect(message!.denied.ok).toBe(false);expect(message!.reading.ok).toBe(true);expect(JSON.stringify(message!.reading)).not.toContain('widget-private-salt');expect(JSON.stringify(message!.reading)).not.toContain('connectionId');
+ const tabId=await worker.evaluate(async()=> (await chrome.tabs.query({url:'https://claude.ai/*'}))[0]!.id!);const message=await worker.evaluate(async tabId=>(await chrome.scripting.executeScript({target:{tabId},func:async()=>{const denied=await chrome.runtime.sendMessage({type:'state'}),reading=await chrome.runtime.sendMessage({type:'widget-state',provider:'claude'});return {denied,reading}}}))[0]!.result,tabId);expect(message!.denied.ok).toBe(false);expect(message!.reading.ok).toBe(true);expect(JSON.stringify(message!.reading)).not.toContain('widget-private-salt');expect(message!.reading.data).toEqual({enabled:true,position:'top-left'});
  const scripts=await worker.evaluate(()=>chrome.scripting.getRegisteredContentScripts());expect(scripts.find(s=>s.id==='mylimits-widget-claude')!.matches).toEqual(['https://claude.ai/*']);
- await dashboard.getByLabel('Widget on Claude',{exact:true}).uncheck();await expect(website.locator('#mylimits-usage-widget')).toHaveCount(0);await expect(second.locator('#mylimits-usage-widget')).toHaveCount(0);
+ await dashboard.getByLabel('Preview on Claude',{exact:true}).uncheck();await expect(website.locator('#mylimits-usage-widget')).toHaveCount(0);await expect(second.locator('#mylimits-usage-widget')).toHaveCount(0);
  const failed=await dashboard.evaluate(()=>chrome.runtime.sendMessage({type:'widget-state',provider:'claude'}));expect(failed.ok).toBe(false);
+ await dashboard.getByLabel('Preview on Claude',{exact:true}).check();await expect(launcher).toBeVisible();await launcher.click();await website.getByRole('button',{name:'Hide on this site',exact:true}).click();await expect(website.locator('#mylimits-usage-widget')).toHaveCount(0);await expect(second.locator('#mylimits-usage-widget')).toHaveCount(0);await expect(dashboard.getByLabel('Preview on Claude',{exact:true})).not.toBeChecked();
+ await website.reload();await expect(website.locator('#mylimits-usage-widget')).toHaveCount(0);
 });
 
 });
@@ -405,20 +412,18 @@ test('manual second-account setup survives popup closure and protects the first 
       return new Response(JSON.stringify(data),{status:200,headers:{'content-type':'application/json'}});
     };
   });
-  const page=await context.newPage(); await page.goto(`chrome-extension://${extensionId}/popup.html`);
-  await expect(page.getByRole('button',{name:'Add account',exact:true})).toBeVisible();
+  const page=await context.newPage(); await page.goto(`chrome-extension://${extensionId}/dashboard.html#add`);
   await page.evaluate(()=>{chrome.permissions.request=async()=>true});
-  await page.getByRole('button',{name:'Add account',exact:true}).click();
-  await page.getByRole('button',{name:/Claude · Claude Code/}).click();
+   await page.getByRole('button',{name:/Claude · Claude Code/}).click();
   await page.getByLabel('New account nickname').fill('Personal');
   await page.getByRole('button',{name:'Detect current account',exact:true}).click();
   await expect(page.getByRole('button',{name:'Save detected account',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Save detected account',exact:true}).click();
-  await expect(page.getByRole('button',{name:'View Personal in full dashboard',exact:true})).toBeVisible();
-  await page.getByRole('button',{name:'Add account',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Details for Personal',exact:true})).toBeVisible();
+  await page.locator('.app-footer').getByRole('button',{name:'Add account',exact:true}).click();
   await page.getByRole('button',{name:/Claude · Claude Code/}).click();
   await page.getByLabel('New account nickname').fill('Work');
-  await page.getByRole('button',{name:'Connect another account',exact:true}).click();
+  await page.getByRole('button',{name:'Save another website account',exact:true}).click();
   await expect(page.getByText('Still seeing the original account.',{exact:false})).toBeVisible();
   await expect(page.getByRole('button',{name:'Save detected account'})).toHaveCount(0);
   await page.reload();
@@ -433,8 +438,8 @@ test('manual second-account setup survives popup closure and protects the first 
   await page.getByRole('button',{name:'Check account',exact:true}).click();
   await expect(page.getByRole('button',{name:'Save detected account',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Save detected account',exact:true}).click();
-  await expect(page.getByRole('button',{name:'View Work in full dashboard',exact:true})).toBeVisible();
-  await expect(page.getByRole('button',{name:'View Personal in full dashboard',exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Details for Work',exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Details for Personal',exact:true})).toBeVisible();
   const saved=await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);
   expect(saved.accounts).toHaveLength(2); expect(saved.accountSetup).toBeNull();
   expect(saved.accounts.find(a=>a.alias==='Personal')!.connection).toBe('inactive');
@@ -446,10 +451,10 @@ test('popup opens the selected account in the full dashboard and keeps six rows 
   const fixture={...emptyStore('compact-six'),accounts:demoState().accounts};
   fixture.accounts.push({...fixture.accounts[0]!,id:'sixth',alias:'Sixth account'});
   await worker.evaluate(async s=>chrome.storage.local.set({'mylimits:state:v2':s}),fixture);
-  const page=await context.newPage();await page.setViewportSize({width:400,height:500});
+  const page=await context.newPage();await page.setViewportSize({width:440,height:560});
   await page.goto(`chrome-extension://${extensionId}/popup.html`);
   await expect(page.locator('.quick-account')).toHaveCount(6);
-  const bounds=await page.locator('.quick-popup').boundingBox();expect(bounds!.width).toBe(400);expect(bounds!.height).toBeLessThanOrEqual(500);
+  const bounds=await page.locator('.quick-popup').boundingBox();expect(bounds!.width).toBe(440);expect(bounds!.height).toBeLessThanOrEqual(560);
   expect(await page.locator('.quick-main').evaluate(e=>e.scrollHeight<=e.clientHeight)).toBe(true);
   const opened=context.waitForEvent('page');
   await page.getByRole('button',{name:'View GPT Work in full dashboard',exact:true}).click();
@@ -463,9 +468,10 @@ test('popup opens the selected account in the full dashboard and keeps six rows 
 test('provider picker lists the supported services and labels Gemini as activity only',async({context,worker,extensionId})=>{
   const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html#add`);
   for(const name of ['OpenAI · ChatGPT / Codex','Claude · Claude Code','Cursor','Gemini','Grok','Perplexity'])await expect(page.getByRole('button',{name:new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))})).toBeVisible();
+  expect(await page.locator('.connect-provider img').evaluateAll(images=>images.every(img=>(img as HTMLImageElement).complete&&(img as HTMLImageElement).naturalWidth>0))).toBe(true);
   await page.getByRole('button',{name:/Gemini/}).click();
   await expect(page.getByRole('button',{name:'Enable browser activity',exact:true})).toBeVisible();
-  await expect(page.getByRole('button',{name:'Connect another account',exact:true})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'Save another website account',exact:true})).toHaveCount(0);
   const saved=await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);
   expect(saved.accounts).toHaveLength(0);
 });
@@ -479,20 +485,19 @@ test('independent OpenAI setup gives only the new native profile its requested n
    let deliver:(value:unknown)=>void=()=>{};
    return {onMessage:{addListener:(f:(value:unknown)=>void)=>{deliver=f}},onDisconnect:{addListener:()=>{}},disconnect:()=>{},postMessage:(request:{id:string;method:string})=>{
     let data:unknown={type:'snapshot',profiles};
-    if(request.method==='add'){profiles.push({id:addedProfile,status:'signed-out',plan:'plus',updatedAt:0,meters:[]});data={profile:addedProfile,authUrl:'https://auth.openai.com/authorize?client_id=fictional-fixture'}}
+    if(request.method==='add'){profiles.push({id:addedProfile,status:'signed-out',plan:'plus',updatedAt:0,meters:[]});data={profile:addedProfile,browserOpened:true}}
     setTimeout(()=>deliver({id:request.id,ok:true,data}),0);
    }};
   }});
  },{originalProfile,addedProfile});
- const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/popup.html`);
+ const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html#add`);
  await page.evaluate(()=>{chrome.permissions.request=async()=>true});
- await page.getByRole('button',{name:'Add account',exact:true}).click();
  await page.getByRole('button',{name:/OpenAI · ChatGPT/}).click();
  await page.getByLabel('New account nickname').fill('Independent work');
  await page.getByRole('button',{name:'Independent OpenAI connection',exact:true}).click();
- const authOpened=context.waitForEvent('page');
+ const before=context.pages().length;
  await page.getByRole('button',{name:'Connect OpenAI',exact:true}).click();
- const auth=await authOpened;expect(auth.url()).toMatch(/^https:\/\/auth.openai.com\//);
+ expect(context.pages().length).toBe(before); // Updated helper owns the isolated sign-in window.
  await expect.poll(async()=>worker.evaluate(async()=>((await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store).accounts.find(a=>a.companionProfile==='6c7b581a-333d-4016-955e-98e84dcf22aa')?.alias)).toBe('Independent work');
  const saved=await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);
  expect(saved.accounts.find(a=>a.companionProfile===originalProfile)!.alias).toBe('');
@@ -504,10 +509,38 @@ test('larger account collections scroll inside the popup and search stays availa
  const fixture={...emptyStore('many-accounts'),accounts:demoState().accounts};
  for(let i=0;i<5;i++)fixture.accounts.push({...fixture.accounts[0]!,id:`extra-${i}`,alias:`Extra ${i}`});
  await worker.evaluate(async s=>chrome.storage.local.set({'mylimits:state:v2':s}),fixture);
- const page=await context.newPage();await page.setViewportSize({width:400,height:500});await page.goto(`chrome-extension://${extensionId}/popup.html`);
+ const page=await context.newPage();await page.setViewportSize({width:440,height:560});await page.goto(`chrome-extension://${extensionId}/popup.html`);
  await expect(page.locator('.quick-account')).toHaveCount(10);
  expect(await page.locator('.quick-main').evaluate(e=>e.scrollHeight>e.clientHeight)).toBe(true);
- expect((await page.locator('.quick-footer').boundingBox())!.y).toBeLessThan(500);
+ expect((await page.locator('.quick-footer').boundingBox())!.y).toBeLessThan(560);
  await page.getByLabel('Search accounts').fill('Extra 3');await expect(page.locator('.quick-account')).toHaveCount(1);
  await expect(page.getByRole('button',{name:'View Extra 3 in full dashboard',exact:true})).toBeVisible();
+});
+
+test('popup plus opens dashboard setup and local genuine logos load without external requests',async({context,worker,extensionId})=>{
+ const fixture={...emptyStore('v3-icons'),accounts:demoState().accounts};await worker.evaluate(async s=>chrome.storage.local.set({'mylimits:state:v2':s}),fixture);
+ const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/popup.html`);
+ await expect(page.locator('.provider-mark img')).toHaveCount(5);
+ expect(await page.locator('.provider-mark img').evaluateAll(imgs=>imgs.every(img=>(img as HTMLImageElement).complete&&(img as HTMLImageElement).naturalWidth>0))).toBe(true);
+ expect(await page.locator('.quick-copy strong').first().evaluate(e=>getComputedStyle(e).fontSize)).toBe('14px');
+ const opened=context.waitForEvent('page');await page.getByRole('button',{name:'Add account',exact:true}).click();const dashboard=await opened;
+ await expect(dashboard.getByRole('region',{name:'Add an account'})).toBeVisible();
+ await expect(page.getByRole('region',{name:'Add an account'})).toHaveCount(0);
+});
+
+test('large text persists, privacy masks every surface, and 200 percent enlargement retains controls',async({context,worker,extensionId})=>{
+ const fixture={...emptyStore('v3-layout-private'),accounts:demoState().accounts};
+ fixture.accounts[0]!.alias='Private writing workspace with a very long account name';
+ await worker.evaluate(async s=>chrome.storage.local.set({'mylimits:state:v2':s}),fixture);
+ const page=await context.newPage();await page.setViewportSize({width:1120,height:920});await page.goto(`chrome-extension://${extensionId}/dashboard.html#settings`);
+ await page.getByLabel('Text size',{exact:true}).selectOption('large');await page.getByLabel('Privacy mode',{exact:true}).selectOption('on');await page.getByRole('button',{name:'Save preferences'}).click();
+ await page.reload();await expect(page.locator('html')).toHaveAttribute('data-text-size','large');await expect(page.getByLabel('Privacy mode',{exact:true})).toHaveValue('on');
+ for(const tab of ['Overview','Accounts','History']){await page.getByRole('button',{name:tab,exact:true}).click();for(const a of fixture.accounts)await expect(page.getByText(a.alias,{exact:false})).toHaveCount(0);}
+ await expect(page.getByRole('button',{name:'Export JSON',exact:true})).toBeDisabled();
+ await page.getByRole('button',{name:'Overview',exact:true}).click();await page.getByRole('button',{name:'Details for Account 1',exact:true}).click();await expect(page.getByRole('button',{name:'Rename Account 1',exact:true})).toBeDisabled();
+ await page.setViewportSize({width:560,height:920});await page.evaluate(()=>{document.documentElement.style.fontSize='32px'});
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+ await expect(page.getByRole('button',{name:'Settings',exact:true})).toBeVisible();
+ const saved=await worker.evaluate(async()=>(await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);expect(saved.accounts[0]!.alias).toBe(fixture.accounts[0]!.alias);
+ const popup=await context.newPage();await popup.goto(`chrome-extension://${extensionId}/popup.html`);await expect(popup.getByRole('button',{name:'View Account 1 in full dashboard',exact:true})).toBeVisible();await expect(popup.getByText(fixture.accounts[0]!.alias)).toHaveCount(0);
 });

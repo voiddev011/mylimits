@@ -1,7 +1,7 @@
 import { websiteConnection, type Account, type Meter, type Store } from './model';
 import { applySnapshot } from './engine';
 import { projectAccounts } from './connections';
-export interface CompanionProfile { id:string;status:'active'|'signed-out'|'unavailable';plan:string|null;updatedAt:number;meters:Meter[]; }
+export interface CompanionProfile { possibleDuplicate?: boolean; id:string;status:'active'|'signed-out'|'unavailable';plan:string|null;updatedAt:number;meters:Meter[]; }
 export function mergeCompanion(store:Store,profiles:CompanionProfile[],now:number):Store {
  const keep=new Set(profiles.map(p=>`openai-companion:${p.id}`));
  const removed=store.accounts.filter(a=>a.companionProfile&&!keep.has(a.id)).map(a=>a.id);
@@ -19,7 +19,7 @@ export function mergeCompanion(store:Store,profiles:CompanionProfile[],now:numbe
    next={...next,accounts:next.accounts.map(a=>a.id===id?{...a,companionProfile:profile.id}:a)};
   }
   const status=profile.status==='signed-out'?'needs-auth':profile.status;
-  next={...next,connections:next.connections.map(c=>c.id===connectionId?{...c,status,enabled:true,lastAttemptAt:now,message:status==='active'?null:'The companion needs attention.'}:c),accounts:next.accounts.map(a=>a.id===id?{...a,connection:profile.status}:a)};
+  next={...next,connections:next.connections.map(c=>c.id===connectionId?{...c,status,enabled:true,lastAttemptAt:now,message:profile.possibleDuplicate?'Possible duplicate sign-in: another saved profile reports the same OpenAI email. Verify the chosen accounts; profiles are not merged.':status==='active'?null:'The companion needs attention.'}:c),accounts:next.accounts.map(a=>a.id===id?{...a,connection:profile.status}:a)};
  }
  return projectAccounts(next);
 }

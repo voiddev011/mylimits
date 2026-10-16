@@ -6,7 +6,7 @@ import type { CompanionProfile } from '../core/companion';
 const HOST = 'com.mylimits.openai';
 const KEY = 'mylimits:companion-enabled';
 const SnapshotSchema = z.object({ type: z.literal('snapshot'), profiles: z.array(z.object({
-  id: z.string().uuid(), status: z.enum(['active', 'signed-out', 'unavailable']), plan: z.string().max(80).nullable(),
+  possibleDuplicate: z.boolean().optional(), id: z.string().uuid(), status: z.enum(['active', 'signed-out', 'unavailable']), plan: z.string().max(80).nullable(),
   updatedAt: z.number().finite().min(0).max(Number.MAX_SAFE_INTEGER), meters: z.array(MeterSchema).max(30),
 })).max(20) });
 let port: ReturnType<typeof browser.runtime.connectNative> | undefined;
@@ -78,7 +78,8 @@ export async function enableCompanion(enabled: boolean) {
   }
 }
 export async function addCompanionAccount() {
-  const result = z.object({ profile: z.string().uuid(), authUrl: z.string().url() }).parse(await companionRequest('add'));
+  const result = z.union([z.object({profile:z.string().uuid(),browserOpened:z.literal(true)}).strict(),z.object({profile:z.string().uuid(),authUrl:z.string().url()}).strict()]).parse(await companionRequest('add'));
+  if ('browserOpened' in result) return result.profile; // Authorization URL remains outside browser storage.
   const url = new URL(result.authUrl);
   if (url.protocol !== 'https:' || !['auth.openai.com', 'chatgpt.com'].includes(url.hostname) || url.username || url.password || (url.port && url.port !== '443')) throw new Error('Unsupported OpenAI sign-in URL.');
   await browser.tabs.create({ url: result.authUrl });

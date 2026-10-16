@@ -4,7 +4,7 @@ Name "MyLimits Optional Companion (unsigned preview)"
 OutFile "${OUTPUT}"
 InstallDir "$LOCALAPPDATA\MyLimitsCompanionSetup"
 RequestExecutionLevel user
-SetCompressor /SOLID lzma
+SetCompressor /SOLID zlib
 !define MUI_FINISHPAGE_RUN
 !define MUI_FINISHPAGE_RUN_TEXT "Open companion setup"
 !define MUI_FINISHPAGE_RUN_FUNCTION "LaunchSetup"
@@ -49,6 +49,7 @@ Section "Uninstall"
   Delete "$INSTDIR\windows\setup.ps1"
   Delete "$INSTDIR\windows\uninstall.ps1"
   RMDir "$INSTDIR\windows"
+  RMDir /r "$INSTDIR\dependencies"
   Delete "$INSTDIR\Install.cmd"
   Delete "$INSTDIR\uninstall-files.nsh"
   Delete "$INSTDIR\Uninstall.exe"
