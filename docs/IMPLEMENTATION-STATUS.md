@@ -7,7 +7,7 @@ credential upload has been performed.
 
 - Requested phase: Phase 2 (authorized by the user: “Start with next phase”).
 - Current work package: P2-10 — implemented.
-- Next action: P2-10 — publish final code checkpoint, inspect all CI jobs and artifact presence, then record final handoff.
+- Next action: P2-10 — inspect replacement CI run, verify native/extension artifacts, then finalize status and handoff.
 - Working branch/commit: `v2/phase-2`; Phase 1 and main preserved.
 - Authoritative scope: [master plan](V2-IMPLEMENTATION-PLAN.md),
   [Phase 1](PHASE-1.md), [Phase 2](PHASE-2.md).
@@ -145,7 +145,7 @@ State: **verified**. Rebuilt shared popup/dashboard/side-panel surfaces with com
 
 Next: P1-08 — implement quiet hours, snooze and confirmed reset notifications.
 
-## P1-08 checkpoint — 15 October 2026
+## P1-08 checkpoint — 16 October 2026
 
 State: **verified**. Implemented overnight local quiet hours, per-account snooze, scoped deduplication with legacy-ledger compatibility, conservative fresh-reading reset confirmation and used/remaining badge semantics. Failed notification delivery restores its ledger entry for retry. Added timing, no-false-reset and migration-dedup tests; all 58 core tests and type checking pass. No timestamp-only reset claim is made.
 
@@ -314,3 +314,9 @@ Next: P2-10 — finish server recheck, publish hardening checkpoint and inspect 
 State: **implemented**. Changed final extension version/package locks, auth verification helper and real-signature tests, tenant lock order/deletion/device scrubbing, bounded API storage and hourly retention plus migration 005, stale sync backlog handling, activity-only observer lifecycle, currency display/export, actual HTTP transport fixture, complete service/platform/archive CI, Windows empty/multiple discovery regression, current docs and Phase 2 handoff. Available local checks pass: 90 core, 17 companion, 19 full browser fixtures plus targeted source/widget and popup measurement reruns; 30 real-PostgreSQL server tests/types with fresh/repeat migrations; phone and actual extension HTTP pairing/upload/delete fixtures. Six cached rows measured 230 ms at 520x600 in Linux headless Chromium. Browser variants/contracts, actual clean ZIPs/checksums and unsigned NSIS installer compiled. Source ZIP auto-generation was disabled after inspection found generated artifacts included; distributable extension ZIPs contain no private/test grants. Final Windows CI and complete release artifact inspection are pending. Production cloud collector, live provider/logout and real OS acceptance remain external blockers.
 
 Next: P2-10 — publish final code checkpoint, inspect all CI jobs and artifact presence, then record final handoff.
+
+## P2-10 checkpoint — 16 October 2026
+
+State: **implemented**. Final connected-services CI passed 30 PostgreSQL/auth/job tests, phone view and actual HTTP transport; Linux verification and clean extension ZIP artifact were produced. Windows CI now passes real PowerShell parsing, GUI construction and empty/multiple candidate checks, but NSIS exposed mixed Windows source-path separators; corrected to native NSIS separators and actual Linux EXE compilation passes. Final controller registration/stop guards ensure Grok/Perplexity observers exist only in activity mode, reconcile on restart and unregister on quota switch. Typecheck and targeted Perplexity/widget fixtures pass locally; final Windows packaging rerun remains pending. No live OS/provider claim changed.
+
+Next: P2-10 — inspect replacement CI run, verify native/extension artifacts, then finalize status and handoff.

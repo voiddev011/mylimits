@@ -338,11 +338,13 @@ test('Perplexity count-only quotas and activity mode preserve names without gues
  const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
  const result=await page.evaluate(async()=>chrome.runtime.sendMessage({type:'enable',provider:'perplexity',enabled:true}));expect(result.ok).toBe(true);expect(JSON.stringify(result.data)).not.toContain('PRIVATE-SEARCH-EMAIL');
  await expect(page.locator('.meter-chip strong').filter({hasText:'0 left'})).toBeVisible();await expect(page.locator('.meter-chip strong').filter({hasText:'12 left'})).toBeVisible();
+ expect((await worker.evaluate(()=>chrome.scripting.getRegisteredContentScripts())).some(s=>s.id==='mylimits-observer-perplexity')).toBe(false);
  const account=result.data.accounts.find((a:Account)=>a.provider==='perplexity');expect(account.meters[0].usedPercent).toBeNull();expect(account.meters[0].total).toBeNull();
  await page.getByRole('button',{name:'Details for Perplexity',exact:true}).click();await page.getByRole('button',{name:'Rename Perplexity',exact:true}).click();await page.getByLabel('Account nickname').fill('Personal search');await page.getByRole('button',{name:'Save nickname',exact:true}).click();
  await page.getByRole('button',{name:'Accounts',exact:true}).click();await page.getByLabel('Reading source for Perplexity').selectOption('activity');
  await expect.poll(async()=>worker.evaluate(async()=>{const s=(await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store;return s.accounts.find(a=>a.kind==='browser'&&a.provider==='perplexity')?.connection})).toBe('active');
  const saved=await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);expect(saved.accounts.find(a=>a.id===account.id)!.alias).toBe('Personal search');expect(saved.accounts.find(a=>a.id===account.id)!.connection).toBe('inactive');expect(saved.providers.perplexity.readingMode).toBe('activity');
+ expect((await worker.evaluate(()=>chrome.scripting.getRegisteredContentScripts())).some(s=>s.id==='mylimits-observer-perplexity')).toBe(true);await page.getByLabel('Reading source for Perplexity').selectOption('quota');await expect.poll(async()=>worker.evaluate(async()=>(await chrome.scripting.getRegisteredContentScripts()).some(s=>s.id==='mylimits-observer-perplexity'))).toBe(false);
 });
 
 test('history insights separate windows, show cautious pacing and persist 90-day retention',async({context,worker,extensionId})=>{

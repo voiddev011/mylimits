@@ -118,20 +118,27 @@ async function setProvider(provider: ProviderId, enabled: boolean): Promise<void
   if (enabled && !await browser.permissions.contains({ origins: [origin] })) throw new Error('Approve Chrome site access before enabling this website.');
   coordinator.cancel(`website:${provider}`);
   await updateStore(store => ({ store: enableWebsite(store, provider, enabled), value: undefined }));
+  await reconcileObserver(provider);
+  if (enabled) {await refreshProvider(provider, true);await reconcileWidgets();}
+  else {
+    await browser.permissions.remove({ origins: [origin] });
+    await renderBadge();
+  }
+}
+
+async function reconcileObserver(provider:ProviderId){
+  const origin=providers[provider].origin;
   const scriptId = `mylimits-observer-${provider}`;
   const registered = await browser.scripting.getRegisteredContentScripts({ ids: [scriptId] });
   if (registered.length) await browser.scripting.unregisterContentScripts({ ids: [scriptId] });
+  const state=await readStore(),enabled=state.providers[provider].enabled&&(provider==='gemini'||state.providers[provider].readingMode==='activity')&&await browser.permissions.contains({origins:[origin]});
+  const existingTabs=await browser.tabs.query({url:providers[provider].origin});await Promise.allSettled(existingTabs.filter(tab=>tab.id).map(tab=>browser.tabs.sendMessage(tab.id!,{type:'mylimits-observer-stop'})));
   if (enabled && observedProviders.includes(provider)) {
     await browser.scripting.registerContentScripts([{
       id: scriptId, matches: [origin], js: ['/content-scripts/observer.js'], runAt: 'document_start', persistAcrossSessions: true,
     }]);
     const tabs = await browser.tabs.query({ url: origin });
     await Promise.allSettled(tabs.filter(tab => tab.id).map(tab => browser.scripting.executeScript({ target: { tabId: tab.id! }, files: ['/content-scripts/observer.js'] })));
-  }
-  if (enabled) {await refreshProvider(provider, true);await reconcileWidgets();}
-  else {
-    await browser.permissions.remove({ origins: [origin] });
-    await renderBadge();
   }
 }
 
@@ -189,7 +196,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
   if (command.type === 'observer-ready' || command.type === 'observation') {
     if (!sender.url || providerForUrl(sender.url) !== command.provider || !sender.tab?.id) throw new Error('Website observation did not match its sender.');
     const state = await readStore();
-    if (!state.providers[command.provider].enabled || !observedProviders.includes(command.provider)) return null;
+    if (!state.providers[command.provider].enabled || !observedProviders.includes(command.provider)||(command.provider!=='gemini'&&state.providers[command.provider].readingMode!=='activity')) return null;
   if (command.type === 'observer-ready') {
       await injectObserver(command.provider, sender.tab.id, command.channel);
       return null;
@@ -208,7 +215,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
     case 'reader-mode': {
       coordinator.cancel(`website:${command.provider}`);
       const enabled=await updateStore(store=>{const enabled=store.providers[command.provider].enabled,next=enableWebsite(store,command.provider,enabled);next.providers[command.provider].readingMode=command.mode;return {store:next,value:enabled}});
-      if(enabled)await refreshProvider(command.provider,true);break;
+      await reconcileObserver(command.provider);if(enabled)await refreshProvider(command.provider,true);break;
     }
     case 'sync': {
       if(command.action==='status')return snapshotSync.status();
@@ -346,7 +353,7 @@ export function startController(): void {
     await browser.alarms.create(REFRESH_ALARM, { periodInMinutes: store.settings.refreshMinutes });
     if ((await companionStatus()).enabled) await browser.alarms.create(COMPANION_ALARM, { periodInMinutes: 1 });
     if((await snapshotSync.status()).enabled)await browser.alarms.create(SYNC_ALARM,{periodInMinutes:5});
-    await reconcileWidgets();
+    await reconcileWidgets();for(const provider of observedProviders)await reconcileObserver(provider);
     await renderBadge();
     await refreshAll();
   })().catch(() => undefined);
