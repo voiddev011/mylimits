@@ -8,3 +8,6 @@
 @media(max-width:740px){.app--dashboard{margin:0;border:0;border-radius:0}.account-summary{grid-template-columns:minmax(0,1fr);gap:14px;padding:20px}.row-meters{padding-left:52px}.app-header{padding:20px}.page-heading,.summary-strip,.overview-tools,.panel,.accounts-page,.connect-sheet,.account-detail{padding-left:20px;padding-right:20px}.local-label{display:none}.tabs{padding:0 12px;gap:8px}.tabs button{font-size:.875rem}.tabs svg{display:none}.form-grid,.detail-meters{grid-template-columns:1fr}.page-heading{flex-wrap:wrap}.footer-age{display:none}.connect-providers{grid-template-columns:1fr}.advanced{margin:16px 20px}.overview-tools .search-box{order:-1;flex-basis:100%}.app-footer{padding:16px 20px}.app-footer select{max-width:140px}}
 
 .connection-help{margin:16px 0;font-size:.875rem}.connection-help summary{cursor:pointer;min-height:32px;color:var(--muted)}.connection-help p{margin-top:10px;color:var(--muted)}
+
+/* Official adaptive SVGs stay legible on the deliberately light logo tile. */
+.provider-mark{color-scheme:light}

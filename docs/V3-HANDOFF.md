@@ -58,6 +58,25 @@ privacy edge-case fixes, this handoff and final evidence.
   needed to open the new Advanced section; corrected in the final branch commit.
   See final status evidence for the rerun. No tests were silently skipped.
 
+## Published evidence
+
+Verified application checkpoint: `cc29f5ac4f4c7dccdea1c168a4c2f23479cc9671`.
+Local checkpoint `9ffa3d9` has exactly the same tree
+`16181f016e732efc2936a0c132fa1b0def9f91bb`. GitHub publication used an expected-head
+lease and no force update. Main was preserved.
+
+[Checks run 38931432647](https://github.com/voiddev011/mylimits/actions/runs/38931432647)
+passed extension verification and all connected-service checks, including corrected
+HTTP pairing/upload/deletion against real isolated PostgreSQL. The extension
+[artifact](https://github.com/voiddev011/mylimits/actions/runs/38931432647/artifacts/12058862247)
+contains the Chrome/Firefox ZIPs and their SHA256SUMS.
+
+All three jobs on run 38931432647 passed, including Windows native logic, real
+PowerShell parsing/GUI construction and bundled installer compilation. The optional
+helper artifact is [available here](https://github.com/voiddev011/mylimits/actions/runs/38931432647/artifacts/12058892440).
+A subsequent style-only correction fixes the official adaptive OpenAI SVG on its
+light logo tile; its rendered pixels are tested under dark browser preference. Interactive OS/provider acceptance remains pending regardless of CI.
+
 Screenshots (sample fixtures only, ignored artifacts): `dashboard-preview.png`,
 `compact-popup-six-accounts.png`, `v3-floating-preview.png` under `artifacts/`.
 No live provider access or credentials were available.

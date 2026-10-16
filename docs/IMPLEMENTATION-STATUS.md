@@ -513,3 +513,36 @@ blocked rather than advertised. Next: implement V3-01 and V3-02.
   Chrome ZIP 298,948 bytes; Firefox ZIP 298,298 bytes.
 - Next: push privacy/handoff/fixture correction, confirm complete CI and record
   artifacts. No real provider or Windows interactive test is implied by CI.
+
+### V3 final CI evidence and logo contrast correction
+
+- Final application checkpoint `cc29f5ac4f4c7dccdea1c168a4c2f23479cc9671`,
+  run **38931432647**: all three jobs succeeded. Extension verify covers 26 real
+  Chromium fixtures and packages; connected-services includes actual isolated
+  PostgreSQL API/jobs, phone web and corrected HTTP pairing/upload/deletion;
+  Windows includes core/native tests, real PowerShell parsing/GUI construction,
+  and actual bundled installer compilation. No live account behavior is implied.
+- Published artifacts: extension packages 12058862247; Windows helper 12058892440.
+- Final visual asset review found the official OpenAI favicon switches to white
+  under dark preference. Its intentionally light tile now explicitly uses light
+  color-scheme; the asset stays unchanged. Added an actual rendered-pixel browser
+  assertion under dark preference, rather than checking image load alone.
+- Follow-up whole-browser acceptance and variant archives are running for this
+  stylesheet-only correction. Native and server application code unchanged.
+- Main preserved; real Windows installation/provider account/renewal/logout
+  acceptance remains pending as documented in V3-HANDOFF.md.
+
+### V3 delivery ready
+
+- Final dark-logo correction: TypeScript/Chrome production build passed; whole
+  Chromium suite **26/26 passed** again, including real adaptive-SVG pixel check.
+- Final Chrome/Edge/Firefox production builds and manifests passed; actual
+  Chrome ZIP **298,953 bytes**, Firefox ZIP **298,299 bytes**; archive safety/Guide
+  removal/local-logo inclusion and SHA256SUMS passed.
+- Local and CI package artifacts remain separate builds; use the checksum
+  shipped with the particular download. Windows helper source unchanged from
+  its verified CI installer.
+- All authorized implementation work is complete. Final branch push follows;
+  live provider and interactive desktop acceptance are the explicit remaining
+  release checks in V3-HANDOFF.md. No Phase 2/server deployment/store submission
+  or main merge was performed.

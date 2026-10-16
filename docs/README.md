@@ -5,6 +5,10 @@ Your AI limits, named accounts and resets in one place. Development branch:
 · [Current status](IMPLEMENTATION-STATUS.md) · [Handoff](V3-HANDOFF.md).
 All maintained Markdown lives directly in `docs/`; commands run from the repo root.
 
+Download the [3.0 extension packages](https://github.com/voiddev011/mylimits/actions/runs/38931432647/artifacts/12058862247),
+then follow [INSTALL.md](INSTALL.md). These are built artifacts; the source ZIP
+requires Node/npm and a build first.
+
 ## What changed
 
 - Essential 440px popup: larger names/readings, refresh, + and Full dashboard.

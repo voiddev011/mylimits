@@ -469,6 +469,10 @@ test('provider picker lists the supported services and labels Gemini as activity
   const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html#add`);
   for(const name of ['OpenAI · ChatGPT / Codex','Claude · Claude Code','Cursor','Gemini','Grok','Perplexity'])await expect(page.getByRole('button',{name:new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))})).toBeVisible();
   expect(await page.locator('.connect-provider img').evaluateAll(images=>images.every(img=>(img as HTMLImageElement).complete&&(img as HTMLImageElement).naturalWidth>0))).toBe(true);
+  await page.emulateMedia({colorScheme:'dark'});
+  expect(await page.locator('.provider-mark').first().evaluate(e=>getComputedStyle(e).colorScheme)).toBe('light');
+  const darkPixels=await page.locator('img[src="/providers/chatgpt.svg"]').evaluate(image=>{const canvas=document.createElement('canvas');canvas.width=32;canvas.height=32;const context=canvas.getContext('2d')!;context.drawImage(image as HTMLImageElement,0,0,32,32);const pixels=context.getImageData(0,0,32,32).data;let count=0;for(let i=0;i<pixels.length;i+=4)if(pixels[i]!<100&&pixels[i+1]!<100&&pixels[i+2]!<100&&pixels[i+3]!>128)count++;return count});
+  expect(darkPixels).toBeGreaterThan(20); // The adaptive official logo must not turn white on its light tile.
   await page.getByRole('button',{name:/Gemini/}).click();
   await expect(page.getByRole('button',{name:'Enable browser activity',exact:true})).toBeVisible();
   await expect(page.getByRole('button',{name:'Save another website account',exact:true})).toHaveCount(0);
