@@ -17,7 +17,7 @@ SetCompressor /SOLID lzma
 Section "Companion setup"
  SetShellVarContext current
  SetOutPath "$INSTDIR"
- File /r "${STAGING}/*"
+ File /r "${STAGING}\*"
  WriteUninstaller "$INSTDIR\Uninstall.exe"
  CreateDirectory "$SMPROGRAMS\MyLimits Companion"
  CreateShortCut "$SMPROGRAMS\MyLimits Companion\Setup.lnk" "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" '-NoProfile -ExecutionPolicy Bypass -File "$INSTDIR\windows\setup.ps1"'
@@ -45,7 +45,7 @@ Section "Uninstall"
   Delete "$SMPROGRAMS\MyLimits Companion\Setup.lnk"
   Delete "$SMPROGRAMS\MyLimits Companion\Uninstall.lnk"
   RMDir "$SMPROGRAMS\MyLimits Companion"
-  !include "${STAGING}/uninstall-files.nsh"
+  !include "${STAGING}\uninstall-files.nsh"
   Delete "$INSTDIR\windows\setup.ps1"
   Delete "$INSTDIR\windows\uninstall.ps1"
   RMDir "$INSTDIR\windows"
