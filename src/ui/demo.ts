@@ -1,8 +1,9 @@
 import { emptyStore, type Account, type Meter } from '../core/model';
+import { toPublicState } from '../core/public';
 import type { PublicStore } from '../platform/messages';
 
 export function demoState(now = Date.now()): PublicStore {
-  const { installSalt: _salt, alertLedger: _ledger, observationLedger: _observations, ...store } = emptyStore('demo-only');
+  const store = emptyStore('demo-only');
   const meter = (id: string, label: string, usedPercent: number, hours: number, scope: Meter['scope']): Meter => ({
     id, label, usedPercent, used: null, total: null, unit: 'percent', resetsAt: now + hours * 3600_000,
     scope, evidence: 'reported', source: 'Sample reading, not a real account',
@@ -23,5 +24,5 @@ export function demoState(now = Date.now()): PublicStore {
     store.providers[provider] = { enabled: true, status: 'active', activeAccountId: store.accounts.find(account => account.provider === provider && account.connection === 'active')!.id,
       checkedAt: now, message: null, failures: 0, nextRetryAt: null };
   }
-  return store;
+  return toPublicState(store);
 }

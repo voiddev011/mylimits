@@ -20,17 +20,31 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Browser tests
         run: npm run test:browser
-      - name: Package extension
-        run: npm run zip
+      - name: Browser variant builds and package contracts
+        run: |
+          npm run build:edge
+          npm run build:firefox
+          node scripts/check-packages.mjs
+      - name: Package extension variants
+        run: |
+          npm run zip
+          npm run zip:firefox
+          node scripts/package-checksums.mjs
+          python scripts/check-archives.py
       - uses: actions/upload-artifact@v4
         with:
-          name: mylimits-chrome
-          path: .output/*.zip
+          name: mylimits-extension-packages
+          path: |
+            .output/*.zip
+            .output/SHA256SUMS
+          include-hidden-files: true
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: browser-test-results
           path: test-results/
+          include-hidden-files: true
 
   windows-logic:
     runs-on: windows-latest
@@ -41,3 +55,54 @@ jobs:
           node-version: 24
       - run: npm ci
       - run: npm run check
+      - name: Parse Windows scripts and construct setup GUI without installing
+        shell: powershell
+        run: ./scripts/test-windows-setup.ps1
+      - name: Install NSIS compiler
+        run: choco install nsis --no-progress -y
+      - name: Package unsigned optional Windows companion
+        run: npm run package:companion
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mylimits-companion-windows-unsigned
+          path: |
+            artifacts/mylimits-companion-windows-unsigned.exe
+            artifacts/mylimits-companion-windows-unsigned.exe.sha256
+          if-no-files-found: error
+
+  connected-services:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: mylimits
+          POSTGRES_PASSWORD: isolated-ci-fixture-only
+          POSTGRES_DB: mylimits_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mylimits -d mylimits_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      MYLIMITS_TEST_DATABASE_URL: postgresql://mylimits:isolated-ci-fixture-only@127.0.0.1:5432/mylimits_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npm ci --prefix server
+      - name: Authenticated API, real PostgreSQL migrations and job/credential tests
+        run: npm run check --prefix server
+      - run: npx playwright install --with-deps chromium
+      - name: Responsive phone dashboard fixture
+        run: npm run test:web --prefix server
+      - name: Build local transport fixture
+        run: npm run build
+        env:
+          MYLIMITS_SYNC_ORIGIN: http://127.0.0.1:8789
+      - name: Pairing, upload and deletion through actual extension transport
+        run: npm run test:transport --prefix server

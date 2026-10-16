@@ -1,16 +1,16 @@
 import { browser } from 'wxt/browser';
-import { emptyStore, type Store } from '../core/model';
+import { type Store } from '../core/model';
 import { StoreSchema } from '../core/schema';
+import { toPublicState } from '../core/public';
 
-const KEY = 'mylimits:state:v1';
+import { initializeV2, STATE_V2 } from '../core/migrations';
+import { ensureHistory } from './history';
+const KEY = STATE_V2;
 let queue: Promise<unknown> = Promise.resolve();
 let initialisation: Promise<void> | undefined;
 
 export async function readStore(): Promise<Store> {
-  initialisation ??= (async () => {
-    const saved = (await browser.storage.local.get(KEY))[KEY];
-    if (saved === undefined) await browser.storage.local.set({ [KEY]: emptyStore(crypto.randomUUID()) });
-  })();
+  initialisation ??= initializeV2(browser.storage.local, ensureHistory, () => crypto.randomUUID()).catch(error => { initialisation = undefined; throw new Error(error instanceof Error ? `Saved data needs recovery: ${error.message}` : 'Saved data needs recovery.'); });
   await initialisation;
   const saved = (await browser.storage.local.get(KEY))[KEY];
   if (saved !== undefined) {
@@ -31,7 +31,21 @@ export function updateStore<T>(mutate: (store: Store) => Promise<{ store: Store;
   return task;
 }
 
-export async function publicStore(): Promise<Omit<Store, 'installSalt' | 'alertLedger' | 'observationLedger'>> {
-  const { installSalt: _salt, alertLedger: _alerts, observationLedger: _observations, ...publicData } = await readStore();
-  return publicData;
+export async function publicStore() { return toPublicState(await readStore()); }
+
+// Explicit forgetting also removes that account from recovery copies. Migration
+// preserves backups; a later deliberate deletion must not retain forgotten data.
+export async function forgetLegacyAccount(accountId: string): Promise<void> {
+  const { STATE_V1, BACKUP_V1 } = await import('../core/migrations');
+  const { V1StoreSchema } = await import('../core/v1-schema');
+  const values=await browser.storage.local.get([STATE_V1,BACKUP_V1]);
+  const writes:Record<string,unknown>={};
+  for(const key of [STATE_V1,BACKUP_V1]){
+    if(values[key]===undefined)continue;
+    const old=V1StoreSchema.parse(values[key]);
+    writes[key]={...old,accounts:old.accounts.filter(a=>a.id!==accountId),
+      providers:Object.fromEntries(Object.entries(old.providers).map(([id,p])=>[id,p.activeAccountId===accountId?{...p,enabled:false,status:'disabled',activeAccountId:null}:p])),
+      alertLedger:Object.fromEntries(Object.entries(old.alertLedger).filter(([key])=>!key.startsWith(`${accountId}/`)))};
+  }
+  if(Object.keys(writes).length)await browser.storage.local.set(writes);
 }

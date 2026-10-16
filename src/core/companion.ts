@@ -1,19 +1,28 @@
-import type { Account, Meter, Store } from './model';
-export interface CompanionProfile {
-  id: string; status: 'active' | 'signed-out' | 'unavailable'; plan: string | null; updatedAt: number; meters: Meter[];
+import { websiteConnection, type Account, type Meter, type Store } from './model';
+import { applySnapshot } from './engine';
+import { projectAccounts } from './connections';
+export interface CompanionProfile { id:string;status:'active'|'signed-out'|'unavailable';plan:string|null;updatedAt:number;meters:Meter[]; }
+export function mergeCompanion(store:Store,profiles:CompanionProfile[],now:number):Store {
+ const keep=new Set(profiles.map(p=>`openai-companion:${p.id}`));
+ const removed=store.accounts.filter(a=>a.companionProfile&&!keep.has(a.id)).map(a=>a.id);
+ let next:Store={...store,connections:store.connections.map(c=>c.kind==='companion'&&removed.includes(c.accountId??'')?{...c,enabled:false,status:'disabled',generation:c.enabled?c.generation+1:c.generation,message:'Disconnected; saved reading retained.'}:c)};
+
+ for(const profile of profiles){
+  const id=`openai-companion:${profile.id}`,connectionId=`companion:${profile.id}`;
+  if(next.connections.some(c=>c.id===connectionId&&!c.enabled&&c.status==='disabled'))continue;
+  let prior=next.accounts.find(a=>a.id===id);
+  if(!prior){prior={id,provider:'chatgpt',kind:'account',companionProfile:profile.id,alias:'',defaultName:`OpenAI ${profile.id.slice(0,4)}`,plan:profile.plan,connection:'unavailable',meters:[],createdAt:now,updatedAt:0,alertRemaining:null,alertsMuted:false};next={...next,accounts:[...next.accounts,prior]};}
+  if(!next.connections.some(c=>c.id===connectionId))next={...next,connections:[...next.connections,{...websiteConnection('chatgpt'),id:connectionId,kind:'companion',accountId:id,profileId:profile.id,enabled:true,status:'unavailable'}]};
+  const conn=next.connections.find(c=>c.id===connectionId)!;
+  if(profile.status==='active'&&profile.updatedAt>0&&profile.updatedAt<=now+60000&&profile.updatedAt>prior.updatedAt){
+   next=applySnapshot(next,'chatgpt',id,{kind:'account',displayName:prior.defaultName,plan:profile.plan??prior.plan,meters:profile.meters},now,{connectionId,observedAt:profile.updatedAt,generation:conn.generation});
+   next={...next,accounts:next.accounts.map(a=>a.id===id?{...a,companionProfile:profile.id}:a)};
+  }
+  const status=profile.status==='signed-out'?'needs-auth':profile.status;
+  next={...next,connections:next.connections.map(c=>c.id===connectionId?{...c,status,enabled:true,lastAttemptAt:now,message:status==='active'?null:'The companion needs attention.'}:c),accounts:next.accounts.map(a=>a.id===id?{...a,connection:profile.status}:a)};
+ }
+ return projectAccounts(next);
 }
-export function mergeCompanion(store: Store, profiles: CompanionProfile[], now: number): Store {
-  const accounts: Account[] = profiles.map(profile => {
-    const id = `openai-companion:${profile.id}`;
-    const prior = store.accounts.find(account => account.id === id);
-    return { id, provider: 'chatgpt', kind: 'account', companionProfile: profile.id,
-      alias: prior?.alias ?? '', defaultName: prior?.defaultName ?? `OpenAI ${profile.id.slice(0, 4)}`,
-      plan: profile.plan ?? prior?.plan ?? null, connection: profile.status,
-      meters: profile.updatedAt > 0 ? profile.meters : prior?.meters ?? [],
-      createdAt: prior?.createdAt ?? now, updatedAt: profile.updatedAt > 0 ? profile.updatedAt : prior?.updatedAt ?? 0,
-      alertRemaining: prior?.alertRemaining ?? null, alertsMuted: prior?.alertsMuted ?? false };
-  });
-  const removed = store.accounts.filter(account => account.companionProfile && !accounts.some(current => current.id === account.id));
-  return { ...store, accounts: [...store.accounts.filter(account => !account.companionProfile), ...accounts],
-    alertLedger: Object.fromEntries(Object.entries(store.alertLedger).filter(([key]) => !removed.some(account => key.startsWith(`${account.id}/`)))) };
+export function markCompanionUnavailable(store:Store):Store {
+ return projectAccounts({...store,connections:store.connections.map(c=>c.kind==='companion'?{...c,status:'unavailable',message:'Companion unavailable. Website tracking is unaffected.'}:c),accounts:store.accounts.map(a=>a.companionProfile?{...a,connection:'unavailable'}:a)});
 }

@@ -66,6 +66,7 @@ export async function refreshCompanion() {
   await onSnapshot(snapshot.profiles);
 }
 export async function enableCompanion(enabled: boolean) {
+  if(enabled&&__MYLIMITS_BROWSER__==='firefox')throw new Error('Firefox native host setup is not supplied. Website tracking remains available.');
   if (enabled && !await browser.permissions.contains({ permissions: ['nativeMessaging'] })) throw new Error('Approve companion access first.');
   await browser.storage.local.set({ [KEY]: enabled });
   if (enabled) await refreshCompanion();

@@ -55,7 +55,7 @@ test('first seeing a critical balance sends one critical alert, not two notifica
   const result = collectAlerts(withAccount([meter(98)]), NOW);
   assert.equal(result.alerts.length, 1);
   assert.match(result.alerts[0]!.message, /2% left/);
-  assert.deepEqual(result.store.alertLedger['claude:first/session']!.sent.sort((a,b) => a-b), [5,20]);
+  assert.deepEqual(result.store.alertLedger['claude:first/legacy/subscription/session']!.sent.sort((a,b) => a-b), [5,20]);
 });
 test('critical warning can follow an earlier low-balance warning', () => {
   let store = collectAlerts(withAccount(), NOW).store;

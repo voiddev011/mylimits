@@ -1,149 +1,97 @@
-# MyLimits
+# MyLimits 2.1 — Phase 2 preview
 
-Your AI usage limits, account nicknames, and reset times in one place.
+Your AI usage readings, named accounts and reset times in one compact view.
+Phase 2 lives on **`v2/phase-2`**. [Handoff](PHASE-2-HANDOFF.md) records the actual
+checks and pending live acceptance. All maintained Markdown lives in `docs/`;
+commands run from the repository root.
 
-All project Markdown lives in this `docs/` folder. Run development commands from
-the repository root, one directory above this file.
+## Install without Node
 
-## Documentation and implementation handoff
+1. Download **[mylimits-extension-packages](https://github.com/voiddev011/mylimits/actions/runs/38846628036/artifacts/12023223325)** from the verified Phase 2 run.
+   Private repository downloads require GitHub sign-in. Verify the run and artifact
+   exist; a green job alone is not a download.
+2. Extract the artifact, then extract `mylimits-2.1.0-chrome.zip`. Keep the resulting
+   folder somewhere permanent; it must contain `manifest.json` directly.
+3. Chrome: `chrome://extensions`. Brave: `brave://extensions`. Enable Developer
+   mode → Load unpacked → choose that folder. Edge can test the Chromium package
+   using `edge://extensions`. [Firefox and platform details](PLATFORMS.md).
+4. Pin MyLimits → Accounts → enable a website and approve its exact site access.
+   It reuses the login already in this browser. Open the signed-in provider page
+   yourself if its connector needs page context. No companion or MyLimits account
+   is required for local tracking.
+5. Preview with sample data to inspect it without connecting an account. Samples
+   are fictional and never become saved connected accounts.
 
-- [Start here: execution instructions](START-HERE.md)
-- [V2 master plan and shared contracts](V2-IMPLEMENTATION-PLAN.md)
-- [Phase 1: redesigned local extension — 100 effort points](PHASE-1.md)
-- [Phase 2: expansion and connected services — 100 effort points](PHASE-2.md)
-- [Implementation progress and handoff](IMPLEMENTATION-STATUS.md)
-- [Copy-paste GPT-6.1 Sol starter prompt](STARTER-PROMPT.md)
-- [Competitor research](COMPETITOR-RESEARCH.md)
-- [Current architecture](ARCHITECTURE.md), [provider support](SUPPORT.md),
-  [privacy](PRIVACY.md), [companion setup](OPENAI-COMPANION.md),
-  [historical build status](BUILD-STATUS.md), and [high-level roadmap](ROADMAP.md)
+For updates, replace files **inside the existing unpacked folder**, then Reload
+in Extensions. Keep its path and extension ID. Do not remove the extension first;
+that deletes local data. Back up your browser profile before a preview upgrade.
+V1/Phase 1 state migrates without changing existing IDs or account nicknames.
 
-The V2 documents describe planned work. The implementation status file records
-what has actually been implemented and verified.
+## Features
 
-MyLimits is a local-first Chrome extension built with TypeScript, React, WXT,
-and Manifest V3. It uses existing website sessions after you approve Chrome's
-site access. An optional **Windows/Linux OpenAI companion** uses an explicit official
-sign-in flow and an independent Codex connection. No MyLimits cloud account or
-cloud server is required. See the [companion setup guide](OPENAI-COMPANION.md).
+- Compact account rows, separate nicknames, order/pins, selected meters, search,
+  low filtering, themes, optional low/critical and confirmed-reset notifications.
+- Independent readings by source/workspace; unavailable accounts retain dated
+  readings. Five-minute default polling with backoff and cancellation.
+- History comparisons, separate reset windows and gaps, reset timeline, 30/90-day
+  retention, cautious pacing ranges and JSON/CSV export. No invented messages left.
+- Local dashboard Guide: task/mode advice, prompt templates/review and an explicit
+  user-pasted handoff preview/copy/download. No paid AI calls or chat scraping.
+- Optional website widget: exact selected websites, collapse/corners/hide, saved
+  public values only. Off by default in Settings; conversation inputs are untouched.
+- Optional self-hosted snapshot sync and responsive phone dashboard. Pair a device
+  after separate MyLimits sign-in; original observation age is preserved.
+- Optional advanced OpenAI native companion, including an unsigned Windows setup
+  GUI and Start-menu uninstall flow. [Setup](OPENAI-COMPANION.md).
 
-## Development status
+## Provider boundaries
 
-**Initial prototype.** Core account, alert, and parser tests run with Node 24
-without dependencies. A complete browser build requires installing the listed
-packages. Internal website interfaces must still be verified with real signed-in
-accounts before a release can claim reliable provider support.
+All quota readers are source/fixture-tested **live-unverified prototypes**.
 
-| Website | Implemented source | Important limit |
+| Source | Implemented scope | Limitation |
 | --- | --- | --- |
-| Claude | Authenticated account, workspace, and usage requests; normalized and legacy usage formats | First eligible workspace; some plans do not expose quotas. Prototype, not live-verified. |
-| OpenAI companion (Windows/Linux) | Official Codex App Server sign-in, isolated profiles, quota polling and native messaging | Work/Codex buckets returned by OpenAI; live logout/renewal/cross-device validation pending. |
-| ChatGPT website | Authenticated Work / Codex usage windows, including code-review windows when supplied | These are not ordinary ChatGPT chat message limits. Prototype, not live-verified. |
-| Gemini | Successful, recognized browser request observations | Local counts only; account quota and cross-device usage are unknown. |
-| Grok | Successful, recognized browser request observations | Local counts only; account quota and cross-device usage are unknown. |
-| Perplexity | Successful, recognized browser request observations | Local counts only; Pro/Research balances are unknown. |
+| Claude | Account/workspace returned subscription windows | Plan/model windows depend on the returned response |
+| ChatGPT | Returned Work/Codex and code-review windows | Ordinary chat, images, uploads and other limits remain unknown |
+| Grok | Returned Grok 4 default-mode request allowance | Other modes/reset time unknown; optional activity-only mode |
+| Perplexity | Returned Pro/research/Labs/agentic remaining counts | No fabricated total, percentage or reset; activity-only mode available |
+| Cursor | Included/model coding-plan pools and reported on-demand spend | Separate from a subscription fee or local cost estimate |
+| Gemini | Recognized requests in this browser | Local activity only, not a remote quota |
+| Optional companion | Returned Codex App Server buckets | Real authorization/logout/renewal/native launch pending |
 
-See [supported providers](SUPPORT.md) for the validation checklist and
-[architecture](ARCHITECTURE.md) for the account and quota model.
+Website logout or session expiry can stop that website source. Remembered data
+stays dated. Other-device usage appears only through a later successful
+provider-reported reading. There is **no universal real-time/logout-independent
+tracking guarantee**. Snapshot sync copies readings; it does not collect new ones.
+Production independent cloud collectors are disabled by the
+[feasibility gate](HOSTED-FEASIBILITY.md).
 
-## Features in this prototype
+One browser profile usually has one current website login per provider. Switching
+accounts retains earlier names/readings, without giving those accounts separate
+credentials. Optional companion profiles have separate local authorization.
 
-- Optional Windows/Linux OpenAI companion: independent profiles, one-minute polling, and
-  a native bridge with credential-free quota snapshots. Live verification pending.
-- Compact limit rows, search, low-only filtering, and sorting by balance or reset.
-- Popup, side panel, and full extension dashboard with light/dark themes.
-- Choose websites once; reuse existing sessions where the provider permits it.
-- Rename individual saved accounts, such as **Claude Work** or **GPT Personal**.
-- Preserve each account's nickname and last reading when the website login changes.
-- Show reported quotas, reset countdowns, and the time of the last reading.
-- Clearly separate saved accounts and browser-only activity counts.
-- Configurable low-balance warnings, critical warnings, per-account thresholds,
-  and per-account notification muting.
-- Optional desktop notifications; no alerts from unknown, inactive, expired,
-  or stale balances. Notification thresholds are deduplicated per reset window.
-- Local reading history with 30-day time retention.
-- Explicit preview mode with fictional accounts; preview data never becomes
-  connected account data or requests browser permissions.
+## Develop and test
 
-## Multiple accounts
-
-One Chrome profile normally exposes one current login per website. MyLimits
-remembers different verified accounts as you switch those website logins, and
-you can rename each independently. An inactive account retains its dated last
-reading; it is not polled with copied credentials.
-
-Website tracking keeps one current session per website. The optional OpenAI
-companion adds isolated connections for up to 20 OpenAI accounts, separately
-from website cookies. Each profile has its own official Codex authorization and
-nickname. This implementation still needs live account verification. Companion
-connections do not add independent Claude/Gemini/Grok/Perplexity authorization.
-
-## Run locally
-
-Use Node.js 24 or later.
+Node **24+**, committed lockfile:
 
 ```sh
-npm install
-npm test
-npm run typecheck
-npm run build
+npm ci
+npm run dev                 # fast rebuilds while developing
+npm run check               # types, core/native tests, production Chrome build
+npm run test:browser         # needs Playwright Chromium and a built extension
+npm run zip                 # .output/mylimits-2.1.0-chrome.zip
+npm run build:firefox
+npm run zip:firefox
 ```
 
-In desktop Chrome, open `chrome://extensions`, enable Developer mode, choose
-**Load unpacked**, and select `.output/chrome-mv3`.
+Load `.output/chrome-mv3` from the repository root after building. Windows File
+Explorer accepts `.output\chrome-mv3` in its address bar inside the project folder.
+After rebuilding, Reload the existing extension. `npx playwright install chromium`
+installs test Chromium; `CHROMIUM_PATH` selects a compatible executable.
+Browser tests isolate fictional profiles and block live provider traffic.
 
-Open MyLimits, choose **Websites**, and enable the websites you want. Chrome
-asks for their exact site access. If the site requires a page context, open
-its existing signed-in tab and refresh; MyLimits never silently creates one.
+The optional backend is a separate package: [SERVER-SETUP](SERVER-SETUP.md).
+No sync server is configured in default release builds. Phone Chrome cannot load
+this desktop extension; use the phone dashboard only after configuring sync.
 
-The popup's **Full dashboard** link opens the extension's own dashboard.
-**Preview with sample data** is available without granting website access.
-
-```sh
-npm run dev            # WXT development
-npm run check          # full type check, core tests, production build
-npm run test:browser   # build first; Playwright fixture tests
-npm run zip            # installable Chrome archive under .output/
-```
-
-Browser tests use an isolated temporary Chrome profile and fictional readings.
-They deny real HTTP traffic. Set `CHROMIUM_PATH` if using a specific local
-Chromium executable; otherwise Playwright's managed Chromium is used.
-Install it first with `npx playwright install chromium`.
-
-## Privacy and permissions
-
-Usage data stays in the local Chrome profile. Account identifiers are salted and
-hashed for website readers. Website authentication stays in request-local memory;
-companion authorization is managed separately by Codex in protected local storage
-and never sent to the extension. Prompt and response
-bodies are never collected by the activity observer. API keys are not accepted
-by this version. See [PRIVACY.md](PRIVACY.md).
-
-Required permissions are `storage`, `alarms`, `scripting`, and `sidePanel`.
-Site access, `notifications`, and companion `nativeMessaging` access are optional. Turning a website off removes
-its site permission. Notification permission is only requested after a click.
-
-## Next steps
-
-1. Verify Claude and Work/Codex sessions, accounts, plans, and reset fields in
-   real browsers; replace unsupported assumptions with captured, sanitized fixtures.
-2. Add verified quota connectors for Gemini, Grok, Perplexity, and more websites.
-3. Add better workspace selection and explicit support for multiple profile snapshots.
-4. Add token-saving guides, task-to-model/mode recommendations, and prompt templates.
-
-See [the roadmap](ROADMAP.md). Guidance is separate from the tracking core
-and will never silently read conversations or claim a local count is an exact quota.
-
-## Research and originality
-
-[TokenYou](https://github.com/diegoparras/tokenyou),
-[AI Limits](https://github.com/TiantianFlow/ai-limits), and
-[WXT](https://github.com/wxt-dev/wxt) informed the research into session-based
-usage and extension tooling. The application, connectors, account engine, alert
-logic, interface, and tests in this repository were written for MyLimits.
-External packages retain their own licenses. No existing extension was copied
-wholesale or forked as the application.
-
-No project-wide distribution license has been selected yet. The repository is
-intended to remain private during initial development.
+[Privacy](PRIVACY.md) · [Architecture](ARCHITECTURE.md) ·
+[Provider evidence](PROVIDER-CAPABILITIES.md) · [Support/manual checks](SUPPORT.md)

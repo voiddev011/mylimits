@@ -14,8 +14,8 @@ const option = name => { const index = args.indexOf(name); return index < 0 ? un
 const extensionId = option('--extension-id');
 if (!extensionId || !/^[a-p]{32}$/.test(extensionId)) throw new Error('Provide --extension-id with the ID shown in chrome://extensions.');
 const browserName = option('--browser') ?? 'chrome';
-const browserDirs = { chrome: 'google-chrome', chromium: 'chromium', brave: 'BraveSoftware/Brave-Browser' };
-if (!Object.hasOwn(browserDirs, browserName)) throw new Error('--browser must be chrome, chromium or brave.');
+const browserDirs = { chrome: 'google-chrome', chromium: 'chromium', brave: 'BraveSoftware/Brave-Browser',edge:'microsoft-edge' };
+if (!Object.hasOwn(browserDirs, browserName)) throw new Error('--browser must be chrome, chromium, brave or edge.');
 let executable = option('--codex');
 if (!executable) { try { executable = execFileSync(windows ? 'where.exe' : 'which', [windows ? 'codex.cmd' : 'codex'], { encoding: 'utf8' }).trim().split(/\r?\n/)[0]; } catch { throw new Error('Install Codex first: npm install -g @openai/codex'); } }
 if (windows && /\.(cmd|bat)$/i.test(executable)) {

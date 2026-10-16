@@ -1,19 +1,24 @@
 // Pure domain types and calculations. No browser APIs or package dependencies.
-export const PROVIDER_IDS = ['claude', 'chatgpt', 'gemini', 'grok', 'perplexity'] as const;
+export const PROVIDER_IDS = ['claude', 'chatgpt', 'gemini', 'grok', 'perplexity', 'cursor'] as const;
 export type ProviderId = typeof PROVIDER_IDS[number];
 export interface Meter {
   id: string;
   label: string;
-  scope: 'subscription' | 'work-codex' | 'chat' | 'local';
-  evidence: 'reported' | 'observed';
+  scope: 'subscription' | 'work-codex' | 'chat' | 'api' | 'local';
+  evidence: 'reported' | 'observed' | 'estimated';
   usedPercent: number | null;
   used: number | null;
   total: number | null;
-  unit: 'percent' | 'messages' | 'requests' | 'searches' | 'credits';
+  remaining?: number | null;
+  unit: 'percent' | 'messages' | 'requests' | 'searches' | 'credits' | 'currency';
   resetsAt: number | null;
   source: string;
+  currency?: string | null;
+  windowId?: string | null;
+  observedAt?: number;
+  connectionId?: string;
 }
-export type Connection = 'active' | 'inactive' | 'signed-out' | 'waiting-for-tab' | 'unavailable' | 'error';
+export type Connection = 'active' | 'inactive' | 'signed-out' | 'waiting-for-tab' | 'unavailable' | 'offline' | 'error';
 export interface Account {
   id: string;
   provider: ProviderId;
@@ -28,6 +33,11 @@ export interface Account {
   updatedAt: number;
   alertRemaining: number | null;
   alertsMuted: boolean;
+  pinned?: boolean;
+  order?: number;
+  pinnedMeterIds?: string[];
+  snoozedUntil?: number | null;
+  workspaceId?: string | null;
 }
 export interface Settings {
   warningRemaining: number;
@@ -35,8 +45,13 @@ export interface Settings {
   desktopAlerts: boolean;
   refreshMinutes: number;
   theme: 'system' | 'dark' | 'light';
+  historyRetentionDays?: 30 | 90;
+  displayMode?: 'remaining' | 'used';
+  resetAlerts?: boolean;
+  quietHours?: { enabled: boolean; start: string; end: string }; 
 }
 export interface ProviderState {
+  readingMode?: 'quota' | 'activity';
   enabled: boolean;
   status: 'disabled' | 'checking' | Connection;
   activeAccountId: string | null;
@@ -46,7 +61,12 @@ export interface ProviderState {
   nextRetryAt: number | null;
 }
 export interface Store {
-  version: 1;
+  version: 2;
+  connections: ConnectionRecord[];
+  workspaces: Workspace[];
+  snapshots: UsageSnapshot[];
+  historyIssue: string | null;
+  resetLedger: Record<string, { window: string | null; resetsAt: number | null; observedAt: number; usedPercent: number | null }>;
   installSalt: string;
   accounts: Account[];
   providers: Record<ProviderId, ProviderState>;
@@ -56,11 +76,12 @@ export interface Store {
 }
 export function emptyStore(salt: string): Store {
   return {
-    version: 1, installSalt: salt, accounts: [],
+    version: 2, installSalt: salt, accounts: [],
+    connections: PROVIDER_IDS.map(provider => websiteConnection(provider)), workspaces: [], snapshots: [], historyIssue: null, resetLedger: {},
     providers: Object.fromEntries(PROVIDER_IDS.map(id => [id, {
-      enabled: false, status: 'disabled', activeAccountId: null, checkedAt: null, message: null, failures: 0, nextRetryAt: null,
+      readingMode: id==='grok'||id==='perplexity'?'quota':undefined, enabled: false, status: 'disabled', activeAccountId: null, checkedAt: null, message: null, failures: 0, nextRetryAt: null,
     }])) as Store['providers'],
-    settings: { warningRemaining: 20, criticalRemaining: 5, desktopAlerts: false, refreshMinutes: 5, theme: 'system' },
+    settings: { warningRemaining: 20, criticalRemaining: 5, desktopAlerts: false, refreshMinutes: 5, theme: 'system', historyRetentionDays:30, displayMode: 'remaining', resetAlerts: false, quietHours: { enabled: false, start: '22:00', end: '08:00' } },
     alertLedger: {}, observationLedger: [],
   };
 }
@@ -73,10 +94,42 @@ export function remainingPercent(meter: Meter): number | null {
 }
 export function isFresh(account: Account, meter: Meter, now: number, refreshMinutes: number): boolean {
   return account.connection === 'active'
-    && now - account.updatedAt <= Math.max(refreshMinutes * 3, 15) * 60_000
+    && now >= (meter.observedAt ?? account.updatedAt) - 60_000
+    && now - (meter.observedAt ?? account.updatedAt) <= Math.max(refreshMinutes * 3, 15) * 60_000
     && (meter.resetsAt === null || meter.resetsAt > now);
 }
 export function alertThresholds(account: Account, settings: Settings): { warning: number; critical: number } {
   const warning = account.alertRemaining ?? settings.warningRemaining;
   return { warning, critical: Math.min(warning, settings.criticalRemaining) };
+}
+
+export type ConnectionKind = 'website' | 'companion' | 'independent-local' | 'cloud' | 'snapshot-import';
+export type ConnectionStatus = 'disabled' | 'checking' | 'active' | 'needs-auth' | 'needs-tab' | 'unavailable' | 'offline' | 'error';
+export interface ConnectionRecord {
+  id: string; provider: ProviderId; kind: ConnectionKind; accountId: string | null;
+  workspaceId: string | null; workspaceIds: string[]; enabled: boolean;
+  status: ConnectionStatus; generation: number; lastAttemptAt: number | null;
+  lastSuccessAt: number | null; nextRetryAt: number | null; failures: number;
+  message: string | null; profileId?: string;
+}
+export interface Workspace { id: string; provider: ProviderId; remoteId: string; name: string; }
+export interface UsageSnapshot {
+  schemaVersion: 2; snapshotId: string; providerId: ProviderId; accountId: string;
+  connectionId: string; workspaceId: string | null; observedAt: number;
+  receivedAt: number; connectorVersion: string; meters: Meter[];
+}
+export function websiteConnection(provider: ProviderId): ConnectionRecord {
+  return { id: `website:${provider}`, provider, kind: 'website', accountId: null,
+    workspaceId: null, workspaceIds: [], enabled: false, status: 'disabled', generation: 0,
+    lastAttemptAt: null, lastSuccessAt: null, nextRetryAt: null, failures: 0, message: null };
+}
+export function accountStatus(account: Account, now: number, refreshMinutes: number): string {
+  if (account.kind === 'browser') return 'Local activity only';
+  if (account.connection === 'signed-out') return 'Needs sign-in';
+  if (account.connection === 'waiting-for-tab') return 'Open website to refresh';
+  if (account.connection === 'inactive') return 'Remembered';
+  if (account.connection === 'offline') return 'Offline';
+  if (account.connection !== 'active') return 'Temporarily unavailable';
+  if (!account.meters.some(m => m.evidence === 'reported')) return 'Quota unavailable';
+  return account.meters.some(m => m.evidence === 'reported' && isFresh(account, m, now, refreshMinutes)) ? 'Updating' : 'Awaiting fresh reading';
 }
