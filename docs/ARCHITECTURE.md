@@ -164,3 +164,23 @@ observes successful request metadata without reading prompt/response bodies.
 The isolated script and worker validate origin, provider, enabled status, sender,
 event ID and command schema. Provider pages cannot issue dashboard commands or
 select arbitrary fetch URLs. Connector code ships with extension releases.
+
+## Phase 2 history evidence
+
+History insights group by account, source, workspace, scope, meter, reset window
+and currency. Missing collection periods (over 15 minutes or three refresh
+intervals) and negative usage deltas split chart segments. A bounded query reads
+up to 5,000 recent rows per selected account and displays at most 32 series;
+min/max downsampling retains bursts without connecting across gaps.
+Pacing needs an active reported source, a fresh last reading, a future reported
+reset, four observations over 30 minutes and positive, reasonably consistent
+rates. It uses pairwise rates from at most 48 samples, quartiles and 20% padding
+to show a headroom range. This is an estimate at a similar pace, not a predicted
+cutoff or messages-left count. Subscription fees and local token-cost estimates
+are not inferred from provider-reported spend.
+
+Local retention is selectable at 30/90 days and applies immediately when saved.
+The optional server applies the synced retention preference during upload;
+one last-known reading per source remains cached even if older, with its original
+observation date. This cache exception keeps offline accounts visible and does
+not turn an old reading into a fresh quota.

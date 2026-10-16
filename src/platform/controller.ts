@@ -7,9 +7,10 @@ import { AdapterError, readProvider } from '../providers/adapters';
 import { enableWebsite, setWorkspace, accountPreferences, orderAccounts, forgetAccount } from '../core/actions';
 import { RefreshCoordinator, shouldRefresh, nextRetry, type RefreshReason } from '../core/scheduler';
 import { changeConnection } from '../core/connections';
+import { analyzeHistory } from '../core/insights';
 import { historyPoint, exportReadings } from '../core/history-data';
 import { readStore, publicStore, updateStore, forgetLegacyAccount } from './repository';
-import { readHistory, readHistoryPage, historyExport, clearHistory, removeHistory, saveHistory } from './history';
+import { readHistory, readHistoryPage, readHistorySeries, pruneHistory, historyExport, clearHistory, removeHistory, saveHistory } from './history';
 import { CommandSchema, type Command } from './messages';
 import { mergeCompanion, markCompanionUnavailable } from '../core/companion';
 import { addCompanionAccount, companionRequest, companionStatus, enableCompanion, listenCompanion, refreshCompanion } from './companion';
@@ -57,7 +58,7 @@ async function saveAcceptedHistory(accountId: string, connectionId: string): Pro
     if(!connection)return {store,value:undefined};
     const snapshot=store.snapshots.filter(s=>s.accountId===accountId&&s.connectionId===connectionId&&s.workspaceId===connection.workspaceId).sort((a,b)=>b.observedAt-a.observedAt)[0];
     if(!snapshot)return {store,value:undefined};
-    try { await saveHistory(historyPoint(snapshot)); return {store:store.historyIssue?{...store,historyIssue:null}:store,value:undefined}; }
+    try { await saveHistory(historyPoint(snapshot),store.settings.historyRetentionDays??30); return {store:store.historyIssue?{...store,historyIssue:null}:store,value:undefined}; }
     catch { return {store:{...store,historyIssue:'A reading was updated, but local history could not be saved.'},value:undefined}; }
   });
 }
@@ -272,11 +273,17 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
       if (settings.desktopAlerts && !await browser.permissions.contains({ permissions: ['notifications'] })) throw new Error('Approve desktop notifications first.');
       if (settings.criticalRemaining > settings.warningRemaining) throw new Error('Critical alert must be at or below the warning threshold.');
       await updateStore(store => ({ store: { ...store, settings }, value: undefined }));
+      await pruneHistory(settings.historyRetentionDays??30);
       await browser.alarms.create(REFRESH_ALARM, { periodInMinutes: settings.refreshMinutes });
       await renderBadge();
       break;
     }
     case 'history': return readHistory(command.accountId);
+    case 'history-insights': {
+      const store=await readStore();if(command.accountIds.some(id=>!store.accounts.some(a=>a.id===id)))throw new Error('Account is no longer saved.');
+      const pages=await Promise.all(command.accountIds.map(accountId=>readHistorySeries({accountId,from:command.from,to:command.to})));
+      return analyzeHistory(pages.flatMap(p=>p.points),{now:Date.now(),refreshMinutes:store.settings.refreshMinutes,activeConnectionIds:store.connections.filter(c=>c.enabled&&(c.status==='active'||c.status==='checking')).map(c=>c.id),truncated:pages.some(p=>p.truncated)});
+    }
     case 'history-page': return readHistoryPage(command);
     case 'export-history': {
       const store=await readStore();const accounts=command.accountId?store.accounts.filter(a=>a.id===command.accountId):store.accounts;
