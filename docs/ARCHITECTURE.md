@@ -201,3 +201,20 @@ storage, export and sync. Editing a handoff invalidates its preview; copy/downlo
 is offered only after an explicit preview. Nothing is scraped, summarized by an
 AI or sent to another provider. Product/source links reviewed 16 October 2026 are
 included in the Guide itself; consult the provider for currently available modes.
+
+## Optional website widget
+
+`widget.content.ts` registers at runtime only for selected exact provider hosts.
+It uses Shadow DOM, safe fixed corners, bounded dimensions and textContent.
+A singleton and a document-root child observer recover its own removed anchor
+without examining conversations or replacing page input. One local state query
+per minute updates age, with debounced background refresh notifications after
+saved readings change. These queries do not call providers or trigger refreshes.
+
+Content-origin messages are restricted to a tiny public projection and widget
+collapse/position/hide/open-dashboard actions. Provider URL, extension sender ID,
+main frame, enabled tracking/widget and current host grant are checked. The page
+gets no postMessage bridge; content controls ignore synthetic events. Dashboard
+URLs are fixed by the extension. General UI/state/sync messages still require an
+extension-page sender. Removing a grant unregisters scripts and removes visible
+widgets across tabs. Widget settings are separate local storage, not synced.

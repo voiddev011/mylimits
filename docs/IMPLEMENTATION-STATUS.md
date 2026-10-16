@@ -6,8 +6,8 @@ credential upload has been performed.
 ## Active checkpoint
 
 - Requested phase: Phase 2 (authorized by the user: “Start with next phase”).
-- Current work package: P2-07 — verified.
-- Next action: P2-08 — add an off-by-default isolated website widget with restricted public messages.
+- Current work package: P2-08 — verified.
+- Next action: P2-09 — implement Firefox fallbacks, Edge registration and normal optional Windows installer packaging.
 - Working branch/commit: `v2/phase-2`; Phase 1 and main preserved.
 - Authoritative scope: [master plan](V2-IMPLEMENTATION-PLAN.md),
   [Phase 1](PHASE-1.md), [Phase 2](PHASE-2.md).
@@ -41,7 +41,7 @@ implemented independent work while leaving that specific check pending.
 | P2-05 | 12 | verified | See checkpoint below. |
 | P2-06 | 10 | verified | See checkpoint below. |
 | P2-07 | 10 | verified | See checkpoint below. |
-| P2-08 | 8 | not_started | |
+| P2-08 | 8 | verified | See checkpoint below. |
 | P2-09 | 10 | not_started | |
 | P2-10 | 10 | not_started | |
 | **Phase 2 total** | **100** | **in_progress** | Ordered implementation; external provider gates recorded separately. |
@@ -103,13 +103,13 @@ State: **verified**. Resolved the baseline process-sandbox blockers by running t
 
 Next: P1-02 — implement V2 domain and public contracts.
 
-## P1-02 checkpoint — 15 October 2026
+## P1-02 checkpoint — 16 October 2026
 
 State: **verified**. Added explicit connection/workspace/snapshot contracts, validated V2 schemas, generation fencing, account read-model projection and allowlisted public state. Added four domain regression tests and retained the 35 existing tests. Type checking and all 39 core tests pass. Account meters/status remain a materialized read projection inside the same aggregate for existing UI/parser compatibility; connection snapshots are authoritative for source reconciliation, not a second independent store. Baseline browser fixtures passed 10/10 with approved process permissions.
 
 Next: P1-03 — implement resumable V1-to-V2 migration.
 
-## P1-03 checkpoint — 15 October 2026
+## P1-03 checkpoint — 16 October 2026
 
 State: **verified**. Added strict legacy parsing, a V1 backup, V2 state/pointer keys and resumable migration journal. IndexedDB upgrades preserve legacy readings and add idempotency/pagination indexes. Added crash-after-each-write, retry, history failure, malformed/future version and preservation tests. Type checking and 43 core tests pass. Actual browser IndexedDB migration coverage will run at the integration gate.
 
@@ -272,3 +272,15 @@ Next: P2-07 — build deterministic guidance and private prompt utilities, then 
 State: **verified**. Changed core/guide.ts and tests, GuideView, dashboard navigation/styles, runner, architecture and browser fixture. Original deterministic task/scope rules, dated cited product metadata, speed/quality/usage mode suggestions, explicit exclusions, reported reset and optional matching local pacing context. Prompt templates/review and user-pasted handoff preview/copy/download remain component-memory-only; edits invalidate previews. No inference, scraping, fabricated token savings or model entitlement assumptions. Typecheck passed; 86 core tests passed; build passed at 601.9 kB; Guide browser privacy/explicit-preview test passed. Source product scope checked using primary OpenAI, Anthropic, Perplexity and Cursor docs; live model entitlements remain unverified.
 
 Next: P2-08 — add an off-by-default isolated website widget with restricted public messages.
+
+## P2-08 checkpoint — 16 October 2026
+
+State: **in_progress**. Widget defaults off. Use exact provider grants, isolated content script and Shadow DOM. Background returns a tiny formatted reading projection, never the full store. No page message bridge, composer access, provider calls or broad site grants.
+
+Next: P2-08 — implement restricted widget state/actions, registration, UI and isolation fixtures.
+
+## P2-08 checkpoint — 16 October 2026
+
+State: **verified**. Changed runtime widget entrypoint, pure public projection/settings schemas, background registration/permissions/messages, Settings controls and focused tests/docs. Defaults off; exact-host scripts, Shadow DOM, corner/collapse/hide persistence, public status/two meters only, trusted-click controls, singleton/remount cleanup and debounced local reading updates. No page bridge, full-store messages, raw storage subscription, provider calls or composer reads. Typecheck passed; 87 core tests passed; build passed at 716.2 kB; real Chromium two-tab synthetic-page fixture passed for hostile CSS, SPA/remount, trusted vs synthetic clicks, public-only messages and disable cleanup. Headless permission approval unavailable: fixture grants a single synthetic host in an isolated copied build; ordinary permission denial remains covered. Consumer permission UI and live provider/widget checks remain pending.
+
+Next: P2-09 — implement Firefox fallbacks, Edge registration and normal optional Windows installer packaging.

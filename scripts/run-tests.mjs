@@ -17,3 +17,5 @@ import '../src/providers/additional.test.ts';
 import '../src/core/insights.test.ts';
 
 import '../src/core/guide.test.ts';
+
+import '../src/core/widget.test.ts';
