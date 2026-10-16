@@ -123,3 +123,16 @@ not implemented or advertised. No new remote backend or hosted provider sessions
 were deployed. Snapshot sync does not confer provider authorization. Existing
 provider readers remain live-unverified prototypes; failed/stale readings never
 become fresh quota or synthetic reset balances.
+
+## Final source and download
+
+Final application source: `702d971dfddf18216fb28d7df3fbb9c12b7a4c1f` (local
+`75fb9cd`; equal tree `baeaa4773a6d18a3b4d2dbb6d4e4c7d30013c9f8`).
+All 26 browser fixtures passed again after the adaptive-logo correction, locally
+and in [final extension verification](https://github.com/voiddev011/mylimits/actions/runs/38932629756).
+[Download the final extension ZIPs](https://github.com/voiddev011/mylimits/actions/runs/38932629756/artifacts/12059023187).
+Final local Chrome ZIP is 298,953 bytes; Firefox ZIP is 298,299 bytes; their checksums
+are in `.output/SHA256SUMS`. CI artifacts have their own matching SHA256SUMS.
+
+The last documentation-only commit updates download links and records evidence;
+it changes no application code and does not repeat the full native rebuild.
