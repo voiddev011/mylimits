@@ -146,3 +146,12 @@ no provider credentials are accepted for snapshot sync, no real production KMS i
 configured and no public deployment was performed. If a future permitted collector
 stores server-decryptable authorization, its opt-in/retention policy must be stated
 separately; it cannot be described as zero-knowledge snapshot sync.
+
+The optional website widget is disabled initially. It receives only a formatted
+account nickname, status, two meter values, observation/reset times and display
+preferences from the background. These public display values are visible to the
+website while the widget is enabled. Its isolated content script does not read
+chat content, inputs, cookies, provider tokens or sync credentials; it does not
+subscribe to raw storage events. Page messages are not a command bridge.
+Position/collapse/hide choices are local, outside snapshot preference sync.
+Disabling it removes the UI and stops polling/listeners; tracking remains usable.

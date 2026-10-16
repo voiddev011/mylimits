@@ -1,5 +1,5 @@
 import { test as base, expect, chromium, type BrowserContext, type Worker } from '@playwright/test';
-import { mkdtemp, rm, mkdir } from 'node:fs/promises';
+import { mkdtemp, rm, mkdir, cp, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -9,17 +9,20 @@ import type { browser } from 'wxt/browser';
 declare const chrome: typeof browser;
 
 const extensionPath = path.resolve('.output/chrome-mv3');
-const test = base.extend<{ context: BrowserContext; worker: Worker; extensionId: string; profilePath: string }>({
+const test = base.extend<{ context: BrowserContext; worker: Worker; extensionId: string; profilePath: string;grantedProviderOrigin:string|null }>({
+  grantedProviderOrigin:[null,{option:true}],
   profilePath: async ({}, use) => { const dir=await mkdtemp(path.join(tmpdir(),'mylimits-browser-')); try { await use(dir); } finally { await rm(dir,{recursive:true,force:true}); } },
-  context: async ({ profilePath }, use) => {
+  context: async ({ profilePath,grantedProviderOrigin }, use) => {
     if (!existsSync(path.join(extensionPath, 'manifest.json'))) throw new Error('Run npm run build before browser tests.');
+    let loadedExtensionPath=extensionPath;
+    if(grantedProviderOrigin){loadedExtensionPath=path.join(profilePath,'fixture-extension');await cp(extensionPath,loadedExtensionPath,{recursive:true});const file=path.join(loadedExtensionPath,'manifest.json');const manifest=JSON.parse(await readFile(file,'utf8'));manifest.host_permissions=[grantedProviderOrigin];await writeFile(file,JSON.stringify(manifest));}
     const userData = profilePath;
     const configured = process.env.CHROMIUM_PATH;
     const executablePath = configured; // Prefer Playwright's extension-capable Chromium.
     const context = await chromium.launchPersistentContext(userData, {
       ignoreDefaultArgs: ['--disable-extensions'],
       executablePath, channel: executablePath ? undefined : 'chromium', headless: true,
-      args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`, '--no-sandbox', '--disable-background-networking'],
+      args: [`--disable-extensions-except=${loadedExtensionPath}`, `--load-extension=${loadedExtensionPath}`, '--no-sandbox', '--disable-background-networking'],
     });
     // These tests use fixtures only; never contact real AI accounts.
     await context.route(/^https?:\/\//, route => route.abort());
@@ -357,4 +360,26 @@ test('Guide keeps private text local and handoff requires an explicit preview',a
  await page.getByText('Prepare a handoff',{exact:true}).click();await expect(page.getByRole('button',{name:'Copy handoff',exact:true})).toHaveCount(0);await page.getByLabel('Goal',{exact:true}).fill('PRIVATE_HANDOFF_GOAL');await page.getByLabel('Selected excerpt',{exact:true}).fill('Deliberately selected only');await page.getByRole('button',{name:'Preview handoff',exact:true}).click();await expect(page.getByLabel('Handoff preview')).toHaveValue(/Deliberately selected only/);await page.getByLabel('Selected excerpt',{exact:true}).fill('Changed');await expect(page.getByRole('button',{name:'Copy handoff',exact:true})).toHaveCount(0);
  await page.getByRole('button',{name:'Overview',exact:true}).click();await page.getByRole('button',{name:'Guide',exact:true}).click();await page.getByText('Prompt template and local review',{exact:true}).click();await expect(page.getByLabel('Prompt to review')).toHaveValue('');
  const data=await worker.evaluate(async()=>JSON.stringify(await chrome.storage.local.get(null)));expect(data).not.toContain('PRIVATE_GUIDE_TEXT');expect(data).not.toContain('PRIVATE_HANDOFF_GOAL');expect(requests).toEqual([]);
+});
+
+test.describe('Website widget fixture',()=>{
+test.use({grantedProviderOrigin:'https://claude.ai/*'});
+test('widget opt-in isolates page CSS, rejects page actions and removes on disable',async({context,worker,extensionId})=>{
+ const fixture=emptyStore('widget-private-salt');fixture.accounts=[demoState().accounts[0]!];fixture.providers.claude={...fixture.providers.claude,enabled:true,status:'active',activeAccountId:fixture.accounts[0]!.id};fixture.connections[0]={...fixture.connections[0]!,enabled:true,status:'active',accountId:fixture.accounts[0]!.id,lastAttemptAt:Date.now()};await worker.evaluate(async s=>chrome.storage.local.set({'mylimits:state:v2':s}),fixture);
+ const dashboard=await context.newPage();await dashboard.goto(`chrome-extension://${extensionId}/dashboard.html`);
+ // Isolated fixture build grants only this synthetic website; headless Chrome cannot approve permission UI.
+ expect(await worker.evaluate(()=>chrome.permissions.contains({origins:['https://claude.ai/*']}))).toBe(true);
+ await context.route('https://claude.ai/**',r=>r.fulfill({contentType:'text/html',body:'<html><head><style>section,button,strong,p{display:none!important}body{background:white;color:black}</style></head><body><textarea id="composer">DO NOT READ</textarea></body></html>'}));
+ const website=await context.newPage();await website.goto('https://claude.ai/new');await expect(website.locator('#mylimits-usage-widget')).toHaveCount(0);
+ await dashboard.getByRole('button',{name:'Settings',exact:true}).click();await dashboard.getByLabel('Widget on Claude',{exact:true}).check();await expect(website.getByRole('region',{name:'MyLimits usage widget'})).toBeVisible();await expect(website.getByText('Session · 5 hours: 68%')).toBeVisible();expect(await website.locator('#composer').inputValue()).toBe('DO NOT READ');await mkdir('artifacts',{recursive:true});await website.screenshot({path:'artifacts/phase-2-widget.png'});
+ await website.getByRole('button',{name:'Collapse',exact:true}).evaluate(b=>b.dispatchEvent(new MouseEvent('click',{bubbles:true})));await expect(website.getByRole('button',{name:'Collapse',exact:true})).toBeVisible(); // synthetic page click is ignored
+ await website.getByRole('button',{name:'Collapse',exact:true}).click();await expect(website.getByRole('button',{name:'Expand',exact:true})).toBeVisible();await website.getByRole('button',{name:'Expand',exact:true}).click();await website.getByLabel('Widget position').selectOption('top-left');
+ const second=await context.newPage();await second.goto('https://claude.ai/new');await expect(second.locator('#mylimits-usage-widget')).toBeVisible();
+ await website.evaluate(()=>{history.pushState({},'', '/chat/fixture');document.getElementById('mylimits-usage-widget')?.remove()});await expect(website.locator('#mylimits-usage-widget')).toHaveCount(1);
+ const tabId=await worker.evaluate(async()=> (await chrome.tabs.query({url:'https://claude.ai/*'}))[0]!.id!);const message=await worker.evaluate(async tabId=>(await chrome.scripting.executeScript({target:{tabId},func:async()=>{const denied=await chrome.runtime.sendMessage({type:'state'}),reading=await chrome.runtime.sendMessage({type:'widget-state',provider:'claude'});return {denied,reading}}}))[0]!.result,tabId);expect(message!.denied.ok).toBe(false);expect(message!.reading.ok).toBe(true);expect(JSON.stringify(message!.reading)).not.toContain('widget-private-salt');expect(JSON.stringify(message!.reading)).not.toContain('connectionId');
+ const scripts=await worker.evaluate(()=>chrome.scripting.getRegisteredContentScripts());expect(scripts.find(s=>s.id==='mylimits-widget-claude')!.matches).toEqual(['https://claude.ai/*']);
+ await dashboard.getByLabel('Widget on Claude',{exact:true}).uncheck();await expect(website.locator('#mylimits-usage-widget')).toHaveCount(0);await expect(second.locator('#mylimits-usage-widget')).toHaveCount(0);
+ const failed=await dashboard.evaluate(()=>chrome.runtime.sendMessage({type:'widget-state',provider:'claude'}));expect(failed.ok).toBe(false);
+});
+
 });

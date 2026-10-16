@@ -14,6 +14,7 @@ import { readHistory, readHistoryPage, readHistorySeries, pruneHistory, historyE
 import { CommandSchema, type Command } from './messages';
 import { mergeCompanion, markCompanionUnavailable } from '../core/companion';
 import { addCompanionAccount, companionRequest, companionStatus, enableCompanion, listenCompanion, refreshCompanion } from './companion';
+import { widgetSettings,updateWidgetSettings,reconcileWidgets,readWidget,listenWidgets } from './widget';
 import { snapshotSync } from './sync';
 
 const coordinator = new RefreshCoordinator(2);
@@ -127,7 +128,7 @@ async function setProvider(provider: ProviderId, enabled: boolean): Promise<void
     const tabs = await browser.tabs.query({ url: origin });
     await Promise.allSettled(tabs.filter(tab => tab.id).map(tab => browser.scripting.executeScript({ target: { tabId: tab.id! }, files: ['/content-scripts/observer.js'] })));
   }
-  if (enabled) await refreshProvider(provider, true);
+  if (enabled) {await refreshProvider(provider, true);await reconcileWidgets();}
   else {
     await browser.permissions.remove({ origins: [origin] });
     await renderBadge();
@@ -177,13 +178,19 @@ async function injectObserver(provider: ProviderId, tabId: number, channel: stri
   });
 }
 
-async function handle(command: Command, sender: { id?: string; url?: string; tab?: { id?: number } }): Promise<unknown> {
+async function handle(command: Command, sender: { id?: string; url?: string; tab?: { id?: number };frameId?:number }): Promise<unknown> {
   if (sender.id !== browser.runtime.id) throw new Error('Unrecognised message sender.');
+  if(command.type==='widget-state'||command.type==='widget-action'){
+    if(!sender.url||providerForUrl(sender.url)!==command.provider||!sender.tab?.id||sender.frameId!==0)throw new Error('Widget sender does not match its website.');
+    const view=await readWidget(command.provider);if(command.type==='widget-state'||!view.enabled)return view;
+    if(command.action==='open'){await browser.tabs.create({url:browser.runtime.getURL('/dashboard.html')});return null}
+    await updateWidgetSettings(s=>({...s,providers:command.action==='hide'?s.providers.filter(p=>p!==command.provider):s.providers,collapsed:command.action==='collapse'?true:command.action==='expand'?false:s.collapsed,position:command.position??s.position}));return null;
+  }
   if (command.type === 'observer-ready' || command.type === 'observation') {
     if (!sender.url || providerForUrl(sender.url) !== command.provider || !sender.tab?.id) throw new Error('Website observation did not match its sender.');
     const state = await readStore();
     if (!state.providers[command.provider].enabled || !observedProviders.includes(command.provider)) return null;
-    if (command.type === 'observer-ready') {
+  if (command.type === 'observer-ready') {
       await injectObserver(command.provider, sender.tab.id, command.channel);
       return null;
     }
@@ -195,6 +202,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
   }
   if (!sender.url?.startsWith(browser.runtime.getURL('/'))) throw new Error('This action must come from the MyLimits dashboard.');
   switch (command.type) {
+    case 'widget-settings': return command.settings?updateWidgetSettings(()=>command.settings!):widgetSettings();
     case 'state': return publicStore();
     case 'opened': void refreshAll(false, 'open').catch(() => {}); return publicStore();
     case 'reader-mode': {
@@ -298,6 +306,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
 }
 
 export function startController(): void {
+  listenWidgets();
   const storage=browser.storage.local as typeof browser.storage.local&{setAccessLevel?:(options:{accessLevel:'TRUSTED_CONTEXTS'})=>Promise<void>};
   void storage.setAccessLevel?.({accessLevel:'TRUSTED_CONTEXTS'}).catch(()=>{});
   listenCompanion(async profiles => {
@@ -322,6 +331,7 @@ export function startController(): void {
     void (async () => {
       if (permissions.permissions?.includes('nativeMessaging')) await enableCompanion(false);
       if (permissions.permissions?.includes('notifications')) await updateStore(store => ({ store: { ...store, settings: { ...store.settings, desktopAlerts: false } }, value: undefined }));
+      const widgets=await widgetSettings();const kept:ProviderId[]=[];for(const provider of widgets.providers)if(await browser.permissions.contains({origins:[providers[provider].origin]}))kept.push(provider);await updateWidgetSettings(s=>({...s,providers:kept}));
       for (const provider of PROVIDER_IDS) {
         const store = await readStore();
         if (store.providers[provider].enabled && !await browser.permissions.contains({ origins: [providers[provider].origin] })) await setProvider(provider, false);
@@ -335,6 +345,7 @@ export function startController(): void {
     await browser.alarms.create(REFRESH_ALARM, { periodInMinutes: store.settings.refreshMinutes });
     if ((await companionStatus()).enabled) await browser.alarms.create(COMPANION_ALARM, { periodInMinutes: 1 });
     if((await snapshotSync.status()).enabled)await browser.alarms.create(SYNC_ALARM,{periodInMinutes:5});
+    await reconcileWidgets();
     await renderBadge();
     await refreshAll();
   })().catch(() => undefined);
