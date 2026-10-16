@@ -7,11 +7,14 @@ but **not yet verified with a real signed-in account**, ordinary website logout,
 other-device usage, or token renewal. These are acceptance tests, not guarantees.
 Ordinary ChatGPT chat limits are not established by the returned Codex buckets.
 
-## Optional Windows setup GUI (Phase 2)
+## Optional Windows setup GUI (3.0)
 
 The unsigned per-user installer adds Start-menu Setup and Uninstall entries.
 It discovers the MyLimits extension from browser metadata, with a manual ID fallback.
-Node 24+ and the official Codex CLI are prerequisites. See [platform packaging and
+The Windows x64 installer bundles Node 24.22.0 and official Codex 0.163.0;
+no global Node/npm/Codex install is needed for the packaged helper.
+See [short installation instructions](INSTALL.md). Manual source installation below
+still requires global prerequisites. See [platform packaging and
 acceptance](PLATFORMS.md) for the artifact, setup and deletion behavior. No real
 Windows/native/provider verification is claimed. Basic extension tracking never
 requires this installer.
@@ -235,3 +238,26 @@ Windows follow-up validation: added pure tests for Windows directory/pipe naming
 launcher quoting and mutual bridge authentication, plus browser coverage for a
 missing native API and unit coverage for partial browser namespace fallback. The
 Windows task/registry installer still requires the live Windows acceptance test.
+
+## Version 3.0 authorization isolation
+
+The updated daemon opens each official authorization URL in an installed
+Chrome/Brave/Edge/Chromium executable using a dedicated persistent browser profile
+under that companion account’s protected local directory. It never reads your
+ordinary profile cookies. A new companion connection gets a fresh sign-in profile,
+so your current ChatGPT website account does not automatically select the other
+connection. Close the sign-in window after completing authorization.
+
+The extension receives the new profile UUID and `browserOpened: true`, not the
+authorization URL. Older helpers retain their tab-opening fallback; update the
+helper to obtain isolated sign-in. Codex owns credential refresh and quota RPCs.
+
+If two returned email hints match, account details show **Possible duplicate
+sign-in**. Only an in-memory hash is compared; no email/hash is saved or exported.
+A matching email is not a verified account/workspace identifier. Profiles are never
+auto-merged, and the authorization isolation / two real accounts / renewal / logout
+flow remains live-unverified.
+
+Bundled dependencies are pinned and integrity checked at package time; see
+`scripts/companion-dependencies.mjs`, bundled upstream LICENSE/NOTICE, and
+`dependencies/DEPENDENCIES.json` in the installer payload. This preview is unsigned.

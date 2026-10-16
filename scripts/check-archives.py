@@ -10,6 +10,10 @@ for target in ['chrome','firefox']:
         assert not forbidden,forbidden
         manifest=json.loads(archive.read('manifest.json'))
         assert manifest['version']==version
+        assert all('providers/'+name in names for name in ['claude.svg','chatgpt.svg','gemini.png','grok.svg','perplexity.svg','cursor.svg'])
+        bundled=''.join(archive.read(n).decode('utf-8') for n in names if n.endswith('.js'))
+        assert 'Prompt template and local review' not in bundled
+        assert 'Prepare a handoff' not in bundled
         assert not manifest.get('host_permissions')
         assert len(manifest['optional_host_permissions'])==6
         assert not manifest.get('content_scripts')

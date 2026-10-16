@@ -11,8 +11,8 @@ export default defineConfig({
   vite: ({browser}) => ({ plugins: [tailwindcss()],define:{__MYLIMITS_SYNC_ORIGIN__:JSON.stringify(syncOrigin),__MYLIMITS_BROWSER__:JSON.stringify(browser)} }),
   manifest: ({browser}) => ({
     name: 'MyLimits',
-    version: '2.2.0',
-    version_name: '2.2 Compact accounts preview',
+    version: '3.0.0',
+    version_name: '3.0 Clean dashboard preview',
     description: 'Keep your AI accounts, usage limits, and reset times in one place.',
     permissions: ['storage', 'alarms', 'scripting',...(browser==='firefox'?[]:['sidePanel'])],
     optional_permissions: ['notifications',...(browser==='firefox'?[]:['nativeMessaging'])],

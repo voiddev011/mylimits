@@ -34,7 +34,7 @@ if (windows) {
 } else await chmod(dataDir, 0o700);
 const runtime = path.join(dataDir, 'runtime'); await mkdir(runtime, { recursive: true, mode: 0o700 });
 // Copy the runtime so downloading a new ZIP or moving the checkout cannot break the host.
-for (const name of ['paths.mjs', 'local-auth.mjs', 'protocol.mjs', 'limits.mjs', 'app-server.mjs', 'service.mjs', 'daemon.mjs', 'host.mjs']) {
+for (const name of ['paths.mjs', 'local-auth.mjs', 'protocol.mjs', 'limits.mjs', 'app-server.mjs', 'service.mjs', 'auth-browser.mjs', 'daemon.mjs', 'host.mjs']) {
   await writeFile(path.join(runtime, name), await readFile(path.join(source, name)), { mode: 0o600 });
 }
 const quote = value => "'" + value.replaceAll("'", "'\\''") + "'";

@@ -410,3 +410,72 @@ signing was added. Main remains unchanged.
 Next: install/update using the current 2.2 artifact. Further independent-provider
 work needs a viable permitted authorization/quota source and live acceptance;
 never relabel saved website readings as independently updating accounts.
+
+## V3-01 — started, 16 October 2026
+
+User approved implementation of the researched V3 redesign. New branch
+`v3/redesign`, clean baseline from 2.2; no user changes discarded. Plan is
+V3-IMPLEMENTATION-PLAN.md. Start with Guide removal, genuine local provider assets
+and typography/layout foundations, then complete the ordered work packages.
+No new provider credentials/live accounts are available. Native packaging and
+fixture verification are authorized; unsupported independent providers remain
+blocked rather than advertised. Next: implement V3-01 and V3-02.
+
+### V3-01 / V3-02 / V3-03 implementation checkpoint
+
+- Removed Guide UI, core helpers, tests and navigation; legacy hashes land on Overview.
+- Packaged official six-provider favicon assets with `PROVIDER-ASSETS.md` provenance.
+- Rebuilt typography/layout tokens, 440px quick popup, dashboard-only setup, larger
+  four-tab dashboard and local reset clocks. Added Standard/Large settings.
+- Added UI-only privacy projection, masked notifications, history privacy guard,
+  Needs attention filter and strict-allowlist diagnostics/help.
+- Replaced on-page quota rendering with opt-in Coming soon launcher. Preview
+  projection receives only site preferences, requires no account, preserves old
+  site/corner choices; exact-site permissions remain required.
+- Actual checks: TypeScript passed; 99 core tests passed. Browser/layout tests and
+  package builds have not run at this checkpoint.
+- Decision: history is hidden/export disabled under privacy mode, rather than
+  exporting a partially masked private record. Saved aliases/data are unchanged.
+- Next: browser acceptance fixtures and optional connector improvements.
+
+### V3-04 account connection checkpoint
+
+- Independent OpenAI authorization now opens a fresh local Chrome/Brave/Edge profile
+  per companion account. Authorization URLs stay in the helper on the new protocol;
+  old helper compatibility remains, with explicit update guidance.
+- Added same-email possible-duplicate hints computed only in helper memory. No
+  email/hash leaves native messaging, and profiles/workspaces are never auto-merged.
+  Official `account/read` exposes email/plan, not a verified universal workspace key;
+  matching email is deliberately only a warning.
+- Windows x64 package pins/checks official Node 24.22.0 SHA256 and Codex 0.163.0
+  npm SHA512, bundling their native runtime layout and licenses. Setup uses bundled
+  binaries rather than a global Node/Codex dependency. Unsigned preview only.
+- Updated browser account action to “Save another website account”; it explicitly
+  describes dated readings rather than independent refresh.
+- Actual tests: first unrestricted `npm run check` passed (99 core, 19 native,
+  production Chrome build). The same native child-process check failed only inside
+  the restricted sandbox; unrestricted execution passed. Added duplicate test next.
+- First browser pass: 22/26 passed. Fixed six-row micro-overflow, async preview
+  checkbox feedback, and explicit accessibility labels for presentation selects;
+  rerun is in progress. Existing migration/history/account/source tests passed.
+- Blockers: no real provider credentials or Windows desktop session. Independent
+  Claude is not exposed; logout/renewal/cross-device and actual Windows install /
+  startup/uninstall remain pending. No provider claim was upgraded from prototype.
+- Next: finish browser acceptance, compile final Windows installer, all variant
+  archives, update handoff/current docs and publish the working branch.
+
+### V3 interface / connector implementation verified checkpoint
+
+- Final unrestricted core/native check passed: TypeScript, 99 core tests,
+  20 native tests (including actual child process RPC), Chrome production build.
+- Browser rerun: 25/26 passed; the remaining position test used synthetic select
+  events rejected by the intentional trusted-input guard. Replaced it with actual
+  keyboard selection; focused preview browser test passed, including CSS isolation,
+  Escape/outside click, no account requirement, position persistence and removal.
+- Normal six-row popup fits with 14px account names, 16px values, 12px secondary
+  text. Large-text/privacy persistence and 200% text enlargement checks passed.
+- Actual bundled Windows installer compiled: 196,690,078 bytes with upstream Node
+  and Codex runtime, native PE output and SHA256. This does not prove Windows live
+  installation or real account authorization.
+- Added follow-up fixtures for on-site Hide persistence and new native sign-in
+  protocol; final whole-suite and variant/archive checks are next.

@@ -14,7 +14,7 @@ import { readHistory, readHistoryPage, readHistorySeries, pruneHistory, historyE
 import { CommandSchema, type Command } from './messages';
 import { mergeCompanion, markCompanionUnavailable } from '../core/companion';
 import { addCompanionAccount, companionRequest, companionStatus, enableCompanion, listenCompanion, refreshCompanion } from './companion';
-import { widgetSettings,updateWidgetSettings,reconcileWidgets,readWidget,listenWidgets } from './widget';
+import { widgetSettings,updateWidgetSettings,reconcileWidgets,readWidget } from './widget';
 import { snapshotSync } from './sync';
 import { startAccountSetup, saveAccountSetup } from '../core/account-setup';
 
@@ -193,8 +193,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
   if(command.type==='widget-state'||command.type==='widget-action'){
     if(!sender.url||providerForUrl(sender.url)!==command.provider||!sender.tab?.id||sender.frameId!==0)throw new Error('Widget sender does not match its website.');
     const view=await readWidget(command.provider);if(command.type==='widget-state'||!view.enabled)return view;
-    if(command.action==='open'){await browser.tabs.create({url:browser.runtime.getURL('/dashboard.html')});return null}
-    await updateWidgetSettings(s=>({...s,providers:command.action==='hide'?s.providers.filter(p=>p!==command.provider):s.providers,collapsed:command.action==='collapse'?true:command.action==='expand'?false:s.collapsed,position:command.position??s.position}));return null;
+    await updateWidgetSettings(s=>({...s,providers:command.action==='hide'?s.providers.filter(p=>p!==command.provider):s.providers,position:command.position??s.position}));return null;
   }
   if (command.type === 'observer-ready' || command.type === 'observation') {
     if (!sender.url || providerForUrl(sender.url) !== command.provider || !sender.tab?.id) throw new Error('Website observation did not match its sender.');
@@ -333,7 +332,6 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
 }
 
 export function startController(): void {
-  listenWidgets();
   const storage=browser.storage.local as typeof browser.storage.local&{setAccessLevel?:(options:{accessLevel:'TRUSTED_CONTEXTS'})=>Promise<void>};
   void storage.setAccessLevel?.({accessLevel:'TRUSTED_CONTEXTS'}).catch(()=>{});
   listenCompanion(async profiles => {

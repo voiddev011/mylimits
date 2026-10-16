@@ -2,7 +2,6 @@ import { browser } from 'wxt/browser';
 import { WidgetSettingsSchema,widgetDefaults,widgetView,type WidgetSettings } from '../core/widget';
 import { PROVIDER_IDS,type ProviderId } from '../core/model';
 import { providers } from '../providers/catalog';
-import { publicStore } from './repository';
 const key='mylimits:widget:v1';let queue:Promise<unknown>=Promise.resolve();
 export async function widgetSettings(){const raw=(await browser.storage.local.get(key))[key];return raw===undefined?widgetDefaults():WidgetSettingsSchema.parse(raw)}
 async function notify(provider:ProviderId,type='mylimits-widget-refresh'){
@@ -19,8 +18,4 @@ export async function reconcileWidgets(){
 export function updateWidgetSettings(update:(prior:WidgetSettings)=>WidgetSettings){
  const task=queue.then(async()=>{const next=WidgetSettingsSchema.parse(update(await widgetSettings()));for(const id of next.providers)if(!await browser.permissions.contains({origins:[providers[id].origin]}))throw new Error('Enable website access before adding its widget.');await browser.storage.local.set({[key]:next});await reconcileWidgets();return next});queue=task.catch(()=>{});return task;
 }
-export async function readWidget(provider:ProviderId){if(!await browser.permissions.contains({origins:[providers[provider].origin]}))return {enabled:false as const};return widgetView(await publicStore(),provider,await widgetSettings(),Date.now())}
-export function listenWidgets(){
- let pending:ReturnType<typeof setTimeout>|undefined;
- browser.storage.onChanged.addListener((changes,area)=>{if(area!=='local'||!changes['mylimits:state:v2'])return;clearTimeout(pending);pending=setTimeout(()=>{void widgetSettings().then(s=>Promise.allSettled(s.providers.map(p=>notify(p)))).catch(()=>{})},250)});
-}
+export async function readWidget(provider:ProviderId){if(!await browser.permissions.contains({origins:[providers[provider].origin]}))return {enabled:false as const};return widgetView(provider,await widgetSettings())}

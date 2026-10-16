@@ -107,7 +107,7 @@ account settings and does not pause collection of subsequent new readings.
 
 Quiet hours, snooze and reset alerts are local preferences. Reset alerts require
 fresh provider evidence of a new window; the passage of a countdown alone does
-not establish a reset. The local Guide reviews text you explicitly paste; it stores none of that text and makes no AI requests. Handoff copy/download requires an explicit preview; editing invalidates that preview. No automatic conversation transfer occurs.
+not establish a reset. The Guide and prompt/handoff tools were removed in 3.0.
 
 ## Phase 2 optional snapshot sync
 
@@ -167,3 +167,23 @@ The optional Windows setup reads only extension registration metadata from brows
 Preferences/Secure Preferences to locate MyLimits. It does not read cookies or
 transfer login state. Its uninstaller offers an explicit local-credential deletion
 choice; deleting files does not prove provider-side logout.
+
+## Version 3.0 interface changes
+
+The floating preview receives only its enabled state and corner position. It
+reads no account readings, page text, selections, prompts or conversations.
+Existing per-site widget opt-ins and corner preferences remain; the old quota
+widget is replaced. No account is required to enable the preview.
+
+Privacy mode masks account/workspace names, meter labels and notification text
+without overwriting the original local data. History display and exports pause
+while it is on. This is a screen-sharing control, not encryption or authentication;
+it does not change previously configured snapshot synchronization. Diagnostics
+copy only version, counts, generic connection states and presentation settings.
+
+The updated optional helper opens official OpenAI sign-in in a fresh local browser
+profile for each connection. It does not copy cookies from your regular browser.
+Codex credentials remain in its protected local account directory/OS store.
+Email duplicate hints are hashed in memory only and never exported; the UI receives
+only a possible-duplicate flag, never the email/hash. A matching email is a warning,
+not proof of identical workspace authorization, and profiles are never auto-merged.
