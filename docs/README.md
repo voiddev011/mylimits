@@ -9,7 +9,7 @@ in `docs/`; run commands from the repository root.
 ## Install / update
 
 For the current upgrade, download the **mylimits-extension-packages** artifact from
-a successful [Checks run on this branch](https://github.com/voiddev011/mylimits/actions?query=branch%3Av2%2Fcompact-accounts).
+the verified [Checks run 38922290094](https://github.com/voiddev011/mylimits/actions/runs/38922290094/artifacts/12054622767).
 Extract the artifact, then extract `mylimits-2.2.0-chrome.zip` into a permanent
 folder. It must contain `manifest.json` directly. The 2.1 Phase 2 artifact is an
 older build; it does not contain this redesign.

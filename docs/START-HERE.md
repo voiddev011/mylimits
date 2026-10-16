@@ -2,8 +2,9 @@
 
 This is the implementation handoff for MyLimits 2.0. It is designed for one
 GPT-6.1 Sol workstream using bounded tasks, shared contracts and durable progress
-notes. Phase 2 is implemented on `v2/phase-2`; read the
-[Phase 2 handoff](PHASE-2-HANDOFF.md) and status before starting more work.
+notes. The latest user-authorized upgrade is **2.2** on `v2/compact-accounts`;
+read the [compact accounts handoff](COMPACT-ACCOUNTS-HANDOFF.md) and current status.
+The historical [Phase 2 handoff](PHASE-2-HANDOFF.md) covers its preserved base.
 
 ## Read in this order
 
@@ -22,7 +23,8 @@ Do not repeat completed tasks. Further product work requires the user’s next i
 ## Current baseline
 
 - Project: `voiddev011/mylimits`, an existing React/TypeScript/WXT MV3 extension.
-- App version is `2.1.0` with manifest label `2.1 Phase 2 preview` on this branch.
+- App version is `2.2.0` with manifest label `2.2 Compact accounts preview` on the
+  current working branch. A dedicated popup replaces dashboard tabs in the toolbar.
 - Known source boundaries: `src/core`, `src/providers`, `src/platform`, `src/ui`,
   `entrypoints`, `companion`, `tests/browser` `server/` and `.github/workflows/checks.yml`.
 - Existing website readers are prototypes. Claude and Work/Codex quota parsing
