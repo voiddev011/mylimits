@@ -34,7 +34,8 @@ export class SnapshotSync {
   if(s.nextAttemptAt!==null&&s.nextAttemptAt>now||s.lastAttemptAt!==null&&now-s.lastAttemptAt<(manual?15000:60000))return this.public(s);
   s.lastAttemptAt=now;try{
    for(const id of [...s.pendingDeletes]){try{await this.request(s,'/v1/source-data','DELETE',{sourceAccountId:id})}catch(e){if(!(e instanceof SyncError&&[404,410].includes(e.status)))throw e}s.pendingDeletes=s.pendingDeletes.filter(x=>x!==id);delete s.mappings[id];await this.port.write(s)}
-   const local=await this.port.store(),pending=local.snapshots.filter(x=>!s.acknowledged.includes(x.snapshotId)&&!s.excluded.includes(x.accountId)&&local.accounts.some(a=>a.id===x.accountId));
+   const local=await this.port.store(),expired=local.snapshots.filter(x=>x.observedAt<now-90*86400000);
+   const pending=local.snapshots.filter(x=>x.observedAt>=now-90*86400000&&x.observedAt<=now+60000&&x.receivedAt<=now+60000&&!s.acknowledged.includes(x.snapshotId)&&!s.excluded.includes(x.accountId)&&local.accounts.some(a=>a.id===x.accountId));
    let batches=0;
    for(const accountId of [...new Set(pending.map(x=>x.accountId))]){
     if(batches++>=5)break;const account=local.accounts.find(a=>a.id===accountId)!;const items=pending.filter(x=>x.accountId===accountId).slice(0,20).map(x=>syncItem(account,x));
@@ -43,7 +44,7 @@ export class SnapshotSync {
     }catch(e){if(e instanceof SyncError&&e.status===410){if(!s.excluded.includes(accountId))s.excluded.push(accountId)}else throw e}
     await this.port.write(s);
    }
-   s.failures=0;s.nextAttemptAt=null;s.error=null;s.lastSyncedAt=now;
+   s.failures=0;s.nextAttemptAt=null;s.error=expired.length?'Readings older than 90 days stay local; newer snapshots are synced.':null;s.lastSyncedAt=now;
   }catch(e){s.failures++;s.nextAttemptAt=now+Math.min(3600000,30000*2**Math.min(6,s.failures));s.error=e instanceof SyncError&&e.status===401?'Device access was revoked or expired. Disconnect and pair again.':'Sync is waiting to retry. Local tracking continues.';if(e instanceof SyncError&&e.status===401)s.enabled=false;}
   await this.port.write(s);return this.public(s);
  })}

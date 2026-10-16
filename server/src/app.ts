@@ -10,6 +10,7 @@ import { authRoutes } from './oidc';
 import { JobRunner } from './jobs';
 import { CredentialStore } from './credentials';
 import { pairingRoutes } from './pairing';
+import { startRetention } from './retention';
 import { webRoutes } from './web';
 export type RequestWithPrincipal=FastifyRequest&{principal:Principal};
 const identifier=z.string().uuid();
@@ -48,10 +49,12 @@ export function createApp(options:{config:Config;pool:pg.Pool;testVerifier?:Veri
  authRoutes(app,pool,config);
  pairingRoutes(app,pool);
  webRoutes(app);
- app.post('/v1/devices',async r=>{const b=z.object({name:z.string().trim().min(1).max(60)}).strict().parse(r.body);return registerDevice(pool,p(r),b.name)});
+ const stopRetention=startRetention(pool);app.addHook('onClose',async()=>stopRetention());
+ app.post('/v1/devices',async r=>{const b=z.object({name:z.string().trim().min(1).max(60)}).strict().parse(r.body);return transaction(pool,db=>registerDevice(db,p(r),b.name))});
  app.get('/v1/devices',async r=>{requireWeb(p(r));return {devices:(await pool.query('SELECT id,name,revoked_at AS "revokedAt" FROM devices WHERE owner_id=$1 ORDER BY created_at',[p(r).owner])).rows}});
  app.delete('/v1/devices/:id',async r=>{
   const id=params(r);if(p(r).kind==='device'&&p(r).deviceId!==id)throw new ApiError(403,'wrong_device');await transaction(pool,async db=>{
+   await db.query('SELECT id FROM owners WHERE id=$1 FOR UPDATE',[p(r).owner]);
    const found=await db.query('UPDATE devices SET revoked_at=now() WHERE owner_id=$1 AND id=$2 RETURNING id',[p(r).owner,id]);if(!found.rows.length)throw new ApiError(404,'device_not_found');
    await db.query("UPDATE connections SET enabled=false,status='disabled',generation=generation+1 WHERE owner_id=$1 AND device_id=$2",[p(r).owner,id]);
    await db.query('DELETE FROM jobs WHERE owner_id=$1 AND connection_id IN (SELECT id FROM connections WHERE owner_id=$1 AND device_id=$2)',[p(r).owner,id]);
@@ -84,6 +87,7 @@ export function createApp(options:{config:Config;pool:pg.Pool;testVerifier?:Veri
   const principal=p(r);if(principal.kind!=='device'||!principal.deviceId)throw new ApiError(403,'device_authentication_required');
   const {sourceAccountId}=z.object({sourceAccountId:z.string().min(1).max(240)}).strict().parse(r.body);
   await transaction(pool,async db=>{
+   await db.query('SELECT id FROM owners WHERE id=$1 FOR UPDATE',[principal.owner]);
    const device=await db.query('SELECT id FROM devices WHERE owner_id=$1 AND id=$2 AND revoked_at IS NULL FOR UPDATE',[principal.owner,principal.deviceId]);if(!device.rows.length)throw new ApiError(401,'device_revoked');
    await db.query('INSERT INTO source_tombstones(owner_id,device_id,source_id) VALUES($1,$2,$3) ON CONFLICT DO NOTHING',[principal.owner,principal.deviceId,sourceAccountId]);
    const account=(await db.query('SELECT id FROM accounts WHERE owner_id=$1 AND device_id=$2 AND source_id=$3',[principal.owner,principal.deviceId,sourceAccountId])).rows[0];if(account)await deleteAccountInTransaction(db,principal,account.id);
@@ -95,6 +99,7 @@ export function createApp(options:{config:Config;pool:pg.Pool;testVerifier?:Veri
  app.patch('/v1/preferences',async r=>{
   const body=z.object({expectedRevision:z.number().int().min(0),data:SyncPreferencesSchema}).strict().parse(r.body);
   return transaction(pool,async db=>{
+   await db.query('SELECT id FROM owners WHERE id=$1 FOR UPDATE',[p(r).owner]);
    await db.query('INSERT INTO preferences(owner_id) VALUES($1) ON CONFLICT DO NOTHING',[p(r).owner]);
    const row=(await db.query('SELECT revision FROM preferences WHERE owner_id=$1 FOR UPDATE',[p(r).owner])).rows[0];if(row.revision!==body.expectedRevision)throw new ApiError(409,'preference_revision_conflict');
    for(const [id,name] of Object.entries(body.data.names??{})){const changed=await db.query('UPDATE accounts SET name=$3 WHERE owner_id=$1 AND id=$2 AND deleted_at IS NULL RETURNING id',[p(r).owner,id,name]);if(!changed.rows.length)throw new ApiError(404,'account_not_found')}
@@ -105,7 +110,7 @@ export function createApp(options:{config:Config;pool:pg.Pool;testVerifier?:Veri
   requireWeb(p(r));z.object({confirmation:z.literal('delete-all')}).strict().parse(r.body);
   await transaction(pool,async db=>{
    await db.query('SELECT id FROM owners WHERE id=$1 FOR UPDATE',[p(r).owner]);
-   await db.query('UPDATE devices SET revoked_at=now() WHERE owner_id=$1',[p(r).owner]);
+   await db.query("UPDATE devices SET revoked_at=now(),name='Revoked device' WHERE owner_id=$1",[p(r).owner]);
    await db.query("UPDATE accounts SET deleted_at=now(),name='Deleted account',plan=NULL WHERE owner_id=$1",[p(r).owner]);
    await db.query("UPDATE connections SET enabled=false,generation=generation+1,status='disabled' WHERE owner_id=$1",[p(r).owner]);
    await db.query('DELETE FROM jobs WHERE owner_id=$1',[p(r).owner]);await db.query('DELETE FROM snapshots WHERE owner_id=$1',[p(r).owner]);await db.query('DELETE FROM preferences WHERE owner_id=$1',[p(r).owner]);

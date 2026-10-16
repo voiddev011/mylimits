@@ -48,3 +48,6 @@ test('preference conflicts are explicit and cloud aliases map only to this devic
 test('pause stops uploads and disconnect revokes the device without discarding local accounts',async()=>{
  const f=fixture();await f.connect();await f.sync.enable(false);await f.sync.run(true);assert.equal(f.calls.length,0);await f.sync.disconnect();assert.equal(f.calls[0]!.path,`/v1/devices/${deviceId}`);assert.equal((await f.sync.status()).connected,false);assert.equal(f.store.accounts.length,1);
 });
+test('expired backlog remains local and cannot block newer sync with permanent server time errors',async()=>{
+ const f=fixture(),now=Date.now();const old=structuredClone(f.store.snapshots[0]!);old.snapshotId='older-than-service-retention';old.observedAt=now-91*86400000;old.receivedAt=old.observedAt;f.setStore({...f.store,snapshots:[old,...f.store.snapshots]});await f.connect();const status=await f.sync.run(true,now);assert.equal(f.saved.acknowledged.length,1);assert.ok(status.error?.includes('90 days'));assert.equal(f.store.snapshots.length,2);const payload=f.calls.find(c=>c.path==='/v1/snapshots/batch')!.body as {items:SyncItem[]};assert.equal(payload.items.length,1);assert.notEqual(payload.items[0]!.snapshot.snapshotId,old.snapshotId);
+});

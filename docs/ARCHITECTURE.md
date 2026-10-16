@@ -1,8 +1,6 @@
-# Architecture — implemented Phase 1
+# Architecture — implemented Phase 2
 
-MyLimits 2.0 is a local Manifest V3 extension. No backend or cloud authorization
-is required. The [master plan](V2-IMPLEMENTATION-PLAN.md) defines later work;
-[this handoff](PHASE-1-HANDOFF.md) records current evidence.
+MyLimits 2.1 is a local Manifest V3 extension with an optional separate snapshot service. Local tracking requires no backend account. The [master plan](V2-IMPLEMENTATION-PLAN.md) defines contracts; [this handoff](PHASE-2-HANDOFF.md) records current evidence.
 
 ```mermaid
 flowchart TD
@@ -16,6 +14,11 @@ flowchart TD
   Reconcile --> History[IndexedDB: dated readings and gaps]
   State --> Views[Shared popup / side panel / dashboard]
   History --> Views
+  State --> Widget[Optional isolated website widget]
+  State --> Sync[Explicit opt-in snapshot queue / app device token]
+  Sync --> API[Optional OIDC / Fastify / PostgreSQL service]
+  API --> Phone[Read-focused phone dashboard]
+  Gate[Hosted authorization gate: closed] -.-> Collector[Production collector registry: empty]
   State --> Policy[Freshness / thresholds / quiet hours / deduplication]
   Policy --> Alerts[Optional desktop alerts and badge]
   Observer[Narrow local request observer] --> Reconcile
@@ -32,6 +35,7 @@ flowchart TD
 - `src/ui`: shared React views/selectors; sample preview is isolated in memory.
 - `entrypoints`: background, narrow content observer, popup, dashboard, side panel.
 - `companion`: optional independently authorized local Codex service/native host.
+- `server`: separately installed OIDC snapshot API, PostgreSQL leases/credential interfaces and phone web view; production hosted collectors remain disabled.
 
 The writable aggregate is `Store.version = 2`. It contains accounts (identity
 and preferences), workspaces, independently addressable connections, latest

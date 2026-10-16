@@ -14,7 +14,7 @@ omitted from public UI messages and exports. A display name may include the
 workspace name; an email is not used as the default display name. Nicknames
 you enter are stored locally.
 
-For Gemini, Grok, and Perplexity, the initial activity observer examines the
+For Gemini and explicit Grok/Perplexity activity-only mode, the observer examines the
 URL, method, and success status of a small allowlist of existing requests.
 It does not read request bodies, prompt text, response bodies, or chat history.
 These observations are local activity counts, not account-wide quotas.
@@ -30,10 +30,10 @@ Chrome local storage contains preferences, pseudonymous account IDs,
 nicknames, usage readings, refresh state, and bounded notification and
 observation/reset deduplication records, source connection state, workspace
 choices and the last normalized source snapshots. IndexedDB contains historical
-readings. History older than 30 days is pruned after a successful new reading.
+readings. History retention is selectable at 30/90 days, pruned on new readings and immediately when that setting is saved.
 
 This storage is local browser storage, not a separate encrypted vault. It
-does not synchronize between profiles or devices. Forgetting an account
+does not synchronize unless you explicitly enable the optional snapshot service. Forgetting an account
 removes its saved readings, nickname and history, including matching entries
 from V1 recovery copies; an opaque disabled source marker can remain to reject
 late messages. If it is the current tracked account,
@@ -41,11 +41,10 @@ tracking for that website is also disabled.
 
 ## Network traffic
 
-MyLimits has no analytics, telemetry, advertising, or cloud application server.
+MyLimits has no analytics, telemetry or advertising. A separate self-hosted snapshot service is optional and off by default.
 The optional companion is a local background service; Codex makes its authenticated
 OpenAI requests independently of website cookies.
-The extension's own requests target only the enabled provider's selected
-session and usage interfaces. It will not collect or forward conversations.
+Without sync, the extension’s own requests target only the enabled provider’s selected session and usage interfaces. Configured sync sends the allowlisted data described below only to its fixed approved server. It will not collect or forward conversations.
 Opening a website or its usage page is a visible action performed by the user.
 
 ## Permissions
@@ -82,7 +81,7 @@ URL passes through to open the provider's authorization page.
 
 The service polls about once a minute while your computer and user session remain
 running, even after Chrome closes. Browser desktop alerts and history collection
-require the extension to be running. No mobile or cloud collection is added.
+require the extension to be running. This service is local, not a hosted collector. Optional phone viewing uses separately synced snapshots.
 
 Pausing extension sync does not stop the service or revoke accounts. Disconnect
 an account in its Overview settings to request Codex logout before deleting the
@@ -108,8 +107,7 @@ account settings and does not pause collection of subsequent new readings.
 
 Quiet hours, snooze and reset alerts are local preferences. Reset alerts require
 fresh provider evidence of a new window; the passage of a countdown alone does
-not establish a reset. No backend, cloud synchronization, prompt analysis or
-conversation transfer is added by Phase 1.
+not establish a reset. The local Guide reviews text you explicitly paste; it stores none of that text and makes no AI requests. Handoff copy/download requires an explicit preview; editing invalidates that preview. No automatic conversation transfer occurs.
 
 ## Phase 2 optional snapshot sync
 
@@ -155,3 +153,17 @@ chat content, inputs, cookies, provider tokens or sync credentials; it does not
 subscribe to raw storage events. Page messages are not a command bridge.
 Position/collapse/hide choices are local, outside snapshot preference sync.
 Disabling it removes the UI and stops polling/listeners; tracking remains usable.
+
+
+Server history follows the synced 30/90-day preference, pruned on upload and by an
+hourly bounded maintenance pass. One dated last-known reading per source remains
+cached for inactive-account viewing. Resource caps can trim older samples sooner.
+Delete a synced account to remove its readings; delete all account data to scrub
+names/plans/device names, remove history/preferences and revoke device credentials.
+Opaque device/source tombstones can remain to reject stale uploads. Provider
+revocation is separate from deleting snapshot copies.
+
+The optional Windows setup reads only extension registration metadata from browser
+Preferences/Secure Preferences to locate MyLimits. It does not read cookies or
+transfer login state. Its uninstaller offers an explicit local-credential deletion
+choice; deleting files does not prove provider-side logout.

@@ -162,3 +162,32 @@ Run `npm run test:web --prefix server` with an isolated test database and availa
 Playwright Chromium (`CHROMIUM_PATH` optional) for real-service phone UI acceptance.
 Fixture sessions are seeded directly in the private test DB; there is no fixture
 login endpoint in the application.
+
+## Phase 2 operational bounds
+
+OIDC tokens also require an issued-at age of at most 24 hours, no future issue
+time, and correct authorized-party binding for multi-audience ID tokens.
+Login/callback and pairing attempts each have bounded per-IP in-process budgets;
+production still needs shared ingress limits. The API's body/batch/page/owner
+limits do not make a public deployment automatically production-ready.
+
+Per owner: at most 20 active / 200 total devices, 100 active / 1,000 retained
+account mappings and 2,000 source connections. Snapshot retention is 30/90 days
+from the synced preference, plus one last-known reading per source. Upload and
+hourly maintenance prune history; the resource cap retains at most 20,000 older
+samples plus those latest source readings. Original observation dates remain
+unchanged. Tombstones prevent replay and are never recycled into another source.
+
+For a real extension transport fixture (synthetic account/session and temporary
+PostgreSQL schema only):
+
+```sh
+npm run build:web --prefix server
+MYLIMITS_SYNC_ORIGIN=http://127.0.0.1:8789 npm run build
+npm run test:transport --prefix server
+npm run build   # restore the default local-only package before distribution
+```
+
+On PowerShell set `$env:MYLIMITS_SYNC_ORIGIN` for that build and remove it before
+building the default release. Test host grants exist only in temporary fixture
+copies; shipped packages keep every provider/server grant optional.

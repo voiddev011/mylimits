@@ -1,14 +1,17 @@
+import { verifyToken } from './token-verification';
 import type { FastifyInstance } from 'fastify';
 import type pg from 'pg';
 import { createHash } from 'node:crypto';
-import { createRemoteJWKSet,jwtVerify } from 'jose';
+import { createRemoteJWKSet } from 'jose';
 import { ApiError,opaque,ownerId } from './auth';
 import { hash,transaction } from './db';
 import type { Config } from './config';
 export function authRoutes(app:FastifyInstance,pool:pg.Pool,config:Config){
+ const budgets=new Map<string,{at:number;count:number}>();
  const cookie=(name:string,value:string,maxAge:number)=>`${name}=${value}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAge}${config.origin.startsWith('https:')?'; Secure':''}`;
  app.get('/auth/config',async()=>({configured:!!config.oidc,mode:'snapshot-only'}));
  app.get('/auth/login',async(req,reply)=>{
+  const now=Date.now(),prior=budgets.get(req.ip),budget=prior&&now-prior.at<60000?prior:{at:now,count:0};if(++budget.count>30)throw new ApiError(429,'authentication_budget_exceeded');budgets.delete(req.ip);budgets.set(req.ip,budget);if(budgets.size>2000)budgets.delete(budgets.keys().next().value!);
   const c=config.oidc;if(!c)throw new ApiError(503,'authentication_unconfigured');
   const state=opaque(),binding=opaque(),verifier=opaque(),nonce=opaque();
   const pair=(req.query as {pair?:string}).pair,returnPath=pair&&/^[A-F0-9]{12}$/.test(pair)?`/?pair=${pair}`:'/';
@@ -18,6 +21,7 @@ export function authRoutes(app:FastifyInstance,pool:pg.Pool,config:Config){
   return reply.header('set-cookie',cookie('mylimits_auth',binding,600)).redirect(u.href);
  });
  app.get('/auth/callback',async(req,reply)=>{
+  const now=Date.now(),prior=budgets.get(req.ip),budget=prior&&now-prior.at<60000?prior:{at:now,count:0};if(++budget.count>30)throw new ApiError(429,'authentication_budget_exceeded');budgets.delete(req.ip);budgets.set(req.ip,budget);if(budgets.size>2000)budgets.delete(budgets.keys().next().value!);
   const c=config.oidc;if(!c)throw new ApiError(503,'authentication_unconfigured');
   const q=req.query as Record<string,string>,binding=req.headers.cookie?.split(';').map(v=>v.trim()).find(v=>v.startsWith('mylimits_auth='))?.slice(14);
   if(!q.state||!q.code||!binding||q.error)throw new ApiError(400,'invalid_auth_callback');
@@ -26,7 +30,7 @@ export function authRoutes(app:FastifyInstance,pool:pg.Pool,config:Config){
   let identity:{issuer:string;subject:string};
   try{
    const response=await fetch(c.tokenEndpoint,{method:'POST',body,redirect:'error',signal:AbortSignal.timeout(10000)});if(!response.ok)throw new Error();const data=await response.json() as {id_token?:string};if(!data.id_token)throw new Error();
-   const {payload}=await jwtVerify(data.id_token,createRemoteJWKSet(new URL(c.jwksUri)),{issuer:c.issuer,audience:c.clientId,algorithms:['RS256','ES256'],requiredClaims:['sub','exp','iat','nonce']});if(payload.nonce!==a.nonce||!payload.sub)throw new Error();identity={issuer:c.issuer,subject:payload.sub};
+   identity=await verifyToken(data.id_token,createRemoteJWKSet(new URL(c.jwksUri)),{issuer:c.issuer,audience:c.clientId,nonce:a.nonce});
   }catch{throw new ApiError(401,'authentication_failed')}
   const owner=ownerId(identity.issuer,identity.subject),token=opaque();
   await transaction(pool,async db=>{await db.query('INSERT INTO owners(id) VALUES($1) ON CONFLICT DO NOTHING',[owner]);await db.query("INSERT INTO sessions(token_hash,owner_id,expires_at) VALUES($1,$2,now()+interval '8 hours')",[hash(token),owner])});

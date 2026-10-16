@@ -6,8 +6,8 @@ credential upload has been performed.
 ## Active checkpoint
 
 - Requested phase: Phase 2 (authorized by the user: “Start with next phase”).
-- Current work package: P2-09 — verified.
-- Next action: P2-10 — run integrated hardening, server/browser checks, release packaging and handoff.
+- Current work package: P2-10 — implemented.
+- Next action: P2-10 — publish final code checkpoint, inspect all CI jobs and artifact presence, then record final handoff.
 - Working branch/commit: `v2/phase-2`; Phase 1 and main preserved.
 - Authoritative scope: [master plan](V2-IMPLEMENTATION-PLAN.md),
   [Phase 1](PHASE-1.md), [Phase 2](PHASE-2.md).
@@ -43,7 +43,7 @@ implemented independent work while leaving that specific check pending.
 | P2-07 | 10 | verified | See checkpoint below. |
 | P2-08 | 8 | verified | See checkpoint below. |
 | P2-09 | 10 | verified | See checkpoint below. |
-| P2-10 | 10 | not_started | |
+| P2-10 | 10 | implemented | See checkpoint below. |
 | **Phase 2 total** | **100** | **in_progress** | Ordered implementation; external provider gates recorded separately. |
 
 Points are relative estimates, not elapsed time. Record changes to remaining
@@ -127,19 +127,19 @@ State: **implemented**. Added validated account pin/order/snooze preferences, so
 
 Next: P1-06 — implement persisted refresh policy and request coordination.
 
-## P1-06 checkpoint — 15 October 2026
+## P1-06 checkpoint — 16 October 2026
 
 State: **verified**. Added a two-slot refresh coordinator, same-source coalescing/cancellation, persisted generation/attempt/backoff state, Retry-After handling and startup/open/tab recovery policies. Added fake-clock and concurrency tests; type checking and 54 core tests pass. Browser observation updates retain their original reported-meter age and are stored in source snapshots. Account controls from P1-05 are ready for UI integration.
 
 Next: P1-07 — build the compact shared interface and account controls.
 
-## P1-05 checkpoint — 15 October 2026
+## P1-05 checkpoint — 16 October 2026
 
 State: **verified**. Completed UI integration in P1-07: rename, pins, order, per-account thresholds, source disconnect, reconnect and workspace controls are available. Production browser regressions for rename persistence, denied access, native independent accounts and remembered disconnect pass.
 
 Next: P1-08 — implement timing-aware notification delivery.
 
-## P1-07 checkpoint — 15 October 2026
+## P1-07 checkpoint — 16 October 2026
 
 State: **verified**. Rebuilt shared popup/dashboard/side-panel surfaces with compact account rows, two pinned meters, clear source age/status, Accounts/History/Settings screens, optional advanced companion, keyboard Escape and light/dark themes. Type check, production build and all 10 adapted regression browser fixtures pass. Visually inspected the captured dashboard preview. Added an explicit six-account fit and pin-persistence integration case for the final gate; actual Windows DPI remains unverified.
 
@@ -296,3 +296,21 @@ Next: P2-09 — implement and verify browser fallbacks and unsigned Windows inst
 State: **verified**. Changed browser-specific WXT builds/permissions and Firefox sync data-consent checks; optional native UI fallback; Edge host registration; extension-metadata discovery; Windows GUI setup/uninstall, NSIS packaging/checksums and Windows CI parser/GUI/compiler steps; platform/companion docs and tests. Chrome/Edge/Firefox MV3 builds pass and package-contract checker passes; Firefox 140+ uses sidebar/event page and excludes unsupported native setup. 88 core and 17 companion tests passed. Actual unsigned NSIS EXE compiled locally (158753 bytes) with SHA-256; installer/Start-menu use current-user paths, no elevation, automatic profile selection plus manual fallback and explicit credential deletion choice. Local apt index lacked NSIS; temporary official Debian packages supplied compiler, without changing system packages. Real Windows clean install/update/uninstall/browser/native acceptance and real Firefox/provider behavior remain pending; Windows PowerShell parser/GUI checks execute in CI, not claimed locally passed. Installer prerequisites remain Node 24+ and official Codex CLI, documented as optional advanced setup.
 
 Next: P2-10 — run integrated hardening, server/browser checks, release packaging and handoff.
+
+## P2-10 checkpoint — 16 October 2026
+
+State: **in_progress**. Final phase gate: extension/core/native/browser suites, real PostgreSQL server and phone dashboard tests, actual transport pairing/snapshot E2E, platform package checks and unsigned installer. Preserve source dates, tenant isolation, deletion tombstones and disabled production collectors. Measure bundles/request bounds; update all current user docs and publish branch.
+
+Next: P2-10 — harden auth/deletion/sync edges, add integrated service CI and produce final packages/handoff.
+
+## P2-10 checkpoint — 16 October 2026
+
+State: **in_progress**. Actual local integrated extension gate passed: typecheck, 90 core tests, 17 companion tests and production build (717.31 kB); all 19 Chromium fixtures passed. Actual HTTP extension pairing/upload/delete E2E passed; phone dashboard test passed against PostgreSQL. Server typecheck found an uninitialized test variable, now corrected; rerun pending. Earlier P2-09 Windows CI exposed empty-array/null discovery handling in PowerShell GUI; fixed filtering, awaiting Windows CI retest. Real Windows GUI install/browser/provider and Firefox/provider remain unverified. No production collector or credentials enabled.
+
+Next: P2-10 — finish server recheck, publish hardening checkpoint and inspect all CI jobs/artifacts.
+
+## P2-10 checkpoint — 16 October 2026
+
+State: **implemented**. Changed final extension version/package locks, auth verification helper and real-signature tests, tenant lock order/deletion/device scrubbing, bounded API storage and hourly retention plus migration 005, stale sync backlog handling, activity-only observer lifecycle, currency display/export, actual HTTP transport fixture, complete service/platform/archive CI, Windows empty/multiple discovery regression, current docs and Phase 2 handoff. Available local checks pass: 90 core, 17 companion, 19 full browser fixtures plus targeted source/widget and popup measurement reruns; 30 real-PostgreSQL server tests/types with fresh/repeat migrations; phone and actual extension HTTP pairing/upload/delete fixtures. Six cached rows measured 230 ms at 520x600 in Linux headless Chromium. Browser variants/contracts, actual clean ZIPs/checksums and unsigned NSIS installer compiled. Source ZIP auto-generation was disabled after inspection found generated artifacts included; distributable extension ZIPs contain no private/test grants. Final Windows CI and complete release artifact inspection are pending. Production cloud collector, live provider/logout and real OS acceptance remain external blockers.
+
+Next: P2-10 — publish final code checkpoint, inspect all CI jobs and artifact presence, then record final handoff.

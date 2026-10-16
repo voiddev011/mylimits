@@ -29,7 +29,7 @@ export function exportReadings(accounts:Account[],points:HistoryPoint[],format:'
  const safe=points.map(publicHistory);
  const text=format==='json'?JSON.stringify({schemaVersion:2,exportedAt:new Date(now).toISOString(),accounts:safeAccounts,readings:safe},null,2):[
   ['account','provider','observed_at','received_at','source','scope','evidence','meter','used_percent','used','total','remaining','unit','currency','reset_at'].map(csvCell).join(','),
-  ...safe.flatMap(p=>p.meters.map(m=>{const a=safeAccounts.find(a=>a.id===p.accountId);return [a?.name??p.accountId,a?.provider??'',new Date(p.observedAt??p.time).toISOString(),new Date(p.receivedAt??p.time).toISOString(),m.source??(p.legacy?'Legacy reading; scope not recorded':''),m.scope??'',m.evidence??'unverified legacy',m.label??m.id,m.usedPercent,m.used,m.total,m.remaining,m.unit,m.currency,m.resetsAt?new Date(m.resetsAt).toISOString():''].map(csvCell).join(',')})),
+  ...safe.flatMap(p=>p.meters.map(m=>{const a=safeAccounts.find(a=>a.id===p.accountId);return [a?.name??p.accountId,a?.provider??'',new Date(m.observedAt??p.observedAt??p.time).toISOString(),new Date(p.receivedAt??p.time).toISOString(),m.source??(p.legacy?'Legacy reading; scope not recorded':''),m.scope??'',m.evidence??'unverified legacy',m.label??m.id,m.usedPercent,m.used,m.total,m.remaining,m.unit,m.currency,m.resetsAt?new Date(m.resetsAt).toISOString():''].map(csvCell).join(',')})),
  ].join('\r\n');
  return {name:`mylimits-readings-${new Date(now).toISOString().slice(0,10)}.${format}`,mime:format==='json'?'application/json':'text/csv;charset=utf-8',text};
 }
