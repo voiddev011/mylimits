@@ -7,7 +7,7 @@ credential upload has been performed.
 
 - Requested phase: Phase 2 (authorized by the user: “Start with next phase”).
 - Current work package: P2-10 — implemented.
-- Next action: P2-10 — inspect replacement CI run, verify native/extension artifacts, then finalize status and handoff.
+- Next action: P2-10 — verify initialized transport fixture in CI, then record successful run and artifact IDs.
 - Working branch/commit: `v2/phase-2`; Phase 1 and main preserved.
 - Authoritative scope: [master plan](V2-IMPLEMENTATION-PLAN.md),
   [Phase 1](PHASE-1.md), [Phase 2](PHASE-2.md).
@@ -151,7 +151,7 @@ State: **verified**. Implemented overnight local quiet hours, per-account snooze
 
 Next: P1-09 — finish paginated history, export and data controls.
 
-## P1-09 checkpoint — 15 October 2026
+## P1-09 checkpoint — 16 October 2026
 
 State: **verified**. Implemented real IndexedDB pagination with stable timestamp/ID cursors, snapshot deduplication, 30-day pruning, safe JSON/CSV export, date filters, basic observation bars and confirmed history clearing. Exports allowlist fields and disarm CSV formulas. Serializing accepted-history writes prevents forgotten accounts from being reinserted. Browser checks verified pagination, retention, source metadata and V1 history migration across a real browser restart. Fixed an IndexedDB auto-key write issue caught by those tests. Added pruning of forgotten accounts from local recovery copies and late-native-source tombstones; final integration verifies these additional deletion cases.
 
@@ -320,3 +320,9 @@ Next: P2-10 — publish final code checkpoint, inspect all CI jobs and artifact 
 State: **implemented**. Final connected-services CI passed 30 PostgreSQL/auth/job tests, phone view and actual HTTP transport; Linux verification and clean extension ZIP artifact were produced. Windows CI now passes real PowerShell parsing, GUI construction and empty/multiple candidate checks, but NSIS exposed mixed Windows source-path separators; corrected to native NSIS separators and actual Linux EXE compilation passes. Final controller registration/stop guards ensure Grok/Perplexity observers exist only in activity mode, reconcile on restart and unregister on quota switch. Typecheck and targeted Perplexity/widget fixtures pass locally; final Windows packaging rerun remains pending. No live OS/provider claim changed.
 
 Next: P2-10 — inspect replacement CI run, verify native/extension artifacts, then finalize status and handoff.
+
+## P2-10 checkpoint — 16 October 2026
+
+State: **implemented**. Windows CI now passes real PowerShell parsing/GUI regression checks and actual NSIS packaging, producing a nonempty unsigned installer artifact. Full extension CI passes with the clean Chrome/Firefox artifact. Actual transport CI exposed a fixture race: cached test state could be written before durable schema/history initialization. The fixture now waits for the initialized empty dashboard, seeds inactive cached data independently of provider grants, and waits for that named account before pairing. Local actual HTTP transport retest passes with original observation age and deletion; server typecheck passes. No runtime code changed for this fixture correction. Final all-job CI rerun pending.
+
+Next: P2-10 — verify initialized transport fixture in CI, then record successful run and artifact IDs.
