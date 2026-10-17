@@ -28,7 +28,7 @@
 
 ## Actual local verification
 
-- `npm run test:account-proof`: **26/26 pass** on Linux, Node 24.19.0.
+- `npm run test:account-proof`: **27/27 pass** on Linux, Node 24.19.0.
   Includes real fictional CLI child processes, real PTYs, two-account isolation,
   changed fixture values, identity/generation fencing, onboarding refusal,
   unknown-panel timeout, aborted login, quota retention, logout acknowledgment,
@@ -38,6 +38,13 @@
 - `node scripts/account-proof.mjs --help`: **pass**; `git diff --check`: **pass**.
 - CI now runs the diagnostic tests on Linux and native Windows/ConPTY. Results
   will be recorded below after publication; do not assume a pending run passed.
+- First run 39005904346: Linux proof/core/build/browser checks passed;
+  connected-services passed. Windows core/native/build passed, but two proof
+  cleanup hooks hit EBUSY after asynchronous ConPTY shutdown (23 passed, two
+  failed, one POSIX-only skip). Corrected by awaiting terminal exit/PID release
+  before resolving a probe, using the pinned library's bundled ConPTY prototype
+  and bounded Windows filesystem retries. Added the specific race regression.
+  The updated Linux suite passes 27/27; corrected Windows rerun remains pending.
 - Offline lockfile normalization first failed on an uncached pre-existing WASM
   package. Normalization with registry access succeeded. Existing dependency
   versions were retained; npm added bundled optional-package metadata.

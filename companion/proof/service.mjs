@@ -14,7 +14,7 @@ export const manualChecks = ['two-distinct-accounts', 'primary-browser-unchanged
   'other-device-change', 'ordinary-website-logout', 'global-revocation', 'restart-and-renewal'];
 const errorCodes = new Set(['needs-sign-in', 'unsupported-auth', 'unverified-profile', 'unverified-identity',
   'unsupported-format', 'unavailable', 'missing-terminal', 'terminal-unavailable', 'cancelled', 'unsupported-panel',
-  'needs-setup', 'output-limit', 'cli-stopped', 'identity-changed', 'cooldown', 'login-unsupported', 'login-failed']);
+  'needs-setup', 'output-limit', 'cli-stopped', 'identity-changed', 'cooldown', 'login-unsupported', 'login-failed', 'terminal-stop-unconfirmed']);
 
 function codexIdentity(info) {
   const account = info?.account;
@@ -252,6 +252,7 @@ export class AccountProof {
         return { id: profile.id, provider: profile.provider, alias: profile.alias, generation: profile.generation,
           identityGroup: groups.get(profile.identityBinding) ?? null,
           identityConfidence: this.identities.get(profile.id)?.confidence ?? 'not checked this run',
+          plan: this.identities.get(profile.id)?.plan ?? null,
           status: snapshot?.status ?? 'not-checked', nextCheckAt: this.cooldowns.get(profile.id) ?? null,
           last: snapshot?.last ?? null, history: snapshot?.history ?? [] };
       }),

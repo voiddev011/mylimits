@@ -19,7 +19,8 @@ export function claudeIdentity(value, expectedDirectory, platform = process.plat
   if (!email) throw new ProbeError('unverified-identity', 'The official auth status did not expose a usable account identity.');
   // These are optional official metadata, not IDs inferred from an email.
   const org = typeof value.orgId === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(value.orgId) ? value.orgId : null;
-  return { binding: JSON.stringify([email, org]), display: email, confidence: org ? 'email-and-organization' : 'email-only', plan: null };
+  const plan = ['pro', 'max', 'team', 'enterprise'].includes(value.subscriptionType) ? value.subscriptionType : null;
+  return { binding: JSON.stringify([email, org]), display: email, confidence: org ? 'email-and-organization' : 'email-only', plan };
 }
 
 export async function readClaudeIdentity({ executable, home, workspace, env, signal }) {
@@ -74,6 +75,26 @@ export async function loadTerminalDependencies() {
   } catch { throw new ProbeError('missing-terminal', 'Terminal support is unavailable. Install optional dependencies: npm install --include=optional.'); }
 }
 
+export function stopProbeTerminal(child, alreadyExited = false, timeout = 7000) {
+  return new Promise(resolve => {
+    let exited = alreadyExited;
+    const pid = child.pid;
+    const subscription = child.onExit(() => { exited = true; });
+    const timer = setTimeout(() => finish(false), timeout);
+    const interval = setInterval(check, 50);
+    function finish(stopped) { clearTimeout(timer); clearInterval(interval); subscription.dispose(); resolve(stopped); }
+    function check() {
+      let alive = false;
+      if (Number.isInteger(pid) && pid > 0) {
+        try { process.kill(pid, 0); alive = true; } catch (error) { alive = error.code !== 'ESRCH'; }
+      }
+      if (exited && !alive) finish(true);
+    }
+    if (!alreadyExited) try { child.kill(); } catch {}
+    check();
+  });
+}
+
 /** A fresh process per explicit check. Only /usage and terminal replies are sent. */
 export async function probeClaudeUsage({ executable, workspace, env, timeout = 30_000, settleMs = 800, dependencies, signal }) {
   const { spawnPty, Terminal } = dependencies ?? await loadTerminalDependencies();
@@ -81,17 +102,24 @@ export async function probeClaudeUsage({ executable, workspace, env, timeout = 3
   const [file, args] = command(executable, claudeProbeArguments());
   const terminal = new Terminal({ cols: 120, rows: 50, scrollback: 0, allowProposedApi: true });
   let child;
-  try { child = spawnPty(file, args, { name: 'xterm-256color', cols: 120, rows: 50, cwd: workspace, env, useConpty: true }); }
+  // The pinned library's bundled ConPTY avoids its older asynchronous console-
+  // enumeration helper, which races process teardown on current Windows runners.
+  try { child = spawnPty(file, args, { name: 'xterm-256color', cols: 120, rows: 50, cwd: workspace, env, useConpty: true, useConptyDll: process.platform === 'win32' }); }
   catch { terminal.dispose(); throw new ProbeError('terminal-unavailable', 'Could not start the Claude terminal. See diagnostic setup instructions.'); }
   return new Promise((resolve, reject) => {
-    let done = false, sent = false, size = 0, settling;
+    let done = false, sent = false, size = 0, settling, exited = false;
     const subscriptions = [];
     const finish = (error, result) => {
       if (done) return; done = true;
       clearTimeout(timer); clearTimeout(settling); signal?.removeEventListener('abort', abort);
       for (const subscription of subscriptions) subscription.dispose();
-      try { child.kill(); } catch {}
-      terminal.dispose(); error ? reject(error) : resolve(result);
+      terminal.dispose();
+      // kill() is asynchronous on Windows. Do not hand a result to the caller
+      // or release its ownership lock while the profile process still runs.
+      void stopProbeTerminal(child, exited).then(stopped => {
+        if (!stopped) reject(new ProbeError('terminal-stop-unconfirmed', 'Could not confirm the probe terminal stopped. Close the diagnostic and check its owned processes before restarting.'));
+        else error ? reject(error) : resolve(result);
+      });
     };
     const abort = () => finish(new ProbeError('cancelled', 'Check cancelled.'));
     const timer = setTimeout(() => finish(new ProbeError('unsupported-panel', 'No supported /usage panel appeared. Complete first-party CLI setup in the isolated profile, or report the CLI version.')), timeout);
@@ -127,6 +155,6 @@ export async function probeClaudeUsage({ executable, workspace, env, timeout = 3
         }, settleMs);
       });
     }));
-    subscriptions.push(child.onExit(() => finish(new ProbeError('cli-stopped', 'Claude stopped before a supported usage panel could be read.'))));
+    subscriptions.push(child.onExit(() => { exited = true; finish(new ProbeError('cli-stopped', 'Claude stopped before a supported usage panel could be read.')); }));
   });
 }

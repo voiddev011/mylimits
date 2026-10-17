@@ -12,7 +12,7 @@ branch `v3/account-proof`. Research plan supersedes the earlier V3 multi-account
 claims. Profile/runtime and account-bound OpenAI/Claude candidate probes are
 implemented. Real accounts, isolated Claude browser login, Windows interactive
 acceptance and Claude monitoring/distribution permission remain unverified.
-Actual checks: 26/26 new diagnostic tests pass, including real fictional CLI
+Actual checks: 27/27 new diagnostic tests pass, including real fictional CLI
 subprocesses and PTYs. Existing `npm run check` also passes. Windows proof CI is
 not yet recorded. See [ACCOUNT-PROOF.md](ACCOUNT-PROOF.md).
 Next: publish branch, inspect CI, and record handoff evidence.
@@ -604,3 +604,18 @@ No AGENTS.md applies; one workstream, no parallel agents.
   fixture CI is pending at this checkpoint; real desktop sign-in remains separate.
 - Next: publish branch and record CI. Live manual proof is the next dependency
   before Gates 2–5; no independent-Claude extension UI was enabled.
+
+### PROOF-01 Windows shutdown correction
+
+- Published first source checkpoint `a9f121ac2bf55f90ad86671c47d3132772c2a02c`,
+  exact local tree `3d6a3bed54f430601b4980ddbb03276aa2e1601b` (`4996315`).
+- CI run 39005904346: Linux diagnostic, core/build and browser checks passed;
+  connected-services passed. Windows core/native/build passed; proof had 23 passes,
+  two failures and one intentional POSIX-symlink skip. Both failures were EBUSY
+  during fixture cleanup because kill() returned before ConPTY released its cwd.
+- Added bounded exit/PID acknowledgment before a terminal result is released,
+  selected the pinned library's bundled ConPTY implementation for this prototype,
+  and added Windows filesystem cleanup retries plus a shutdown-race regression.
+  Unknown/unconfirmed shutdown fails closed. No other process is killed.
+- Also include provider-reported plan metadata in redacted reports; absent plans
+  stay null. Local updated diagnostic suite: **27/27 pass**. Windows rerun follows.
