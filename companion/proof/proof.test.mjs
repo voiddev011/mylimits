@@ -8,7 +8,7 @@ import { EventEmitter } from 'node:events';
 import { profileEnvironment, command, runCli, proofDirectory } from './runtime.mjs';
 import { ProofStore, privateDirectory } from './store.mjs';
 import { AccountProof } from './service.mjs';
-import { claudeIdentity, parseClaudeUsage, claudeProbeArguments, probeClaudeUsage } from './claude.mjs';
+import { claudeIdentity, parseClaudeUsage, claudeProbeArguments, probeClaudeUsage, stopProbeTerminal } from './claude.mjs';
 import { codexLoginWaiter } from './codex-login.mjs';
 
 const executable = fileURLToPath(new URL('../../tests/fixtures/account-proof-cli.mjs', import.meta.url));
@@ -18,7 +18,7 @@ async function fixture(t, options = {}) {
   const store = new ProofStore(directory);
   const service = new AccountProof({ store, locate: async () => executable, ...options });
   await service.load();
-  t.after(async () => { await service.close(); await rm(directory, { force: true, recursive: true }); });
+  t.after(async () => { await service.close(); await rm(directory, { force: true, recursive: true, maxRetries: 10, retryDelay: 100 }); });
   return { service, store, directory };
 }
 async function profileFixture(store, provider, alias, email, used) {
@@ -72,6 +72,8 @@ test('private profile roots reject symbolic links', { skip: process.platform ===
 test('Claude identity requires documented directory confirmation and subscription auth', () => {
   const value = { loggedIn: true, authMethod: 'claude.ai', email: 'A@fixture.test', configDirectory: '/profiles/a' };
   assert.equal(claudeIdentity(value, '/profiles/a', 'linux').display, 'a@fixture.test');
+  assert.equal(claudeIdentity({ ...value, subscriptionType: 'max' }, '/profiles/a', 'linux').plan, 'max');
+  assert.equal(claudeIdentity({ ...value, subscriptionType: 'unknown' }, '/profiles/a', 'linux').plan, null);
   for (const authMethod of ['api_key', 'oauth_token', 'third_party', 'api_key_helper']) assert.throws(() => claudeIdentity({ ...value, authMethod }, '/profiles/a'), /subscription/);
   assert.throws(() => claudeIdentity({ ...value, configDirectory: '/profiles/b' }, '/profiles/a'), /expected config/);
   assert.throws(() => claudeIdentity({ ...value, email: null }, '/profiles/a'), /identity/);
@@ -277,4 +279,12 @@ test('auth generation change while a read is in flight cannot install a stale re
   const rejected = assert.rejects(task, error => error.code === 'identity-changed');
   await begun; a.generation++; release(); await rejected;
   assert.equal(service.report().profiles[0].last, null);
+});
+test('a terminal result waits for asynchronous exit acknowledgment rather than only calling kill', async () => {
+  let onExit, killed = false, resolved = false;
+  const child = { onExit: listener => { onExit = listener; return { dispose() {} }; }, kill() { killed = true; } };
+  const stopping = stopProbeTerminal(child, false, 1000).then(value => { resolved = true; return value; });
+  await new Promise(resolve => setTimeout(resolve, 20));
+  assert.equal(killed, true); assert.equal(resolved, false);
+  onExit(); assert.equal(await stopping, true);
 });
