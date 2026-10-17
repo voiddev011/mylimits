@@ -1,5 +1,9 @@
 # MyLimits 3.0 — Clean dashboard preview
 
+Current development: [independent-account proof tool](ACCOUNT-PROOF.md) on
+`v3/account-proof`. It is separate from the extension and does not enable a
+released independent Claude connection. [Current handoff](ACCOUNT-PROOF-HANDOFF.md).
+
 Your AI limits, named accounts and resets in one place. Development branch:
 **`v3/redesign`**. [Install/update](INSTALL.md) · [Implementation plan](V3-IMPLEMENTATION-PLAN.md)
 · [Current status](IMPLEMENTATION-STATUS.md) · [Handoff](V3-HANDOFF.md).

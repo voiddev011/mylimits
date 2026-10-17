@@ -16,6 +16,8 @@ jobs:
         run: npm ci
       - name: Core tests, type checking and extension build
         run: npm run check
+      - name: Account proof subprocess and PTY regressions (fictional accounts)
+        run: npm run test:account-proof
       - name: Install Chromium for browser tests
         run: npx playwright install --with-deps chromium
       - name: Browser tests
@@ -55,6 +57,8 @@ jobs:
           node-version: 24
       - run: npm ci
       - run: npm run check
+      - name: Account proof Windows ConPTY regressions (fictional accounts)
+        run: npm run test:account-proof
       - name: Parse Windows scripts and construct setup GUI without installing
         shell: powershell
         run: ./scripts/test-windows-setup.ps1

@@ -5,12 +5,12 @@ import { EventEmitter } from 'node:events';
 
 // Only this process speaks to Codex. Raw responses and stderr never go to Chrome.
 export class AppServer extends EventEmitter {
-  constructor({ executable = 'codex', home, timeout = 30_000, spawnProcess = spawn }) {
+  constructor({ executable = 'codex', home, timeout = 30_000, spawnProcess = spawn, environment = process.env }) {
     super();
     this.pending = new Map(); this.nextId = 0; this.timeout = timeout;
     const script = /\.m?js$/i.test(executable);
     this.child = spawnProcess(script ? process.execPath : executable, [...(script ? [executable] : []), 'app-server', '--listen', 'stdio://'], {
-      env: { ...process.env, PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ''}`, CODEX_HOME: home }, stdio: ['pipe', 'pipe', 'pipe'],
+      env: { ...environment, PATH: `${path.dirname(process.execPath)}${path.delimiter}${environment.PATH ?? environment.Path ?? ''}`, CODEX_HOME: home }, stdio: ['pipe', 'pipe', 'pipe'],
     });
     let buffered = ''; const decoder = new StringDecoder('utf8');
     this.child.stdout.on('data', chunk => {
