@@ -281,10 +281,20 @@ test('auth generation change while a read is in flight cannot install a stale re
   assert.equal(service.report().profiles[0].last, null);
 });
 test('a terminal result waits for asynchronous exit acknowledgment rather than only calling kill', async () => {
-  let onExit, killed = false, resolved = false;
-  const child = { onExit: listener => { onExit = listener; return { dispose() {} }; }, kill() { killed = true; } };
+  let onExit, killed = false, resolved = false; const control = [];
+  const child = { onExit: listener => { onExit = listener; return { dispose() {} }; }, write: value => control.push(value), kill() { killed = true; } };
   const stopping = stopProbeTerminal(child, false, 1000).then(value => { resolved = true; return value; });
   await new Promise(resolve => setTimeout(resolve, 20));
-  assert.equal(killed, true); assert.equal(resolved, false);
+  assert.equal(control[0], '\x03'); assert.equal(killed, false); assert.equal(resolved, false);
   onExit(); assert.equal(await stopping, true);
+});
+test('unconfirmed terminal shutdown rejects successful-looking results and retains the recovery lock', async t => {
+  const { service, store, directory } = await fixture(t, { version: async () => '0.0.1',
+    claudeIdentity: async () => ({ binding: 'fictional-account', display: 'A', confidence: 'fixture', plan: null }),
+    claudeUsage: async () => { const error = new Error('stop unconfirmed'); error.code = 'terminal-stop-unconfirmed'; throw error; } });
+  const a = await store.create('claude', 'A'); await assert.rejects(service.check(a.id));
+  await service.close();
+  assert.ok((await readFile(path.join(directory, 'proof.lock'), 'utf8')).length);
+  await assert.rejects(new ProofStore(directory).load(), /already running/);
+  assert.equal(service.report().profiles[0].last, null);
 });

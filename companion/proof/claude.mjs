@@ -82,7 +82,9 @@ export function stopProbeTerminal(child, alreadyExited = false, timeout = 7000) 
     const subscription = child.onExit(() => { exited = true; });
     const timer = setTimeout(() => finish(false), timeout);
     const interval = setInterval(check, 50);
-    function finish(stopped) { clearTimeout(timer); clearInterval(interval); subscription.dispose(); resolve(stopped); }
+    const secondInterrupt = setTimeout(() => { if (!exited) try { child.write('\x03'); } catch {} }, 150);
+    const forceStop = setTimeout(() => { if (!exited) try { child.kill(); } catch {} }, 500);
+    function finish(stopped) { clearTimeout(timer); clearInterval(interval); clearTimeout(secondInterrupt); clearTimeout(forceStop); subscription.dispose(); resolve(stopped); }
     function check() {
       let alive = false;
       if (Number.isInteger(pid) && pid > 0) {
@@ -90,7 +92,9 @@ export function stopProbeTerminal(child, alreadyExited = false, timeout = 7000) 
       }
       if (exited && !alive) finish(true);
     }
-    if (!alreadyExited) try { child.kill(); } catch {}
+    // Let the unmodified CLI handle Ctrl+C before closing ConPTY handles. This
+    // avoids a Windows console-enumeration race and sends no text/model prompt.
+    if (!alreadyExited) try { child.write('\x03'); } catch {}
     check();
   });
 }
@@ -102,9 +106,7 @@ export async function probeClaudeUsage({ executable, workspace, env, timeout = 3
   const [file, args] = command(executable, claudeProbeArguments());
   const terminal = new Terminal({ cols: 120, rows: 50, scrollback: 0, allowProposedApi: true });
   let child;
-  // The pinned library's bundled ConPTY avoids its older asynchronous console-
-  // enumeration helper, which races process teardown on current Windows runners.
-  try { child = spawnPty(file, args, { name: 'xterm-256color', cols: 120, rows: 50, cwd: workspace, env, useConpty: true, useConptyDll: process.platform === 'win32' }); }
+  try { child = spawnPty(file, args, { name: 'xterm-256color', cols: 120, rows: 50, cwd: workspace, env, useConpty: true }); }
   catch { terminal.dispose(); throw new ProbeError('terminal-unavailable', 'Could not start the Claude terminal. See diagnostic setup instructions.'); }
   return new Promise((resolve, reject) => {
     let done = false, sent = false, size = 0, settling, exited = false;
