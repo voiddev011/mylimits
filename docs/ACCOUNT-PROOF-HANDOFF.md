@@ -28,7 +28,7 @@
 
 ## Actual local verification
 
-- `npm run test:account-proof`: **27/27 pass** on Linux, Node 24.19.0.
+- `npm run test:account-proof`: **28/28 pass** on Linux, Node 24.19.0.
   Includes real fictional CLI child processes, real PTYs, two-account isolation,
   changed fixture values, identity/generation fencing, onboarding refusal,
   unknown-panel timeout, aborted login, quota retention, logout acknowledgment,
@@ -45,6 +45,17 @@
   before resolving a probe, using the pinned library's bundled ConPTY prototype
   and bounded Windows filesystem retries. Added the specific race regression.
   The updated Linux suite passes 27/27; corrected Windows rerun remains pending.
+- Follow-up run 39006181611 passed Linux proof/full extension and connected-services;
+  its experimental bundled-ConPTY path stalled on Windows and was rejected. The
+  current code uses OS ConPTY, graceful control interrupts and bounded shutdown
+  confirmation. Unconfirmed process exit retains the ownership lock for explicit
+  recovery. CI proof steps now have a three-minute deadline and superseded branch
+  runs are cancelled. A recovery-lock regression brings the local suite to 28.
+- Official unmodified Claude Code **2.1.301** ran only `--version` and
+  `auth login --help` in a fresh unauthenticated temporary profile. Help exposes
+  subscription/Console/email/SSO options, no --no-browser option. This is actual
+  help inspection, not auth/quota/live-account proof and not proof that no other
+  undocumented routing mechanism exists.
 - Offline lockfile normalization first failed on an uncached pre-existing WASM
   package. Normalization with registry access succeeded. Existing dependency
   versions were retained; npm added bundled optional-package metadata.

@@ -61,10 +61,10 @@ export class ProofStore {
     this.saving = this.saving.catch(() => {}).then(() => atomicJson(path.join(this.directory, 'profiles.json'), state));
     return this.saving;
   }
-  async close() {
+  async close({ retainLock = false } = {}) {
     if (!this.lock) return;
     await this.saving;
     await this.lock.close(); this.lock = null;
-    await unlink(path.join(this.directory, 'proof.lock')).catch(error => { if (error.code !== 'ENOENT') throw error; });
+    if (!retainLock) await unlink(path.join(this.directory, 'proof.lock')).catch(error => { if (error.code !== 'ENOENT') throw error; });
   }
 }

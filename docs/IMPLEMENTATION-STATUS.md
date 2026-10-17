@@ -12,7 +12,7 @@ branch `v3/account-proof`. Research plan supersedes the earlier V3 multi-account
 claims. Profile/runtime and account-bound OpenAI/Claude candidate probes are
 implemented. Real accounts, isolated Claude browser login, Windows interactive
 acceptance and Claude monitoring/distribution permission remain unverified.
-Actual checks: 27/27 new diagnostic tests pass, including real fictional CLI
+Actual checks: 28/28 new diagnostic tests pass, including real fictional CLI
 subprocesses and PTYs. Existing `npm run check` also passes. Windows proof CI is
 not yet recorded. See [ACCOUNT-PROOF.md](ACCOUNT-PROOF.md).
 Next: publish branch, inspect CI, and record handoff evidence.
@@ -619,3 +619,22 @@ No AGENTS.md applies; one workstream, no parallel agents.
   Unknown/unconfirmed shutdown fails closed. No other process is killed.
 - Also include provider-reported plan metadata in redacted reports; absent plans
   stay null. Local updated diagnostic suite: **27/27 pass**. Windows rerun follows.
+
+### PROOF-01 bounded process cleanup
+
+- Follow-up source `69d7b2daba226e88540b5fd332a8af393e3853ae` (local `490541e`,
+  tree `183ab3552f6754d03933d266607a3b3728a86eda`) passed Linux proof and extension
+  verification plus connected-services in run 39006181611. Its experimental
+  bundled-ConPTY path stalled the Windows proof step, so it is not accepted.
+- Reverted to OS ConPTY. Probe shutdown now first sends control interrupts, waits
+  for exit/PID release, then uses a bounded force-stop fallback. An unconfirmed
+  process stop retains the recovery lock and blocks further provider operations.
+  Codex proof subprocess shutdown is also acknowledged before returning results.
+- Added a recovery-lock regression and three-minute CI proof-step deadlines;
+  branch-scoped concurrency cancels superseded CI runs. Updated suite: 28 tests.
+- Actual official Claude Code 2.1.301 `--version` and `auth login --help` ran in a
+  fresh unauthenticated temporary profile. Help lists --claudeai/--console/--email/
+  --sso, with no exposed --no-browser option. This is capability inspection only:
+  no login, quota or model request; it does not prove all possible hidden options
+  absent. Automated isolated-browser sign-in stays unverified.
+- Next: verify corrected local tests, push this correction, inspect Windows CI.

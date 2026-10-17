@@ -14,7 +14,7 @@ export const manualChecks = ['two-distinct-accounts', 'primary-browser-unchanged
   'other-device-change', 'ordinary-website-logout', 'global-revocation', 'restart-and-renewal'];
 const errorCodes = new Set(['needs-sign-in', 'unsupported-auth', 'unverified-profile', 'unverified-identity',
   'unsupported-format', 'unavailable', 'missing-terminal', 'terminal-unavailable', 'cancelled', 'unsupported-panel',
-  'needs-setup', 'output-limit', 'cli-stopped', 'identity-changed', 'cooldown', 'login-unsupported', 'login-failed', 'terminal-stop-unconfirmed']);
+  'needs-setup', 'output-limit', 'cli-stopped', 'identity-changed', 'cooldown', 'login-unsupported', 'login-failed', 'terminal-stop-unconfirmed', 'app-server-stop-unconfirmed']);
 
 function codexIdentity(info) {
   const account = info?.account;
@@ -85,6 +85,7 @@ export class AccountProof {
     }
   }
   async context(profile) {
+    if (this.requiresRecovery) throw new ProbeError('terminal-stop-unconfirmed', 'An owned process did not confirm shutdown. Stop the diagnostic and recover its lock before further provider operations.');
     const paths = await this.store.paths(profile);
     const env = profileEnvironment(profile.provider, paths.home);
     const executable = await this.locate(profile.provider);
@@ -108,7 +109,19 @@ export class AccountProof {
     const client = this.makeClient({ executable: context.executable, home: context.home, environment: context.env });
     this.clients.add(client);
     try { await client.ready; return await task(client); }
-    finally { this.clients.delete(client); client.close(); }
+    finally {
+      const child = client.child;
+      let timer;
+      const stopped = child?.pid && child.exitCode === null && !child.signalCode
+        ? new Promise(resolve => { child.once('exit', () => resolve(true)); timer = setTimeout(() => resolve(false), 5000); })
+        : Promise.resolve(true);
+      client.close();
+      const confirmed = await stopped; clearTimeout(timer); this.clients.delete(client);
+      if (!confirmed) {
+        this.requiresRecovery = true;
+        throw new ProbeError('app-server-stop-unconfirmed', 'Codex shutdown was not confirmed. Stop the diagnostic and check its owned processes before restarting.');
+      }
+    }
   }
   login(id, { manualClaudeBrowser = false } = {}) {
     if (this.authBusy || this.pending.size || this.closing) return Promise.reject(new Error('Wait for the current operation before starting sign-in.'));
@@ -196,6 +209,7 @@ export class AccountProof {
       await this.save(); return reading;
     } catch (error) {
       const code = errorCodes.has(error.code) ? error.code : 'unavailable';
+      if (['terminal-stop-unconfirmed', 'app-server-stop-unconfirmed'].includes(code)) this.requiresRecovery = true;
       this.snapshots.set(profile.id, { ...previous, status: code });
       // Manual refresh cannot bypass cooldown, even after an error. No token rotation.
       this.cooldowns.set(profile.id, this.now() + (profile.provider === 'openai' ? 120_000 : 300_000));
@@ -276,6 +290,6 @@ export class AccountProof {
     this.closing = true; this.abort.abort();
     for (const client of this.clients) client.close();
     await Promise.allSettled([this.loginPending, ...this.pending.values()]); await this.saving;
-    await this.store.close();
+    await this.store.close({ retainLock: !!this.requiresRecovery });
   }
 }

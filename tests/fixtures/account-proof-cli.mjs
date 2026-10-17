@@ -27,6 +27,7 @@ if (process.argv.includes('app-server')) {
   process.stdout.write(initial.mode === 'onboarding' ? 'Do you trust the files in this folder?\r\n' : 'Claude fixture\r\n❯ \r\n');
   let input = '';
   process.stdin.on('data', async chunk => {
+    if (chunk.includes(3)) process.exit(0); // Official CLI-style graceful interrupt.
     input += chunk.toString();
     if (!input.includes('\r')) return;
     if (input !== '/usage\r') process.exit(42); // Absolutely no model prompt.
