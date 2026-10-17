@@ -12,10 +12,13 @@ branch `v3/account-proof`. Research plan supersedes the earlier V3 multi-account
 claims. Profile/runtime and account-bound OpenAI/Claude candidate probes are
 implemented. Real accounts, isolated Claude browser login, Windows interactive
 acceptance and Claude monitoring/distribution permission remain unverified.
-Actual checks: 28/28 new diagnostic tests pass, including real fictional CLI
-subprocesses and PTYs. Existing `npm run check` also passes. Windows proof CI is
-not yet recorded. See [ACCOUNT-PROOF.md](ACCOUNT-PROOF.md).
-Next: publish branch, inspect CI, and record handoff evidence.
+Actual checks: 28/28 Linux diagnostic tests pass; Windows ConPTY proof passes
+27 tests with one intentional POSIX-only skip. Existing `npm run check` also
+passes. Code is pushed; all three jobs in CI run 39006704947 succeeded, including
+Windows native installer packaging. Live Gate 1 remains pending.
+See [ACCOUNT-PROOF.md](ACCOUNT-PROOF.md) and
+[ACCOUNT-PROOF-HANDOFF.md](ACCOUNT-PROOF-HANDOFF.md).
+Next dependency: live two-account checks on the laptop, then evaluate Gate 1.
 The historical checkpoints below describe earlier work, not completion of this gate.
 
 ### Historical release checkpoint
@@ -638,3 +641,31 @@ No AGENTS.md applies; one workstream, no parallel agents.
   no login, quota or model request; it does not prove all possible hidden options
   absent. Automated isolated-browser sign-in stays unverified.
 - Next: verify corrected local tests, push this correction, inspect Windows CI.
+
+### PROOF-01 final delivery evidence
+
+- Published application source `6e172dd5e2efa6cba82c9d297cd5a4e498c28d4f`, tree
+  `9836973433f45d67e5a4055ede51500de949fe8b` equals local `7f609f2`.
+- Final complete run **39006704947**, maintenance head
+  `b2c0c3e18e3ac0ce65b8931c6e1e2eba13885527`: **all three jobs succeeded**.
+  Linux proof 28/28; Windows ConPTY proof 27 passed, zero failed, one intentional
+  POSIX symlink skip. Core/native/build/browser/variant/archive checks passed;
+  real PowerShell GUI construction and native installer compile passed;
+  isolated PostgreSQL/phone/extension transport checks passed.
+- Final artifacts: extension packages 12090284547; optional legacy OpenAI helper
+  12091477070. The diagnostic itself runs from the source checkout; those packages
+  do not enable independent Claude.
+- Windows stall recovery: a tightly scoped one-off CI workflow cancelled only
+  superseded run 39006181611 after checking its exact SHA/branch/status. Cleanup
+  run 39006701928 succeeded. Runs 39006181611 and 39006580872 are confirmed cancelled.
+  That one-off workflow is removed after use; ordinary branch concurrency/deadlines
+  remain. No token values or credentials were printed or exported.
+- Final files after green application CI: documentation/evidence plus removal of
+  the completed one-off cleanup. Application and proof source unchanged.
+- Gate 0 decision record and Gate 1 tooling delivered; **live Gate 1 is pending**.
+  No account credentials were available, no provider login/model calls performed,
+  and no verified independent-Claude UI/release claim was introduced.
+- Next dependency: run ACCOUNT-PROOF.md on the laptop with two real accounts per
+  provider; verify default-browser preservation, scope/value matching, phone-only
+  changes, ordinary logout vs global revocation and actual renewal. Resolve the
+  automatic Claude sign-in and acceptable-use gates before Gates 2–5.

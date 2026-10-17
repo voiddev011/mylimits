@@ -26,7 +26,7 @@
   `@xterm/headless` 6.0.0. They are not imported into extension entrypoints or bundled
   into the existing production helper installer. Final packaging remains Gate 5.
 
-## Actual local verification
+## Actual verification
 
 - `npm run test:account-proof`: **28/28 pass** on Linux, Node 24.19.0.
   Includes real fictional CLI child processes, real PTYs, two-account isolation,
@@ -36,21 +36,21 @@
 - `npm run check`: **pass** (TypeScript, existing core tests, 20 native-helper tests,
   Chrome production build). No extension UI or provider website reader was changed.
 - `node scripts/account-proof.mjs --help`: **pass**; `git diff --check`: **pass**.
-- CI now runs the diagnostic tests on Linux and native Windows/ConPTY. Results
-  will be recorded below after publication; do not assume a pending run passed.
-- First run 39005904346: Linux proof/core/build/browser checks passed;
-  connected-services passed. Windows core/native/build passed, but two proof
-  cleanup hooks hit EBUSY after asynchronous ConPTY shutdown (23 passed, two
-  failed, one POSIX-only skip). Corrected by awaiting terminal exit/PID release
-  before resolving a probe, using the pinned library's bundled ConPTY prototype
-  and bounded Windows filesystem retries. Added the specific race regression.
-  The updated Linux suite passes 27/27; corrected Windows rerun remains pending.
-- Follow-up run 39006181611 passed Linux proof/full extension and connected-services;
-  its experimental bundled-ConPTY path stalled on Windows and was rejected. The
-  current code uses OS ConPTY, graceful control interrupts and bounded shutdown
-  confirmation. Unconfirmed process exit retains the ownership lock for explicit
-  recovery. CI proof steps now have a three-minute deadline and superseded branch
-  runs are cancelled. A recovery-lock regression brings the local suite to 28.
+- Windows native ConPTY proof: **27 pass, zero failures, one intentional POSIX-only
+  symlink skip**, verified in run 39006580872 for source
+  `6e172dd5e2efa6cba82c9d297cd5a4e498c28d4f`. Current-source run 39006704947
+  also passed the Windows proof step. These are actual Windows fictional CLI/PTY
+  checks, not real Claude/OpenAI authorization tests.
+- Final [CI run 39006704947](https://github.com/voiddev011/mylimits/actions/runs/39006704947):
+  **all three jobs passed**: extension verification, Windows logic/native installer,
+  and connected-services with isolated PostgreSQL/phone/transport tests. Windows
+  includes actual ConPTY proof, PowerShell GUI construction and installer compilation.
+  No real provider accounts were used in those jobs.
+- CI exposed a Windows teardown race. Current code uses OS ConPTY, graceful
+  control interrupts and bounded process-exit confirmation; unconfirmed exit
+  retains the recovery lock. The experimental bundled-ConPTY trial was rejected.
+  Proof CI has a three-minute deadline. Failed/superseded runs are recorded in
+  IMPLEMENTATION-STATUS.md; they are not reported as successful.
 - Official unmodified Claude Code **2.1.301** ran only `--version` and
   `auth login --help` in a fresh unauthenticated temporary profile. Help exposes
   subscription/Console/email/SSO options, no --no-browser option. This is actual
@@ -63,6 +63,21 @@
 The current scope did not change dashboard styling or bundle browser UI features,
 so the earlier V3 browser suite was not repeated locally. CI retains those checks.
 No real user accounts, provider authorizations or secrets were available here.
+
+## Published checkpoint
+
+- Application source: `6e172dd5e2efa6cba82c9d297cd5a4e498c28d4f`, same tree as local
+  `7f609f2` (`9836973433f45d67e5a4055ede51500de949fe8b`).
+- Final successful CI used `b2c0c3e18e3ac0ce65b8931c6e1e2eba13885527`, which added
+  only a one-off workflow to cancel the exact superseded experimental-PTY run.
+  The cancellation succeeded and both superseded runs are cancelled. That one-off
+  workflow is removed in the final evidence commit; normal CI needs contents:read.
+- Final extension package artifact: **12090284547**; optional OpenAI-only Windows
+  helper artifact: **12091477070**, both under run 39006704947. They do not contain
+  the developer proof CLI or enable independent Claude. Use the source checkout
+  and `npm run account-proof` to test this milestone.
+- Final evidence commit changes documentation and removes the completed one-off
+  CI cleanup only; application/proof source is unchanged from successful CI.
 
 ## Explicitly not complete
 
