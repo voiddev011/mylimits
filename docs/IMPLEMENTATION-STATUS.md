@@ -1,9 +1,24 @@
-# MyLimits 2.0 implementation status
+# MyLimits implementation status
 
-Updated: **16 October 2026**. **Phases 1 and 2 verified in available automation; live/manual checks remain pending.** No cloud deployment or
+Updated: **17 October 2026**. **Independent-account proof tooling implemented;
+live Gate 1 is pending.** Historical Phases 1/2 and V3 have their recorded
+automated evidence below. No cloud deployment or
 credential upload has been performed.
 
 ## Active checkpoint
+
+Current authorization (17 October 2026): independent-account **Gate 0/1 diagnostic**,
+branch `v3/account-proof`. Research plan supersedes the earlier V3 multi-account
+claims. Profile/runtime and account-bound OpenAI/Claude candidate probes are
+implemented. Real accounts, isolated Claude browser login, Windows interactive
+acceptance and Claude monitoring/distribution permission remain unverified.
+Actual checks: 26/26 new diagnostic tests pass, including real fictional CLI
+subprocesses and PTYs. Existing `npm run check` also passes. Windows proof CI is
+not yet recorded. See [ACCOUNT-PROOF.md](ACCOUNT-PROOF.md).
+Next: publish branch, inspect CI, and record handoff evidence.
+The historical checkpoints below describe earlier work, not completion of this gate.
+
+### Historical release checkpoint
 
 - Requested work: user-authorized compact popup and explicit multi-account setup upgrade.
 - Current work package: 2.2 delivered paths verified; independent Claude/other-provider authorization remains unavailable.
@@ -560,3 +575,32 @@ blocked rather than advertised. Next: implement V3-01 and V3-02.
 - Last commit is documentation/evidence only; no further application changes.
   No main merge or public store submission. Release's pending live-account and
   interactive desktop acceptance is fully enumerated in V3-HANDOFF.md.
+
+## Account proof / PROOF-01 — 17 October 2026
+
+State: **implemented, local regression verified; live Gate 1 pending**.
+Branch: `v3/account-proof`; starts from the exact published V3 tree.
+No AGENTS.md applies; one workstream, no parallel agents.
+
+- Inspection/decision: read current start/status and independent-account plan.
+  Recorded first-party ownership, unresolved Claude monitoring/distribution use,
+  supported auth boundaries and explicit stop/go gates in `ACCOUNT-PROOF.md`.
+- Changed `companion/proof/{runtime,store,service,codex-login,claude}.mjs`,
+  `scripts/account-proof.mjs`, `companion/app-server.mjs`: isolated profiles,
+  generation/identity checks, OpenAI sign-in, experimental Claude PTY collection,
+  cancellation/logout, safe retained history and redacted evidence.
+- Changed `package.json`, `package-lock.json`: pinned optional native/headless
+  terminal dependencies and diagnostic commands. Existing package versions kept.
+- Added `companion/proof/proof.test.mjs` and a strictly fictional CLI fixture;
+  changed `.github/workflows/checks.yml` to run proof tests on Linux and Windows.
+- Local results: 26/26 proof tests pass, including real subprocess/PTTY checks;
+  `npm run check` passes (TypeScript/core/20 native tests/Chrome build);
+  CLI help and whitespace checks pass. Earlier restart-cleanup and login-refactor
+  failures were corrected and the full diagnostic suite rerun successfully.
+- Docs: research plan status, START-HERE, README, detailed ACCOUNT-PROOF laptop
+  instructions and ACCOUNT-PROOF-HANDOFF. All maintained Markdown stays in docs/.
+- Blockers: no real provider accounts; automatic isolated Claude browser sign-in
+  is not verified; acceptable polling/distribution use unresolved. Windows CLI
+  fixture CI is pending at this checkpoint; real desktop sign-in remains separate.
+- Next: publish branch and record CI. Live manual proof is the next dependency
+  before Gates 2–5; no independent-Claude extension UI was enabled.

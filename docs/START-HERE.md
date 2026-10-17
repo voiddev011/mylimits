@@ -1,4 +1,12 @@
-# Current work: MyLimits 3.0
+# Current work: independent-account connector proof
+
+Latest authorization: implement the connector-proof milestone on `v3/account-proof`.
+Read [INDEPENDENT-ACCOUNTS-RESEARCH-AND-PLAN.md](INDEPENDENT-ACCOUNTS-RESEARCH-AND-PLAN.md)
+and [ACCOUNT-PROOF.md](ACCOUNT-PROOF.md). The diagnostic is separate from the
+extension; Gate 1 requires real accounts. Do not enable or market independent
+Claude, or start Gates 2–5, on fixture evidence alone.
+
+# Previous release: MyLimits 3.0
 
 Latest authorized upgrade: `v3/redesign`. Read [V3-IMPLEMENTATION-PLAN.md](V3-IMPLEMENTATION-PLAN.md),
 [IMPLEMENTATION-STATUS.md](IMPLEMENTATION-STATUS.md) and [V3-HANDOFF.md](V3-HANDOFF.md).

@@ -19,7 +19,9 @@
     "build:firefox": "wxt build -b firefox",
     "zip:firefox": "wxt zip -b firefox",
     "build:edge": "wxt build -b edge",
-    "package:companion": "node scripts/package-companion.mjs"
+    "package:companion": "node scripts/package-companion.mjs",
+    "account-proof": "node scripts/account-proof.mjs",
+    "test:account-proof": "node --test companion/proof/proof.test.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
@@ -40,5 +42,9 @@
   },
   "engines": {
     "node": ">=24"
+  },
+  "optionalDependencies": {
+    "@xterm/headless": "6.0.0",
+    "node-pty": "1.1.0"
   }
 }
