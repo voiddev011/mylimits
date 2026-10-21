@@ -1054,3 +1054,17 @@ No AGENTS.md applies; one workstream, no parallel agents.
   test service/account sign-in. Next implementation milestone after that: A/B
   identity plus quota proof, followed by + menu and hosted collection. Continue
   only within established provider conditions; no fabricated one-click substitute.
+
+### HOSTED-TRIAL / published handoff
+
+- Pushed feature/hosted-account-proof at 0e39450974fdad7d7f47900342fd0b57e59bea9e,
+  matching local 173c06f tree 951977a461cfca454a2917be69ed6fded44b59cb.
+  CI 39630930205 queued; not marked passed. This documentation follow-up skips
+  duplicate CI and changes no code. Main/feature-independent-accounts untouched.
+- Delivered the plan, executable unauthenticated official transport experiment,
+  seven passing local diagnostic tests and 30 passing existing proof regressions.
+  OpenAI device-code initiation/cancellation observed; Claude loopback observed.
+  Neither authenticated a real account nor fetched quota. Exact one-click hosted
+  multi-account UX remains unproven; no product-complete claim.
+- Next remains the permitted hosted login/account proof described in the plan,
+  before production backend collectors and replacing site switches with +.
