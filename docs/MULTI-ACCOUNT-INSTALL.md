@@ -27,7 +27,7 @@ npm install --include=optional
 npm run build
 ```
 
-Use Node 24+. Stop if Git reports local changes; keep them rather than discarding.
+Use Node 22.15+. Stop if Git reports local changes; keep them rather than discarding.
 For a GitHub source ZIP, download this branch specifically, extract it and run only
 the npm commands in the extracted project. A source ZIP is not a built extension.
 

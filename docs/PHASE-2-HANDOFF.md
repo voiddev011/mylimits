@@ -72,7 +72,7 @@ the folder containing manifest.json. For a preview update, replace files in the
 existing folder and Reload; keep its path/extension ID and do not uninstall first.
 No companion, backend account or manual login window is needed for basic tracking.
 
-For source builds use Node 24+, `npm ci`, `npm run build`, then load
+For source builds use Node 22.15+, `npm ci`, `npm run build`, then load
 `.output/chrome-mv3`. `npm run dev` watches edits for frequent testing.
 [Firefox/Edge/Windows details](PLATFORMS.md) and [README](README.md) cover exact paths.
 Firefox temporary installs need 140+ and disappear on restart; signing is external.

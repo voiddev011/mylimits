@@ -12,6 +12,6 @@ export const ConfigSchema=z.object({
 export type Config=z.infer<typeof ConfigSchema>;
 export function configFromEnv():Config{
  const e=process.env;let oidc:Config['oidc'];
- if(e.OIDC_ISSUER)oidc={issuer:e.OIDC_ISSUER,audience:e.OIDC_AUDIENCE??'',jwksUri:e.OIDC_JWKS_URI??'',authorizationEndpoint:e.OIDC_AUTHORIZATION_ENDPOINT??'',tokenEndpoint:e.OIDC_TOKEN_ENDPOINT??'',clientId:e.OIDC_CLIENT_ID??'',clientSecret:e.OIDC_CLIENT_SECRET};
+ if(e.OIDC_ISSUER)oidc={issuer:e.OIDC_ISSUER,audience:e.OIDC_AUDIENCE??'',jwksUri:e.OIDC_JWKS_URI??'',authorizationEndpoint:e.OIDC_AUTHORIZATION_ENDPOINT??'',tokenEndpoint:e.OIDC_TOKEN_ENDPOINT??'',clientId:e.OIDC_CLIENT_ID??'',clientSecret:e.OIDC_CLIENT_SECRET||undefined};
  return ConfigSchema.parse({environment:e.NODE_ENV??'development',databaseUrl:e.DATABASE_URL,host:e.HOST,port:e.PORT?Number(e.PORT):undefined,origin:e.APP_ORIGIN??'http://127.0.0.1:8787',allowedOrigins:(e.ALLOWED_ORIGINS??'').split(',').filter(Boolean),oidc});
 }

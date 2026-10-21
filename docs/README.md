@@ -64,7 +64,7 @@ No backend is required for local independent connections.
 
 ## Develop
 
-Run commands from the repository root with Node **24+**:
+Run commands from the repository root with Node **22.15+**:
 
 ```sh
 npm ci --include=optional
@@ -84,6 +84,21 @@ isolated fictional profiles; they do not prove real provider behavior.
 Built packages do not require Node/npm. Follow the current install guide for the
 matching 3.2 extension and helper, not historical 3.0/3.1 artifacts. All maintained
 project Markdown belongs directly in `docs/`.
+
+## Docker
+
+Build the browser extension in Docker with a maintained Node major (22, 24 or
+26); pass `--build-arg NODE_VERSION=22` to select Node 22. The default is Node
+24. The builder runs `npm run build` and writes output to `.output`.
+
+```powershell
+docker build --build-arg NODE_VERSION=22 -t mylimits-extension-builder .
+docker run --rm -v "${PWD}\.output:/app/.output" mylimits-extension-builder
+```
+
+The optional snapshot API and PostgreSQL database can be started with
+`docker compose up --build`. See [SERVER-SETUP.md](SERVER-SETUP.md) for setup,
+configuration and deployment limitations.
 
 [Privacy](PRIVACY.md) · [Architecture](ARCHITECTURE.md) ·
 [Provider evidence](PROVIDER-CAPABILITIES.md) · [Support](SUPPORT.md).

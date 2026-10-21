@@ -44,7 +44,7 @@
     "wxt": "^0.20.0"
   },
   "engines": {
-    "node": ">=24"
+    "node": ">=22.15.0"
   },
   "optionalDependencies": {
     "@xterm/headless": "6.0.0",

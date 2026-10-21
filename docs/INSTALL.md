@@ -31,8 +31,8 @@ npm ci --include=optional
 npm run build
 ```
 
-Use Node 24 or newer. With an extracted source ZIP, open the terminal inside that
-folder and start at `node -v`. No Git setup is needed just to build.
+Use Node 22.15 or newer. With an extracted source ZIP, open the terminal inside
+that folder and start at `node -v`. No Git setup is needed just to build.
 
 The Chrome/Brave/Edge load folder is **`.output/chrome-mv3`** inside the project.
 The leading dot matters. Build first; source folders do not contain a loadable

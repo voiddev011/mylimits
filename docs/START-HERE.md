@@ -97,7 +97,7 @@ ask the user to paste passwords, cookies or access/refresh tokens into chat.
 
 ## Tooling and verification
 
-Use Node **24+**, the existing lockfile and package manager. Baseline scripts:
+Use Node **22.15+**, the existing lockfile and package manager. Baseline scripts:
 
 ```sh
 npm ci                    # only when installation is needed
