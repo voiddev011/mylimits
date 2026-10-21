@@ -23,8 +23,8 @@ supersedes the older Gate 1 tooling-only stop; it does not waive live acceptance
   tests passed. Full Chromium suite 28/28 passed; a follow-up focused run during
   concurrent packaging lost an extension file and is being rerun sequentially.
 - Chrome/Edge/Firefox manifests and clean ZIP contracts passed. Final Windows
-  installer rebuilt (196,689,211 bytes); handoff complete. Branch publication and
-  current-source CI record are next.
+  installer rebuilt; branch pushed. All three jobs in CI **39579243525 passed**.
+  Source `e29a7d2571211bac4f82fc733fe531451749d340` has the exact local source tree.
 
 See [MULTI-ACCOUNT-INSTALL.md](MULTI-ACCOUNT-INSTALL.md) for laptop steps and
 [MULTI-ACCOUNT-HANDOFF.md](MULTI-ACCOUNT-HANDOFF.md) for delivery evidence.
@@ -814,3 +814,25 @@ No AGENTS.md applies; one workstream, no parallel agents.
   automatic sign-in and monitoring route are blocked. No main merge or release.
 - Next: commit coherent source checkpoint, publish branch via available GitHub
   access, inspect CI and record actual result without relabeling fixtures as live.
+
+### MULTI-09 published source and successful CI
+
+- Pushed `feature/independent-accounts`; source `e29a7d2571211bac4f82fc733fe531451749d340`
+  has exact tree `89b9e596132777e11f6fc7aaba28075579e39c06` (local `00437a8`).
+  Plan checkpoint `6e87354a...` has the exact local `6142aa6` tree. GitHub connector
+  published the coherent commits without rewriting existing branches or main.
+- Run **39579243525: all three jobs succeeded**. Linux full check/proof/browser/
+  variants/ZIPs passed; Windows 101 core + 20 native + 13 integrated connections
+  passed, proof 27 passed/1 intentional POSIX-only skip, zero failures; actual
+  PowerShell GUI construction and native installer compile passed. Existing
+  isolated PostgreSQL/phone/extension transport suite passed as well.
+- Final CI artifacts: extension **12335143318**; Windows helper **12336221223**.
+  The Windows CI EXE is 196,628,503 bytes. Different compiler/platform builds use
+  their own supplied checksum; local installer is a separate verified artifact.
+- Installation/handoff/README now link directly to those exact downloadable builds.
+  Final evidence commit is docs-only with redundant CI skipped. No application
+  changes after green CI. Main unchanged; no store/public release or deployment.
+- Remaining: user laptop's two real OpenAI account checks and actual renewal/logout,
+  interactive Windows acceptance. Claude automatic isolated browser login, reliable
+  fresh monitoring and applicable product route remain blocked. No credential
+  collection, provider login, model requests or external provider messages occurred.

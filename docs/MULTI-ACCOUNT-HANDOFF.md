@@ -49,7 +49,7 @@
 An initial restricted-sandbox child test failed; the approved process-capable run
 passed. First browser run had one obsolete button selector, corrected before the
 full 28-test success. A follow-up focused run overlapped an extension rebuild and
-failed one reload with ERR_FILE_NOT_FOUND; sequential verification is recorded in
+failed one reload with ERR_FILE_NOT_FOUND; the final sequential setup verification passed **4/4** and is recorded in
 IMPLEMENTATION-STATUS.md. These failures are not counted as passes.
 
 ## Live verified
@@ -91,3 +91,30 @@ See implementation status for the exact published source/CI evidence.
 No main merge, public release/store submission, new backend or provider credential
 upload was performed. Do not advertise this preview as completed Claude/GPT universal
 multi-account tracking.
+
+## Published source and CI evidence
+
+- Application commit: `e29a7d2571211bac4f82fc733fe531451749d340`, exact tree
+  `89b9e596132777e11f6fc7aaba28075579e39c06` equals local `00437a8`.
+- Preceding plan commit: `6e87354a9287fcf603b49b9b0a63e9e6537f170f`, tree
+  `59842650db84199211347113aab6157442940eca` equals local `6142aa6`.
+- [CI run 39579243525](https://github.com/voiddev011/mylimits/actions/runs/39579243525):
+  **all three jobs succeeded** on that exact application source.
+- Linux: 101 core, 20 legacy native, 13 new connection, 28 proof and 28 Chromium
+  tests pass; browser variants/manifests and clean archive contracts pass.
+- Windows: 101 core, 20 legacy native, 13 new connection tests pass; proof 27 pass,
+  one intentional POSIX-only skip, zero failures. Actual Windows child processes,
+  ConPTY, PowerShell parser/GUI construction and NSIS compilation passed.
+- Connected-services: existing isolated PostgreSQL/auth/API/job/phone/extension
+  transport regressions passed. No backend was deployed or used for provider auth.
+- [Extension artifact 12335143318](https://github.com/voiddev011/mylimits/actions/runs/39579243525/artifacts/12335143318).
+- [Windows artifact 12336221223](https://github.com/voiddev011/mylimits/actions/runs/39579243525/artifacts/12336221223).
+  CI EXE: 196,628,503 bytes. Artifact ZIP digest (not the EXE digest):
+  `sha256:14359b522dae4c9bdce154dd5e2903ce6f0e2e8f9cc18a96594f6e4c886e6551`.
+  The artifact includes its own EXE checksum; do not compare it to the separate
+  local Linux-compiled installer checksum.
+- The following evidence commit changes documentation only and skips redundant CI.
+  No new application source follows the successful run at this checkpoint.
+
+CI success remains fixture/build evidence, not real provider signup/logout/renewal
+or interactive clean-user Windows proof. Claude remains unavailable.
