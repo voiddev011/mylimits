@@ -288,6 +288,14 @@ test('a terminal result waits for asynchronous exit acknowledgment rather than o
   assert.equal(control[0], '\x03'); assert.equal(killed, false); assert.equal(resolved, false);
   onExit(); assert.equal(await stopping, true);
 });
+test('Windows disposes the terminal even when the provider process exited naturally', async () => {
+  let closes = 0, subscriptions = 0;
+  const child = { onExit: () => ({ dispose() { subscriptions++; } }),
+    write() { assert.fail('An exited CLI must receive no further input.'); }, kill() { closes++; } };
+  assert.equal(await stopProbeTerminal(child, true, 1000, 'win32'), true);
+  assert.equal(closes, 1); assert.equal(subscriptions, 1);
+  assert.equal(await stopProbeTerminal({ ...child, kill() { throw Error('close failed'); } }, true, 1000, 'win32'), false);
+});
 test('unconfirmed terminal shutdown rejects successful-looking results and retains the recovery lock', async t => {
   const { service, store, directory } = await fixture(t, { version: async () => '0.0.1',
     claudeIdentity: async () => ({ binding: 'fictional-account', display: 'A', confidence: 'fixture', plan: null }),
