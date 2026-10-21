@@ -12,6 +12,7 @@ import { type Kms,CredentialStore } from './credentials';
 import { pairingRoutes } from './pairing';
 import { startRetention } from './retention';
 import { webRoutes } from './web';
+import { HostedJobs } from './hosted-jobs';
 import { HostedService } from './hosted';
 export type RequestWithPrincipal=FastifyRequest&{principal:Principal};
 const identifier=z.string().uuid();
@@ -49,6 +50,7 @@ export function createApp(options:{config:Config;pool:pg.Pool;kms?:Kms;testVerif
  const p=(r:FastifyRequest)=>(r as RequestWithPrincipal).principal;
  app.get('/health',async()=>({ok:true,mode:'snapshot-only',authenticationConfigured:!!config.oidc}));
  app.get('/hosted/capabilities',async()=>hosted.capabilities());
+ app.post('/v1/hosted/connections/:id/refresh',async r=>{z.object({}).strict().parse(r.body??{});return new HostedJobs(hosted).enqueue(p(r).owner,params(r));});
  app.get('/v1/hosted/connections',async r=>hosted.list(p(r).owner));
  app.post('/v1/hosted/attempts',async r=>hosted.start(p(r).owner,r.body));
  app.get('/v1/hosted/attempts/:id',async r=>hosted.attempt(p(r).owner,params(r)));

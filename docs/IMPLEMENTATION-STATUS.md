@@ -26,7 +26,7 @@ Documentation branch: `docs/hosted-accounts-execution-plan`.
 | H05 | implemented | Record H06/H07 provider blockers, then implement H08 collection. |
 | H06 | blocked | Continue H07 decision and H08 independent code; external hosted route and real A/B proof required. |
 | H07 | blocked | Implement H08 bounded jobs and H09 extension integration without enabling unsupported providers. |
-| H08 | not_started | Implement bounded collection and truthful freshness |
+| H08 | implemented | Implement H09 background client, account projection and management UI; then integrated verification. |
 | H09 | not_started | Integrate extension/API and maintain manual evidence matrix |
 | H10 | not_started | Package, verify and deliver accurate handoff |
 
@@ -92,6 +92,15 @@ State: **blocked**. Branch: `feature/hosted-connections`.
 - Checks: Rechecked official Claude authentication and legal/compliance docs; no account login performed.
 - Decision/blockers: https://code.claude.com/docs/en/legal-and-compliance allows unmodified hosted CLI under conditions; https://code.claude.com/docs/en/authentication documents manual-code fallback when loopback is inaccessible. Exact automatic remote completion and quota-only monitoring not established; no custom Claude OAuth or cookie interception added. Normal browser account preservation remains PENDING.
 - Next action: Implement H08 bounded jobs and H09 extension integration without enabling unsupported providers.
+
+## H08 checkpoint — 21 October 2026
+
+State: **implemented**. Branch: `feature/hosted-connections`.
+
+- Files: server/src/hosted-jobs.ts; worker.ts; app.ts refresh route; hosted lifecycle tests; deployment worker service
+- Checks: Server typecheck and 42 PostgreSQL tests passed; new coalescing/cooldown, last-success retention, crashed lease, wrong identity, late disconnect, auth expiry and owner concurrency tests passed. Earlier operator image build passed; final worker image rebuild follows delivery.
+- Decision/blockers: Durable per-account jobs, global4/owner2 concurrency, provider30/min budget, min60s plus adapter interval, Retry-After/backoff/jitter, lease fencing, bounded reads, separate timestamps and history retention. No active providers: no real hosted refresh runs.
+- Next action: Implement H09 background client, account projection and management UI; then integrated verification.
 
 ## Documentation consolidation checkpoint
 

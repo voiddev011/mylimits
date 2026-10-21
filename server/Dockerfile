@@ -12,7 +12,12 @@ RUN npm --prefix server run typecheck && npm --prefix server run build:web
 FROM node:24-bookworm-slim
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=8787
 WORKDIR /app
-COPY --from=build --chown=node:node /app /app
+COPY --from=build --chown=node:node /app/package.json /app/package.json
+COPY --from=build --chown=node:node /app/node_modules/zod /app/node_modules/zod
+COPY --from=build --chown=node:node /app/scripts /app/scripts
+COPY --from=build --chown=node:node /app/src/core /app/src/core
+COPY --from=build --chown=node:node /app/server /app/server
+RUN cd server && npm prune --omit=dev --ignore-scripts --offline
 USER node
 EXPOSE 8787
 CMD ["npm","--prefix","server","start"]

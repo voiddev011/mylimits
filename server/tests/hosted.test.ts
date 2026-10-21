@@ -67,3 +67,35 @@ test('API requires auth, scopes IDs to owner, rejects token uploads and reports 
  const capabilities=(await app.inject({url:'/hosted/capabilities'})).json();assert.ok(capabilities.providers.every((p:any)=>!p.available));
  assert.equal((await app.inject({url:'/v1/hosted/attempts/'+randomUUID(),headers:h})).statusCode,404);
 });
+
+test('hosted refresh coalesces, respects cooldown and preserves last success on throttle',async()=>{
+ const {HostedJobs}=await import('../src/hosted-jobs');const {CollectorError}=await import('../src/jobs');
+ const s=service(),id=(await complete(s,(await start(s)).id)).connectionId!,jobs=new HostedJobs(s),now=Date.now();
+ const queued=await Promise.all([jobs.enqueue('alice',id,now),jobs.enqueue('alice',id,now)]);assert.equal(queued.filter(q=>q.queued).length,1);
+ const l=(await jobs.lease(now))!;assert.ok(l);await jobs.finish(l,{subject:'subject-a',workspace:null,meters:[],providerObservedAt:null},now+1);
+ assert.equal((await jobs.enqueue('alice',id,now+2)).queued,false);
+ await jobs.enqueue('alice',id,now+120002);const next=(await jobs.lease(now+120002))!;
+ await jobs.fail(next,new CollectorError('rate-limit',now+900000),now+120003);
+ const c=(await s.list('alice')).connections[0]!;assert.equal(c.fetchedAt,now+1);assert.equal(c.providerObservedAt,null);assert.equal(c.nextEligibleAt,now+900000);assert.equal(c.staleReason,'fetch-failed');
+ assert.equal((await jobs.enqueue('alice',id,now+899999)).queued,false);
+});
+test('crashed hosted lease, wrong identity and disconnected late reads cannot write history',async()=>{
+ const {HostedJobs}=await import('../src/hosted-jobs');const s=service(),id=(await complete(s,(await start(s)).id)).connectionId!,jobs=new HostedJobs(s),now=Date.now();
+ await jobs.enqueue('alice',id,now);const old=(await jobs.lease(now))!,replacement=(await jobs.lease(now+30001))!;assert.notEqual(old.token,replacement.token);
+ assert.equal(await jobs.finish(old,{subject:'subject-a',workspace:null,meters:[],providerObservedAt:null},now+30002),false);
+ await assert.rejects(jobs.finish(replacement,{subject:'wrong',workspace:null,meters:[],providerObservedAt:null},now+30002),/invalid-response/);
+ await s.disconnect('alice',id);assert.equal(await jobs.finish(replacement,{subject:'subject-a',workspace:null,meters:[],providerObservedAt:null},now+30002),false);
+ assert.equal((await pool.query('SELECT count(*)::int n FROM hosted_readings')).rows[0].n,0);
+});
+test('hosted owner concurrency is bounded and one owner cannot refresh another connection',async()=>{
+ const {HostedJobs}=await import('../src/hosted-jobs');const s=service(),jobs=new HostedJobs(s),now=Date.now();
+ const ids=[];for(let i=0;i<3;i++)ids.push((await complete(s,(await start(s)).id,'fixture-'+i)).connectionId!);
+ for(const id of ids)await jobs.enqueue('alice',id,now);
+ const results=await Promise.all([jobs.lease(now),jobs.lease(now),jobs.lease(now)]);assert.equal(results.filter(Boolean).length,2);
+ await assert.rejects(jobs.enqueue('bob',ids[0]!),/not_found/);
+});
+test('hosted auth expiry pauses collection without leaking upstream text',async()=>{
+ const {HostedJobs}=await import('../src/hosted-jobs');const {CollectorError}=await import('../src/jobs');const s=service(),jobs=new HostedJobs(s),now=Date.now();
+ const id=(await complete(s,(await start(s)).id)).connectionId!;await jobs.enqueue('alice',id,now);const l=(await jobs.lease(now))!;await jobs.fail(l,new CollectorError('auth'),now+1);
+ await assert.rejects(jobs.enqueue('alice',id,now+999999),/reconnect_required/);assert.equal((await s.list('alice')).connections[0]!.fetchedAt,null);
+});
