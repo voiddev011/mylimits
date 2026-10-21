@@ -20,7 +20,7 @@ Documentation branch: `docs/hosted-accounts-execution-plan`.
 | Task | State | Next action |
 | --- | --- | --- |
 | H01 | implemented | Implement H02 contracts; continue available work while provider proofs remain blocked. |
-| H02 | not_started | Define hosted connection/attempt contracts and migration |
+| H02 | implemented | Implement H03 simplified UI with explicit unavailable hosted state. |
 | H03 | not_started | Remove provider toggles; add capability-aware + choices |
 | H04 | not_started | Implement owner-scoped hosted connection orchestration |
 | H05 | not_started | Prepare secure private runtime and operator deployment |
@@ -38,6 +38,15 @@ State: **implemented**. Branch: `feature/hosted-connections`.
 - Checks: Clean starting checkout; no AGENTS.md found under workspace or ancestor paths. Official provider pages rechecked; no account authorization attempted.
 - Decision/blockers: OpenAI experimental transport only: hosted entitlement and exact selection unresolved. Claude hosted unmodified CLI conditions exist, but remote completion/monitoring unresolved. Both production routes remain unavailable; no blanket impossibility claim. Runtime has no account credentials or configured identity/KMS.
 - Next action: Implement H02 contracts; continue available work while provider proofs remain blocked.
+
+## H02 checkpoint — 21 October 2026
+
+State: **implemented**. Branch: `feature/hosted-connections`.
+
+- Files: src/core/hosted-contracts.ts, its tests, scripts/run-tests.mjs
+- Checks: Typecheck passed; core suite 104 tests passed.
+- Decision/blockers: Strict versioned public contracts exclude secrets, require verified subject/workspace, distinguish fetch and provider times, preserve unknown values. New hosted data is additive; legacy local IDs/history untouched. Durable identity/idempotency tests follow H04.
+- Next action: Implement H03 simplified UI with explicit unavailable hosted state.
 
 ## Documentation consolidation checkpoint
 
