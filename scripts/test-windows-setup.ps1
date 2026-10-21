@@ -1,6 +1,6 @@
 $ErrorActionPreference='Stop'
 # Parse every maintained script with the real Windows PowerShell parser, no install side effects.
-foreach($name in @('setup.ps1','uninstall.ps1')) {
+foreach($name in @('setup.ps1','uninstall.ps1','compile-claude-browser.ps1')) {
  $tokens=$null;$errors=$null
  [void][System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD ('companion\windows\'+$name)),[ref]$tokens,[ref]$errors)
  if($errors.Count){throw ($errors | Out-String)}

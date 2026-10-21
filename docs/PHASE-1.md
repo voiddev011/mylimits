@@ -49,7 +49,7 @@ it after integration. Do not maintain two independently writable stores.
 1. Inspect Git status, branch, remote and recent history. Work on `v2/phase-1`
    (or a non-conflicting name). Preserve pre-existing edits; do not reset/clean
    the workspace or assume local dirty files have not already been published.
-2. Record Node/npm versions and existing scripts. Use Node 24+; run `npm ci`
+2. Record Node/npm versions and existing scripts. Use Node 22.15+; run `npm ci`
    only if dependencies need installation. Do not delete the lockfile or change
    dependency versions to hide environment failures.
 3. Run the baseline type check, unit/companion checks and build; run browser

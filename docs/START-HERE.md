@@ -1,3 +1,37 @@
+# Current work: hosted accounts feasibility trial
+
+Latest authorization: propose a plan and actually try the installer-free, hosted
+multi-account route on `feature/hosted-account-proof`. Read
+[HOSTED-ACCOUNTS-TRIAL-PLAN.md](HOSTED-ACCOUNTS-TRIAL-PLAN.md) and the latest status.
+Try documented official remote transports first. Do not replace the UI or enable
+production collectors before a permitted real-account connection is established.
+User reports the ordinary GPT browser-session problem remains unresolved. The
+prior code-complete checklist is not proof that the user's sign-in journey works.
+
+# Previous work: independent-account extension integration
+
+Latest authorization: implement on `feature/independent-accounts`. Read
+[MULTI-ACCOUNT-IMPLEMENTATION.md](MULTI-ACCOUNT-IMPLEMENTATION.md) and current status.
+The user authorizes integration while unavailable live checks remain explicitly
+pending. Version 3.2 implements the Claude CLI adapter and first-party BROWSER routing.
+Read [MULTI-ACCOUNT-CODE-CHECKLIST.md](MULTI-ACCOUNT-CODE-CHECKLIST.md). Manual
+provider acceptance is separate; do not restore the old unavailable-only stub.
+
+# Previous checkpoint: independent-account connector proof
+
+Latest authorization: implement the connector-proof milestone on `v3/account-proof`.
+Read [INDEPENDENT-ACCOUNTS-RESEARCH-AND-PLAN.md](INDEPENDENT-ACCOUNTS-RESEARCH-AND-PLAN.md)
+and [ACCOUNT-PROOF.md](ACCOUNT-PROOF.md). The diagnostic is separate from the
+extension; Gate 1 requires real accounts. Do not enable or market independent
+Claude, or start Gates 2–5, on fixture evidence alone.
+
+# Previous release: MyLimits 3.0
+
+Latest authorized upgrade: `v3/redesign`. Read [V3-IMPLEMENTATION-PLAN.md](V3-IMPLEMENTATION-PLAN.md),
+[IMPLEMENTATION-STATUS.md](IMPLEMENTATION-STATUS.md) and [V3-HANDOFF.md](V3-HANDOFF.md).
+The Phase 1/2 instructions below describe earlier releases; do not restore Guide
+or the old quota widget from them. Use [INSTALL.md](INSTALL.md) to test this build.
+
 # Start here — GPT-6.1 Sol execution guide
 
 This is the implementation handoff for MyLimits 2.0. It is designed for one
@@ -63,7 +97,7 @@ ask the user to paste passwords, cookies or access/refresh tokens into chat.
 
 ## Tooling and verification
 
-Use Node **24+**, the existing lockfile and package manager. Baseline scripts:
+Use Node **22.15+**, the existing lockfile and package manager. Baseline scripts:
 
 ```sh
 npm ci                    # only when installation is needed

@@ -14,7 +14,7 @@ import { readHistory, readHistoryPage, readHistorySeries, pruneHistory, historyE
 import { CommandSchema, type Command } from './messages';
 import { mergeCompanion, markCompanionUnavailable } from '../core/companion';
 import { addCompanionAccount, companionRequest, companionStatus, enableCompanion, listenCompanion, refreshCompanion } from './companion';
-import { widgetSettings,updateWidgetSettings,reconcileWidgets,readWidget,listenWidgets } from './widget';
+import { widgetSettings,updateWidgetSettings,reconcileWidgets,readWidget } from './widget';
 import { snapshotSync } from './sync';
 import { startAccountSetup, saveAccountSetup } from '../core/account-setup';
 
@@ -111,7 +111,7 @@ export async function refreshProvider(provider: ProviderId, manual = false, reas
 }
 
 async function refreshAll(manual = false, reason: RefreshReason = manual ? 'manual' : 'scheduled'): Promise<void> {
-  const results = await Promise.allSettled([...PROVIDER_IDS.map(provider => refreshProvider(provider, manual, reason)), refreshCompanion()]);
+  const results = await Promise.allSettled([...PROVIDER_IDS.map(provider => refreshProvider(provider, manual, reason)), refreshCompanion(true)]);
   await snapshotSync.run().catch(()=>{});
   if (results.some(result => result.status === 'rejected')) await renderBadge().catch(() => undefined);
 }
@@ -193,8 +193,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
   if(command.type==='widget-state'||command.type==='widget-action'){
     if(!sender.url||providerForUrl(sender.url)!==command.provider||!sender.tab?.id||sender.frameId!==0)throw new Error('Widget sender does not match its website.');
     const view=await readWidget(command.provider);if(command.type==='widget-state'||!view.enabled)return view;
-    if(command.action==='open'){await browser.tabs.create({url:browser.runtime.getURL('/dashboard.html')});return null}
-    await updateWidgetSettings(s=>({...s,providers:command.action==='hide'?s.providers.filter(p=>p!==command.provider):s.providers,collapsed:command.action==='collapse'?true:command.action==='expand'?false:s.collapsed,position:command.position??s.position}));return null;
+    await updateWidgetSettings(s=>({...s,providers:command.action==='hide'?s.providers.filter(p=>p!==command.provider):s.providers,position:command.position??s.position}));return null;
   }
   if (command.type === 'observer-ready' || command.type === 'observation') {
     if (!sender.url || providerForUrl(sender.url) !== command.provider || !sender.tab?.id) throw new Error('Website observation did not match its sender.');
@@ -260,7 +259,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
       const conn = (await readStore()).connections.find(c => c.id === command.connectionId);
       if (!conn) throw new Error('Connection is no longer saved.');
       if (conn.kind === 'website') await setProvider(conn.provider, false);
-      else if (conn.kind === 'companion') { await companionRequest('remove', conn.profileId); await refreshCompanion(); }
+      else if (conn.kind === 'companion') { await companionRequest((await companionStatus()).compatible ? 'disconnect' : 'remove', conn.profileId); await refreshCompanion(); }
       else await updateStore(store => ({ store: changeConnection(store, conn.id, { enabled:false,status:'disabled' }, true), value:undefined }));
       break;
     }
@@ -272,11 +271,12 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
       await enableCompanion(command.enabled);
       break;
     case 'companion-add': {
-      const profile = await addCompanionAccount();
+      const profile = await addCompanionAccount(command.provider, command.nickname);
       await refreshCompanion();
       if (command.nickname) await updateStore(store=>({store:{...store,accounts:store.accounts.map(a=>a.companionProfile===profile?{...a,alias:command.nickname!}:a)},value:undefined}));
       break;
     }
+    case 'companion-action': await companionRequest(command.action, command.profile); await refreshCompanion(); break;
     case 'companion-remove': await companionRequest('remove', command.profile); await refreshCompanion(); break;
     case 'refresh': {
       const source = command.connectionId ? (await readStore()).connections.find(c => c.id === command.connectionId) : undefined;
@@ -288,9 +288,15 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
       break;
     }
     case 'enable': await setProvider(command.provider, command.enabled); break;
-    case 'rename':
+    case 'rename': {
+      const account = (await readStore()).accounts.find(a => a.id === command.accountId);
+      if (account?.companionProfile) {
+        const status = await companionStatus();
+        if (status.compatible) await companionRequest('rename', account.companionProfile, { alias: command.alias });
+      }
       await updateStore(store => ({ store: { ...store, accounts: store.accounts.map(account => account.id === command.accountId ? { ...account, alias: command.alias } : account) }, value: undefined }));
       break;
+    }
     case 'account-settings':
       await updateStore(store => ({ store: { ...store, accounts: store.accounts.map(account => account.id === command.accountId ? { ...account, alertRemaining: command.alertRemaining, alertsMuted: command.alertsMuted } : account) }, value: undefined }));
       break;
@@ -333,7 +339,6 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
 }
 
 export function startController(): void {
-  listenWidgets();
   const storage=browser.storage.local as typeof browser.storage.local&{setAccessLevel?:(options:{accessLevel:'TRUSTED_CONTEXTS'})=>Promise<void>};
   void storage.setAccessLevel?.({accessLevel:'TRUSTED_CONTEXTS'}).catch(()=>{});
   listenCompanion(async profiles => {

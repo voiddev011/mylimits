@@ -13,7 +13,7 @@ export const CommandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('account-setup-cancel'), setupId: z.string().uuid() }),
   z.object({type:z.literal('widget-settings'),settings:WidgetSettingsSchema.optional()}),
   z.object({type:z.literal('widget-state'),provider:ProviderSchema}),
-  z.object({type:z.literal('widget-action'),provider:ProviderSchema,action:z.enum(['collapse','expand','hide','open']),position:WidgetSettingsSchema.shape.position.optional()}),
+  z.object({type:z.literal('widget-action'),provider:ProviderSchema,action:z.enum(['hide','position']),position:WidgetSettingsSchema.shape.position.optional()}),
   z.object({ type: z.literal('opened') }),
   z.object({type:z.literal('reader-mode'),provider:z.enum(['grok','perplexity']),mode:z.enum(['quota','activity'])}),
   z.object({ type:z.literal('sync'),action:z.enum(['status','start','poll','pause','resume','run','push-preferences','pull-preferences','disconnect','reset']),name:z.string().trim().min(1).max(60).optional() }),
@@ -29,7 +29,8 @@ export const CommandSchema = z.discriminatedUnion('type', [
 
   z.object({ type: z.literal('companion-status') }),
   z.object({ type: z.literal('companion-enable'), enabled: z.boolean() }),
-  z.object({ type: z.literal('companion-add'), nickname: z.string().trim().max(60).optional() }),
+  z.object({ type: z.literal('companion-action'), action: z.enum(['setup','cancel','reconnect','disconnect']), profile: z.string().uuid() }),
+  z.object({ type: z.literal('companion-add'), provider: z.enum(['openai','claude']).optional(), nickname: z.string().trim().max(60).optional() }),
   z.object({ type: z.literal('companion-remove'), profile: z.string().uuid() }),
   z.object({ type: z.literal('refresh'), provider: ProviderSchema.optional(), connectionId: z.string().min(1).max(240).optional() }),
   z.object({ type: z.literal('enable'), provider: ProviderSchema, enabled: z.boolean() }),

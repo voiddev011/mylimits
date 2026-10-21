@@ -1,105 +1,104 @@
-# MyLimits 2.2 — Compact accounts preview
+# Current experiment: installer-free hosted accounts
 
-Your AI usage readings, named accounts and reset times in one compact view.
-This upgrade lives on **`v2/compact-accounts`**. See the
-[compact accounts handoff](COMPACT-ACCOUNTS-HANDOFF.md) for installation, actual
-verification and remaining provider limitations. All maintained Markdown lives
-in `docs/`; run commands from the repository root.
+See [trial plan and actual results](HOSTED-ACCOUNTS-TRIAL-PLAN.md) on
+`feature/hosted-account-proof`. Official OpenAI device-code initiation/cancellation
+was observed on a server; Claude returned a loopback callback. No real account was
+authenticated and no quota fetched. The user reports the existing GPT sign-in
+journey still opens the ordinary browser session; it remains unresolved. This
+experiment is not a shipped cloud connector or a new extension release.
 
-## Install / update
+# Previous checkpoint: MyLimits 3.2 — Independent accounts preview
 
-For the current upgrade, download the **mylimits-extension-packages** artifact from
-the verified [Checks run 38922290094](https://github.com/voiddev011/mylimits/actions/runs/38922290094/artifacts/12054622767).
-Extract the artifact, then extract `mylimits-2.2.0-chrome.zip` into a permanent
-folder. It must contain `manifest.json` directly. The 2.1 Phase 2 artifact is an
-older build; it does not contain this redesign.
+Current branch: **`feature/independent-accounts`**.
+[Install](MULTI-ACCOUNT-INSTALL.md) · [Code checklist](MULTI-ACCOUNT-CODE-CHECKLIST.md) ·
+[Status](IMPLEMENTATION-STATUS.md) · [Handoff and downloads](MULTI-ACCOUNT-HANDOFF.md).
 
-Chrome: `chrome://extensions`. Brave: `brave://extensions`. Edge:
-`edge://extensions`. Enable Developer mode → Load unpacked → choose that folder.
-For an update, replace the files inside your existing unpacked folder, then click
-Reload. Keep the path and extension ID; uninstalling deletes your local data.
-[Firefox/platform instructions](PLATFORMS.md).
+Track available OpenAI Codex/Work and Claude Code subscription quotas from
+multiple independently connected accounts in one browser dashboard. Real-account
+acceptance is a separate manual checklist; this is an unpublished preview.
 
-Open MyLimits → **+** → choose a service → **Detect current account**. Allow its
-site access; MyLimits reuses the existing website login. For another account,
-choose **Connect another account**, switch/sign in on the provider website, then
-return and confirm the detected account. Both names/readings remain visible;
-website mode refreshes only the current login. The picker also offers an optional
-independent OpenAI connection through the existing companion.
+## Connections
 
-No MyLimits account or companion is required for basic tracking. Preview accounts
-are fictional and never become saved connected accounts.
+- **Website tracking:** reads the account signed into this browser. No helper
+  required. Other saved website accounts keep clearly dated readings.
+- **Independent accounts:** optional local helper, one official CLI profile per
+  account, and separate browser sign-in windows. Add B while keeping your normal
+  website session on A. The extension operates subsequent connection actions.
+- **History:** retained values keep their actual successful fetch timestamp.
+  Missing quotas remain unknown; stale data does not become fresh on restart.
 
-## Features
+Open + → choose OpenAI or Claude → Connect an independent account. Install the
+3.2 helper once, authorize its optional browser connection, then complete official
+sign-in. Give each connection its own nickname. Claude requires the official
+Claude Code CLI and may need one-time onboarding in its own setup window.
 
-- A 400px quick popup: limits, reset times, refresh, + and Full dashboard. Six
-  standard rows fit without scrolling. History/settings/guidance live in the full
-  dashboard; clicking an account opens its details there.
-- Automatic detection and explicit account setup with saved progress, identity
-  checks and nickname confirmation.
-- Compact account rows, separate nicknames, order/pins, selected meters, search,
-  low filtering, themes, optional low/critical and confirmed-reset notifications.
-- Independent readings by source/workspace; unavailable accounts retain dated
-  readings. Five-minute default polling with backoff and cancellation.
-- History comparisons, separate reset windows and gaps, reset timeline, 30/90-day
-  retention, cautious pacing ranges and JSON/CSV export. No invented messages left.
-- Local dashboard Guide: task/mode advice, prompt templates/review and an explicit
-  user-pasted handoff preview/copy/download. No paid AI calls or chat scraping.
-- Optional website widget: exact selected websites, collapse/corners/hide, saved
-  public values only. Off by default in Settings; conversation inputs are untouched.
-- Optional self-hosted snapshot sync and responsive phone dashboard. Pair a device
-  after separate MyLimits sign-in; original observation age is preserved.
-- Optional advanced OpenAI native companion, including an unsigned Windows setup
-  GUI and Start-menu uninstall flow. [Setup](OPENAI-COMPANION.md).
+The official CLIs own credentials and renewal. MyLimits does not request passwords,
+copy browser cookies, extract CLI tokens or put credentials into extension storage.
 
-## Provider boundaries
+## Scope and behavior
 
-All quota readers are source/fixture-tested **live-unverified prototypes**.
+OpenAI reports returned **Codex/Work** windows, not all ordinary ChatGPT chat,
+image, upload or voice allowances. Claude reports supported **subscription /usage**
+percentages; unknown reset timestamps stay unknown. Other providers retain their
+existing website adapters and are not independently connected by this update.
 
-| Source | Implemented scope | Limitation |
-| --- | --- | --- |
-| Claude | Account/workspace returned subscription windows | Plan/model windows depend on the returned response |
-| ChatGPT | Returned Work/Codex and code-review windows | Ordinary chat, images, uploads and other limits remain unknown |
-| Grok | Returned Grok 4 default-mode request allowance | Other modes/reset time unknown; optional activity-only mode |
-| Perplexity | Returned Pro/research/Labs/agentic remaining counts | No fabricated total, percentage or reset; activity-only mode available |
-| Cursor | Included/model coding-plan pools and reported on-demand spend | Separate from a subscription fee or local cost estimate |
-| Gemini | Recognized requests in this browser | Local activity only, not a remote quota |
-| Optional companion | Returned Codex App Server buckets | Real authorization/logout/renewal/native launch pending |
+Eligible refreshes respect provider waits and error backoff: at least two minutes
+for OpenAI, five minutes for Claude. These intervals do not guarantee immediate
+provider data. Other-device changes, website logout and actual credential renewal
+are pending manual acceptance. Global session revocation may require reconnecting.
 
-Website logout or session expiry can stop that website source. Remembered data
-stays dated. Other-device usage appears only through a later successful
-provider-reported reading. There is **no universal real-time/logout-independent
-tracking guarantee**. Snapshot sync copies readings; it does not collect new ones.
-Production independent cloud collectors are disabled by the
-[feasibility gate](HOSTED-FEASIBILITY.md).
+The helper is optional for website tracking and required for independent accounts.
+Windows x64 provides a guided current-user installer. Linux needs official components
+and xterm for first-party Claude onboarding. Firefox remains website-only.
 
-One browser profile usually has one current website login per provider. Switching
-accounts retains earlier names/readings, without giving those accounts separate
-credentials. Optional companion profiles have separate local authorization.
+## Interface
 
-## Develop and test
+Compact popup: provider logos, aliases, quota bars/reset times, dated status,
+refresh, + account and Full dashboard. The dashboard contains account management,
+history, settings, privacy controls and diagnostics. Guide/prompt features remain
+removed. The optional floating button still displays Coming soon.
 
-Node **24+**, committed lockfile:
+Existing account IDs, nicknames, pins, alerts and history are preserved. Optional
+snapshot sync copies readings; it does not maintain remote AI login sessions.
+No backend is required for local independent connections.
+
+## Develop
+
+Run commands from the repository root with Node **22.15+**:
 
 ```sh
-npm ci
-npm run dev                 # fast rebuilds while developing
-npm run check               # types, core/native tests, production Chrome build
-npm run test:browser         # needs Playwright Chromium and a built extension
-npm run zip                 # .output/mylimits-2.2.0-chrome.zip
+npm ci --include=optional
+npm run dev
+npm run check
+npm run test:account-proof
+npm run test:browser
+npm run zip
 npm run build:firefox
 npm run zip:firefox
 ```
 
-Load `.output/chrome-mv3` from the repository root after building. Windows File
-Explorer accepts `.output\chrome-mv3` in its address bar inside the project folder.
-After rebuilding, Reload the existing extension. `npx playwright install chromium`
-installs test Chromium; `CHROMIUM_PATH` selects a compatible executable.
-Browser tests isolate fictional profiles and block live provider traffic.
+Load `.output/chrome-mv3` in Chrome/Brave/Edge after building. The packaged ZIP is
+`.output/mylimits-3.2.0-chrome.zip`. Browser tests need Playwright Chromium and use
+isolated fictional profiles; they do not prove real provider behavior.
 
-The optional backend is a separate package: [SERVER-SETUP](SERVER-SETUP.md).
-No sync server is configured in default release builds. Phone Chrome cannot load
-this desktop extension; use the phone dashboard only after configuring sync.
+Built packages do not require Node/npm. Follow the current install guide for the
+matching 3.2 extension and helper, not historical 3.0/3.1 artifacts. All maintained
+project Markdown belongs directly in `docs/`.
+
+## Docker
+
+Build the browser extension in Docker with a maintained Node major (22, 24 or
+26); pass `--build-arg NODE_VERSION=22` to select Node 22. The default is Node
+24. The builder runs `npm run build` and writes output to `.output`.
+
+```powershell
+docker build --build-arg NODE_VERSION=22 -t mylimits-extension-builder .
+docker run --rm -v "${PWD}\.output:/app/.output" mylimits-extension-builder
+```
+
+The optional snapshot API and PostgreSQL database can be started with
+`docker compose up --build`. See [SERVER-SETUP.md](SERVER-SETUP.md) for setup,
+configuration and deployment limitations.
 
 [Privacy](PRIVACY.md) · [Architecture](ARCHITECTURE.md) ·
-[Provider evidence](PROVIDER-CAPABILITIES.md) · [Support/manual checks](SUPPORT.md)
+[Provider evidence](PROVIDER-CAPABILITIES.md) · [Support](SUPPORT.md).

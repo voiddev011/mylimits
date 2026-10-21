@@ -209,3 +209,27 @@ test('extension discovery reads only exact MyLimits metadata and rejects malform
  const found=extensionCandidates(input,'edge','Default');assert.equal(found.length,1);assert.equal(found[0].browser,'edge');assert.ok(!JSON.stringify(found).includes('DO_NOT_EXPOSE'));assert.ok(!JSON.stringify(found).includes('NEVER_COPY'));
  const {registryRoots}=await import('./windows.mjs');assert.equal(registryRoots.edge,'HKCU\\Software\\Microsoft\\Edge\\NativeMessagingHosts');
 });
+
+test('independent authorization uses a distinct local browser profile and exposes no authorization URL',async t=>{
+ const {service}=await fixture(t);const launched=[];service.launchAuth=async input=>{launched.push(input)};
+ const first=await service.add(),second=await service.add();
+ assert.equal(first.browserOpened,true);assert.equal(second.browserOpened,true);assert.ok(!('authUrl' in first));
+ assert.notEqual(launched[0].directory,launched[1].directory);
+ assert.ok(launched[0].directory.includes(first.profile));
+ assert.ok(!JSON.stringify(service.snapshot()).includes('fictional'));
+});
+test('authorization browser validates origins and passes paths as arguments instead of shell code',async()=>{
+ const {authArguments,browserCandidates}=await import('./auth-browser.mjs');
+ const directory=path.resolve('private space');const args=authArguments(directory,'https://auth.openai.com/authorize?state=test');
+ assert.equal(args[0],`--user-data-dir=${directory}`);assert.equal(args.at(-1),'https://auth.openai.com/authorize?state=test');
+ assert.throws(()=>authArguments(directory,'https://evil.test/'));assert.throws(()=>authArguments('relative','https://auth.openai.com/'));
+ assert.ok(browserCandidates('win32',{PROGRAMFILES:'C:\\Program Files'}).every(p=>p.startsWith('C:\\Program Files')));
+});
+
+test('same-email profiles show a conservative duplicate warning without merging workspace identities or exporting email',async t=>{
+ const {service}=await fixture(t);await service.add();await service.add();
+ for(const profile of service.profiles.values())delete profile.loginId;
+ await service.refreshAll();const snapshot=service.snapshot();
+ assert.equal(snapshot.profiles.length,2);assert.ok(snapshot.profiles.every(p=>p.possibleDuplicate===true));
+ assert.ok(!JSON.stringify(snapshot).includes('private@example.com'));assert.ok(!JSON.stringify(snapshot).includes('identityHint'));
+});

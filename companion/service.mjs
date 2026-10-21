@@ -1,14 +1,14 @@
 import { mkdir, readFile, writeFile, rename, rm } from 'node:fs/promises';
 import path from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import { AppServer } from './app-server.mjs';
 import { parseLimits } from './limits.mjs';
 import { safeAuthUrl } from './protocol.mjs';
 
 export class Companion extends EventEmitter {
-  constructor({ directory, executable = 'codex', makeClient = options => new AppServer(options), now = Date.now }) {
-    super(); this.directory = directory; this.executable = executable; this.makeClient = makeClient; this.now = now;
+  constructor({ directory, executable = 'codex', makeClient = options => new AppServer(options), now = Date.now, launchAuth = null }) {
+    super(); this.launchAuth = launchAuth; this.directory = directory; this.executable = executable; this.makeClient = makeClient; this.now = now;
     this.profiles = new Map(); this.clients = new Map(); this.refreshing = new Map(); this.stopping = false;
   }
   async load() {
@@ -24,7 +24,9 @@ export class Companion extends EventEmitter {
     await writeFile(file + '.tmp', JSON.stringify([...this.profiles.keys()]), { mode: 0o600 });
     await rename(file + '.tmp', file);
   }
-  snapshot() { return { type: 'snapshot', profiles: [...this.profiles.values()].map(profile => ({ id: profile.id, status: profile.status, plan: profile.plan, meters: [...profile.meters], updatedAt: profile.updatedAt })) }; }
+  snapshot() {
+    const identities = [...this.profiles.values()].map(profile=>profile.identityHint).filter(Boolean);
+    return { type: 'snapshot', profiles: [...this.profiles.values()].map(profile => ({ id: profile.id, status: profile.status, plan: profile.plan, meters: [...profile.meters], updatedAt: profile.updatedAt, possibleDuplicate: !!profile.identityHint && identities.filter(value=>value===profile.identityHint).length>1 })) }; }
   changed() { if (!this.stopping) this.emit('snapshot', this.snapshot()); }
   async client(id) {
     if (!this.clients.has(id)) {
@@ -66,6 +68,7 @@ export class Companion extends EventEmitter {
       const login = await client.request('account/login/start', { type: 'chatgpt' });
       if (!safeAuthUrl(login?.authUrl) || typeof login.loginId !== 'string') throw new Error('OpenAI returned an unsupported sign-in response.');
       profile.loginId = login.loginId; this.changed();
+      if(this.launchAuth){await this.launchAuth({directory:path.join(this.directory,'accounts',id,'sign-in-browser'),url:login.authUrl});return {profile:id,browserOpened:true};}
       return { profile: id, authUrl: login.authUrl };
     } catch {
       // An interrupted login may have created local authorization. Keep the profile
@@ -84,6 +87,9 @@ export class Companion extends EventEmitter {
         const client = await this.client(id);
         const info = await client.request('account/read', { refreshToken: false });
         if (info?.account?.type !== 'chatgpt') { profile.status = 'signed-out'; return; }
+        // Email is only a conservative duplicate hint, never a workspace/account key.
+        // Keep the hash in memory only; no email or hint crosses native messaging.
+        profile.identityHint = typeof info.account.email === 'string' && info.account.email ? createHash('sha256').update(info.account.email.trim().toLowerCase()).digest('hex') : null;
         const result = await client.request('account/rateLimits/read');
         profile.meters = parseLimits(result);
         profile.plan = typeof info.account.planType === 'string' ? info.account.planType.slice(0, 80) : null;

@@ -6,7 +6,7 @@ provider collection is disabled by the [feasibility gate](HOSTED-FEASIBILITY.md)
 
 ## Run
 
-Use Node 24+ and PostgreSQL 17 (or a compatible supported PostgreSQL version).
+Use Node 22.15+ and PostgreSQL 17 (or a compatible supported PostgreSQL version).
 From the repository root:
 
 ```sh
@@ -23,6 +23,26 @@ not automatically load that example file. Do not put real configuration in Git.
 npm run migrate --prefix server
 npm start --prefix server
 ```
+
+### Docker Compose
+
+The repository root includes a Compose stack for the optional API and PostgreSQL:
+
+```sh
+docker compose up --build
+```
+
+The API is available at `http://127.0.0.1:8787`; `/health` reports its current
+mode and whether OIDC is configured. Set `POSTGRES_PASSWORD` in a local `.env`
+file before starting the stack if you need a non-default password. The built-in
+password is for local development only. Add the OIDC settings documented above
+to `.env` to enable authentication. Compose persists database files in the
+`postgres-data` volume; `docker compose down -v` deletes that data.
+
+The extension's separate `Dockerfile` is a build environment, not a web server:
+browser extensions must be loaded or published through their respective browser
+store. Its Node image defaults to 24 and accepts maintained majors 22, 24 or 26
+through the `NODE_VERSION` build argument.
 
 Default binding: **127.0.0.1:8787**. There is no public deployment. Production
 requires an HTTPS `APP_ORIGIN`, managed OIDC registration, appropriate ingress

@@ -1,9 +1,22 @@
-# MyLimits 2.0 implementation status
+# MyLimits implementation status
 
-Updated: **16 October 2026**. **Phases 1 and 2 verified in available automation; live/manual checks remain pending.** No cloud deployment or
-credential upload has been performed.
+Updated: **21 October 2026**. **3.2 code completion in progress**.
+User will perform real-account acceptance separately. No main merge/public release.
 
 ## Active checkpoint
+
+Branch `feature/independent-accounts`. See MULTI-ACCOUNT-CODE-CHECKLIST.md.
+Implemented independent OpenAI and Claude adapters, per-profile first-party auth,
+shared state/refresh/identity fencing, mixed account UI, Claude onboarding and
+Windows runtime/router setup. Earlier unavailable-only Claude state is superseded.
+
+Actual evidence so far: 102 core, 20 legacy native, 16 integrated connection,
+28 proof and 29 Chromium tests passed; official unmodified Linux Claude 2.1.301
+BROWSER + loopback callback capability passed without an account. Windows code
+compilation/native routing and final packaging/CI are next. User account tests
+remain separately pending, not a reason to omit source implementation.
+
+### Historical release checkpoint
 
 - Requested work: user-authorized compact popup and explicit multi-account setup upgrade.
 - Current work package: 2.2 delivered paths verified; independent Claude/other-provider authorization remains unavailable.
@@ -410,3 +423,648 @@ signing was added. Main remains unchanged.
 Next: install/update using the current 2.2 artifact. Further independent-provider
 work needs a viable permitted authorization/quota source and live acceptance;
 never relabel saved website readings as independently updating accounts.
+
+## V3-01 — started, 16 October 2026
+
+User approved implementation of the researched V3 redesign. New branch
+`v3/redesign`, clean baseline from 2.2; no user changes discarded. Plan is
+V3-IMPLEMENTATION-PLAN.md. Start with Guide removal, genuine local provider assets
+and typography/layout foundations, then complete the ordered work packages.
+No new provider credentials/live accounts are available. Native packaging and
+fixture verification are authorized; unsupported independent providers remain
+blocked rather than advertised. Next: implement V3-01 and V3-02.
+
+### V3-01 / V3-02 / V3-03 implementation checkpoint
+
+- Removed Guide UI, core helpers, tests and navigation; legacy hashes land on Overview.
+- Packaged official six-provider favicon assets with `PROVIDER-ASSETS.md` provenance.
+- Rebuilt typography/layout tokens, 440px quick popup, dashboard-only setup, larger
+  four-tab dashboard and local reset clocks. Added Standard/Large settings.
+- Added UI-only privacy projection, masked notifications, history privacy guard,
+  Needs attention filter and strict-allowlist diagnostics/help.
+- Replaced on-page quota rendering with opt-in Coming soon launcher. Preview
+  projection receives only site preferences, requires no account, preserves old
+  site/corner choices; exact-site permissions remain required.
+- Actual checks: TypeScript passed; 99 core tests passed. Browser/layout tests and
+  package builds have not run at this checkpoint.
+- Decision: history is hidden/export disabled under privacy mode, rather than
+  exporting a partially masked private record. Saved aliases/data are unchanged.
+- Next: browser acceptance fixtures and optional connector improvements.
+
+### V3-04 account connection checkpoint
+
+- Independent OpenAI authorization now opens a fresh local Chrome/Brave/Edge profile
+  per companion account. Authorization URLs stay in the helper on the new protocol;
+  old helper compatibility remains, with explicit update guidance.
+- Added same-email possible-duplicate hints computed only in helper memory. No
+  email/hash leaves native messaging, and profiles/workspaces are never auto-merged.
+  Official `account/read` exposes email/plan, not a verified universal workspace key;
+  matching email is deliberately only a warning.
+- Windows x64 package pins/checks official Node 24.22.0 SHA256 and Codex 0.163.0
+  npm SHA512, bundling their native runtime layout and licenses. Setup uses bundled
+  binaries rather than a global Node/Codex dependency. Unsigned preview only.
+- Updated browser account action to “Save another website account”; it explicitly
+  describes dated readings rather than independent refresh.
+- Actual tests: first unrestricted `npm run check` passed (99 core, 19 native,
+  production Chrome build). The same native child-process check failed only inside
+  the restricted sandbox; unrestricted execution passed. Added duplicate test next.
+- First browser pass: 22/26 passed. Fixed six-row micro-overflow, async preview
+  checkbox feedback, and explicit accessibility labels for presentation selects;
+  rerun is in progress. Existing migration/history/account/source tests passed.
+- Blockers: no real provider credentials or Windows desktop session. Independent
+  Claude is not exposed; logout/renewal/cross-device and actual Windows install /
+  startup/uninstall remain pending. No provider claim was upgraded from prototype.
+- Next: finish browser acceptance, compile final Windows installer, all variant
+  archives, update handoff/current docs and publish the working branch.
+
+### V3 interface / connector implementation verified checkpoint
+
+- Final unrestricted core/native check passed: TypeScript, 99 core tests,
+  20 native tests (including actual child process RPC), Chrome production build.
+- Browser rerun: 25/26 passed; the remaining position test used synthetic select
+  events rejected by the intentional trusted-input guard. Replaced it with actual
+  keyboard selection; focused preview browser test passed, including CSS isolation,
+  Escape/outside click, no account requirement, position persistence and removal.
+- Normal six-row popup fits with 14px account names, 16px values, 12px secondary
+  text. Large-text/privacy persistence and 200% text enlargement checks passed.
+- Actual bundled Windows installer compiled: 196,690,078 bytes with upstream Node
+  and Codex runtime, native PE output and SHA256. This does not prove Windows live
+  installation or real account authorization.
+- Added follow-up fixtures for on-site Hide persistence and new native sign-in
+  protocol; final whole-suite and variant/archive checks are next.
+
+### V3-05 local delivery checkpoint
+
+- Full real Chromium suite: **26/26 passed**. Added on-site Hide/reload and new
+  helper-owned auth window protocol coverage. Follow-up privacy query/nickname
+  concealment type/build/focused browser check also passed.
+- Chrome/Edge/Firefox builds, manifest checks, actual Chrome/Firefox ZIP checks
+  and SHA256 generation passed. Genuine logos included; Guide prompt tools absent.
+- Installer final local compile passed (196,690,078 bytes); bundled dependency
+  digests and license files included. Windows interactive acceptance is pending.
+- Optional server local check: TypeScript/auth test passed; API/job tests failed
+  startup because no isolated PostgreSQL URL was configured. CI is running those
+  against its isolated PostgreSQL service; do not report local full server success.
+- Published implementation checkpoint `1b9f9e6aac14b8bd2c805624f458c2ff6facb970`
+  on `v3/redesign`, based on user's actual current main. GitHub/local tree equality
+  was verified. Main not merged. Checks run: 38930787730 (in progress at checkpoint).
+- Added `INSTALL.md` and `V3-HANDOFF.md`; current README/start/privacy/helper docs
+  describe 3.0. Plan records decisions, duplicate-identity boundary and source links.
+- Next: publish final privacy/handoff changes; verify CI artifacts and record the
+  precise remaining Windows/provider acceptance checks. No store publication.
+
+### V3 CI integration correction
+
+- Run 38930787730: extension verify job passed; connected-services PostgreSQL API
+  and phone-web checks passed, but transport fixture timed out trying to click
+  snapshot pairing inside the newly collapsed Advanced section. Updated the
+  fixture to open “Snapshot sync · advanced” first. Pairing semantics unchanged.
+- Windows job had passed native checks and real PowerShell parsing/GUI construction
+  and was still compiling the bundled installer at this checkpoint.
+- Final privacy safeguard also hides pre-existing search/nickname fields; focused
+  browser test passed. All final variant builds/archive checks passed again:
+  Chrome ZIP 298,948 bytes; Firefox ZIP 298,298 bytes.
+- Next: push privacy/handoff/fixture correction, confirm complete CI and record
+  artifacts. No real provider or Windows interactive test is implied by CI.
+
+### V3 final CI evidence and logo contrast correction
+
+- Final application checkpoint `cc29f5ac4f4c7dccdea1c168a4c2f23479cc9671`,
+  run **38931432647**: all three jobs succeeded. Extension verify covers 26 real
+  Chromium fixtures and packages; connected-services includes actual isolated
+  PostgreSQL API/jobs, phone web and corrected HTTP pairing/upload/deletion;
+  Windows includes core/native tests, real PowerShell parsing/GUI construction,
+  and actual bundled installer compilation. No live account behavior is implied.
+- Published artifacts: extension packages 12058862247; Windows helper 12058892440.
+- Final visual asset review found the official OpenAI favicon switches to white
+  under dark preference. Its intentionally light tile now explicitly uses light
+  color-scheme; the asset stays unchanged. Added an actual rendered-pixel browser
+  assertion under dark preference, rather than checking image load alone.
+- Follow-up whole-browser acceptance and variant archives are running for this
+  stylesheet-only correction. Native and server application code unchanged.
+- Main preserved; real Windows installation/provider account/renewal/logout
+  acceptance remains pending as documented in V3-HANDOFF.md.
+
+### V3 delivery ready
+
+- Final dark-logo correction: TypeScript/Chrome production build passed; whole
+  Chromium suite **26/26 passed** again, including real adaptive-SVG pixel check.
+- Final Chrome/Edge/Firefox production builds and manifests passed; actual
+  Chrome ZIP **298,953 bytes**, Firefox ZIP **298,299 bytes**; archive safety/Guide
+  removal/local-logo inclusion and SHA256SUMS passed.
+- Local and CI package artifacts remain separate builds; use the checksum
+  shipped with the particular download. Windows helper source unchanged from
+  its verified CI installer.
+- All authorized implementation work is complete. Final branch push follows;
+  live provider and interactive desktop acceptance are the explicit remaining
+  release checks in V3-HANDOFF.md. No Phase 2/server deployment/store submission
+  or main merge was performed.
+
+### V3 published final application and artifacts
+
+- Final source pushed: `702d971dfddf18216fb28d7df3fbb9c12b7a4c1f`; tree
+  `baeaa4773a6d18a3b4d2dbb6d4e4c7d30013c9f8` equals local `75fb9cd`.
+- Run **38932629756** final extension verification passed, including all 26 browser
+  checks and the actual dark-preference SVG pixel assertion. Final downloadable
+  extension artifact: **12059023187**. Install/README links now target that build.
+- Previous complete run **38931432647** passed all three jobs; its Windows helper
+  artifact **12058892440** has identical native application/package source.
+  Latest Windows rebuild is redundant verification of that unchanged helper.
+- Last commit is documentation/evidence only; no further application changes.
+  No main merge or public store submission. Release's pending live-account and
+  interactive desktop acceptance is fully enumerated in V3-HANDOFF.md.
+
+## Account proof / PROOF-01 — 17 October 2026
+
+State: **implemented, local regression verified; live Gate 1 pending**.
+Branch: `v3/account-proof`; starts from the exact published V3 tree.
+No AGENTS.md applies; one workstream, no parallel agents.
+
+- Inspection/decision: read current start/status and independent-account plan.
+  Recorded first-party ownership, unresolved Claude monitoring/distribution use,
+  supported auth boundaries and explicit stop/go gates in `ACCOUNT-PROOF.md`.
+- Changed `companion/proof/{runtime,store,service,codex-login,claude}.mjs`,
+  `scripts/account-proof.mjs`, `companion/app-server.mjs`: isolated profiles,
+  generation/identity checks, OpenAI sign-in, experimental Claude PTY collection,
+  cancellation/logout, safe retained history and redacted evidence.
+- Changed `package.json`, `package-lock.json`: pinned optional native/headless
+  terminal dependencies and diagnostic commands. Existing package versions kept.
+- Added `companion/proof/proof.test.mjs` and a strictly fictional CLI fixture;
+  changed `.github/workflows/checks.yml` to run proof tests on Linux and Windows.
+- Local results: 26/26 proof tests pass, including real subprocess/PTTY checks;
+  `npm run check` passes (TypeScript/core/20 native tests/Chrome build);
+  CLI help and whitespace checks pass. Earlier restart-cleanup and login-refactor
+  failures were corrected and the full diagnostic suite rerun successfully.
+- Docs: research plan status, START-HERE, README, detailed ACCOUNT-PROOF laptop
+  instructions and ACCOUNT-PROOF-HANDOFF. All maintained Markdown stays in docs/.
+- Blockers: no real provider accounts; automatic isolated Claude browser sign-in
+  is not verified; acceptable polling/distribution use unresolved. Windows CLI
+  fixture CI is pending at this checkpoint; real desktop sign-in remains separate.
+- Next: publish branch and record CI. Live manual proof is the next dependency
+  before Gates 2–5; no independent-Claude extension UI was enabled.
+
+### PROOF-01 Windows shutdown correction
+
+- Published first source checkpoint `a9f121ac2bf55f90ad86671c47d3132772c2a02c`,
+  exact local tree `3d6a3bed54f430601b4980ddbb03276aa2e1601b` (`4996315`).
+- CI run 39005904346: Linux diagnostic, core/build and browser checks passed;
+  connected-services passed. Windows core/native/build passed; proof had 23 passes,
+  two failures and one intentional POSIX-symlink skip. Both failures were EBUSY
+  during fixture cleanup because kill() returned before ConPTY released its cwd.
+- Added bounded exit/PID acknowledgment before a terminal result is released,
+  selected the pinned library's bundled ConPTY implementation for this prototype,
+  and added Windows filesystem cleanup retries plus a shutdown-race regression.
+  Unknown/unconfirmed shutdown fails closed. No other process is killed.
+- Also include provider-reported plan metadata in redacted reports; absent plans
+  stay null. Local updated diagnostic suite: **27/27 pass**. Windows rerun follows.
+
+### PROOF-01 bounded process cleanup
+
+- Follow-up source `69d7b2daba226e88540b5fd332a8af393e3853ae` (local `490541e`,
+  tree `183ab3552f6754d03933d266607a3b3728a86eda`) passed Linux proof and extension
+  verification plus connected-services in run 39006181611. Its experimental
+  bundled-ConPTY path stalled the Windows proof step, so it is not accepted.
+- Reverted to OS ConPTY. Probe shutdown now first sends control interrupts, waits
+  for exit/PID release, then uses a bounded force-stop fallback. An unconfirmed
+  process stop retains the recovery lock and blocks further provider operations.
+  Codex proof subprocess shutdown is also acknowledged before returning results.
+- Added a recovery-lock regression and three-minute CI proof-step deadlines;
+  branch-scoped concurrency cancels superseded CI runs. Updated suite: 28 tests.
+- Actual official Claude Code 2.1.301 `--version` and `auth login --help` ran in a
+  fresh unauthenticated temporary profile. Help lists --claudeai/--console/--email/
+  --sso, with no exposed --no-browser option. This is capability inspection only:
+  no login, quota or model request; it does not prove all possible hidden options
+  absent. Automated isolated-browser sign-in stays unverified.
+- Next: verify corrected local tests, push this correction, inspect Windows CI.
+
+### PROOF-01 final delivery evidence
+
+- Published application source `6e172dd5e2efa6cba82c9d297cd5a4e498c28d4f`, tree
+  `9836973433f45d67e5a4055ede51500de949fe8b` equals local `7f609f2`.
+- Final complete run **39006704947**, maintenance head
+  `b2c0c3e18e3ac0ce65b8931c6e1e2eba13885527`: **all three jobs succeeded**.
+  Linux proof 28/28; Windows ConPTY proof 27 passed, zero failed, one intentional
+  POSIX symlink skip. Core/native/build/browser/variant/archive checks passed;
+  real PowerShell GUI construction and native installer compile passed;
+  isolated PostgreSQL/phone/extension transport checks passed.
+- Final artifacts: extension packages 12090284547; optional legacy OpenAI helper
+  12091477070. The diagnostic itself runs from the source checkout; those packages
+  do not enable independent Claude.
+- Windows stall recovery: a tightly scoped one-off CI workflow cancelled only
+  superseded run 39006181611 after checking its exact SHA/branch/status. Cleanup
+  run 39006701928 succeeded. Runs 39006181611 and 39006580872 are confirmed cancelled.
+  That one-off workflow is removed after use; ordinary branch concurrency/deadlines
+  remain. No token values or credentials were printed or exported.
+- Final files after green application CI: documentation/evidence plus removal of
+  the completed one-off cleanup. Application and proof source unchanged.
+- Gate 0 decision record and Gate 1 tooling delivered; **live Gate 1 is pending**.
+  No account credentials were available, no provider login/model calls performed,
+  and no verified independent-Claude UI/release claim was introduced.
+- Next dependency: run ACCOUNT-PROOF.md on the laptop with two real accounts per
+  provider; verify default-browser preservation, scope/value matching, phone-only
+  changes, ordinary logout vs global revocation and actual renewal. Resolve the
+  automatic Claude sign-in and acceptable-use gates before Gates 2–5.
+
+## MULTI-01 — independent account integration / Task 1
+
+- Branch `feature/independent-accounts`, clean baseline local `9ad8085`.
+- Read requested start/status/proof/handoff/research and service, diagnostic,
+  native bridge/controller, account model/UI, installation and CI code. No AGENTS.md
+  found under workspace; no parallel agents. New authorization permits integration
+  despite prior live-gate stop, retaining explicit pending/unavailable labels.
+- Added `MULTI-ACCOUNT-IMPLEMENTATION.md` with task sequence/contracts/acceptance.
+- Actual checks: inspection only; no implementation tests run at this checkpoint.
+- Blockers: no real provider identities; Claude isolated browser routing and fresh
+  monitoring/conditions unresolved. Existing auth folders will not be inspected.
+- Next: strict versioned native contract and migration-compatible service metadata.
+
+### MULTI-02 / Task 2 — connection contract
+
+- Added `core/independent-contract.ts` and `core/independent.ts`: strict protocol-2
+  capability/profile/snapshot schemas; separate auth, quota scope, timestamps,
+  retries, errors and limited identity confidence. No email-as-workspace claim.
+- Extended optional connection metadata in model/schema/public projection without
+  changing persisted schema version, existing UUID namespaces or user aliases.
+- Acceptance/tests: contract implementation in progress; integration and migration
+  regression checks follow with the service/UI. No live behavior claimed.
+- Next: implement service with same on-disk account homes and scoped auth lifecycle.
+
+### MULTI-03 / Task 3 — OpenAI service integration
+
+- Added `companion/connections.mjs`, reusing proof profile-environment isolation,
+  atomic private metadata and scoped login waiter. Same legacy account directories,
+  UUIDs, host and extension IDs; no proof profile import and no credential reads.
+- New profile-generation fencing, first-party completion/identity verification,
+  before/after quota identity checks, fresh auth browser per attempt, duplicate
+  warning, async cancellable login, reconnect and acknowledged per-profile logout.
+- Existing legacy service stays solely as compatibility test/reference; daemon now
+  uses Connections. Native protocol strictly allowlists fields; host forwards only
+  validated operations. Structured upstream errors retain safe retry/status hints.
+- Actual checks: `node --check` service/daemon and `npm run typecheck` passed.
+  Behavioral regressions follow with service tests; no real OpenAI accounts used.
+- Next: record Claude capability decision, then exercise service/refresh invariants.
+
+### MULTI-04 / Task 4 — Claude decision
+
+- Rechecked official authentication and legal/credential documentation today.
+  Recorded exact sources and decision in MULTI-ACCOUNT-IMPLEMENTATION.md.
+- Service exposes explicit Claude-unavailable capability/reason and refuses Claude
+  signup before allocating a profile. Existing per-config diagnostic and website
+  reader retained. No invented OAuth, default-browser fallback or CLI redistribution.
+- Actual verification: official documentation reads only; live login/quota tests
+  unavailable. Automatic isolated login, upstream freshness and monitoring use are
+  blockers, not marked complete. Continue service/extension integration per user.
+
+### MULTI-05 / Task 5 — native service and refresh
+
+- Native capabilities/list/start/cancel/rename/refresh/reconnect/disconnect wired
+  through strictly validated host fields and mutually authenticated existing pipe.
+- Per-profile operation queues, two-process global limit, persisted >=2min refresh
+  reservation and exponential failure backoff. Structured upstream Retry-After is
+  honored when the CLI exposes it; absent headers cannot be recovered by this API.
+- Last successful readings persist across restart and become unavailable until a
+  successful check; failed/empty/cancelled reads retain original time and values.
+  Start/refresh return promptly; progress/results arrive as snapshots.
+- Added `connections.test.mjs`: **10/10 passed** with in-process Node test isolation
+  disabled (sandbox runner otherwise summarized the file as one test). Includes
+  two profiles, duplicates, migration, cancellation, changed identity, retries,
+  disconnect isolation and explicit Claude capability rejection. Fictional only.
+- Extension strict contract/typechecking passed after native bridge integration.
+  Old helper can retain dated data but cannot start v2 independent authorization;
+  capabilities are checked before start and no auth-URL browser-tab fallback exists.
+- Next: replace misleading add flow, show connection progress and management.
+
+### MULTI-06 / Task 6 — extension experience
+
+- Updated AccountConnect: website tracking and independent account connection are
+  separate choices. Removed the button that implied website switching established
+  another independent connection; previously persisted website setup can finish.
+- Replaced OpenAICompanion UI with helper readiness/version check, sign-in progress,
+  local verified identity (hidden in privacy mode), duplicate/cancel/error state,
+  retry countdowns, reconnect/disconnect and last successful reading. Account tab
+  exposes management directly; popup remains compact and opens the dashboard.
+- Controller/message/native bridge now expose capabilities and specific actions;
+  no provider auth URL is returned to the extension or opened in the current tab.
+- Actual checks: TypeScript passed before final migration projection follow-up;
+  complete type/core/browser checks still pending. Live provider setup is untested.
+- Next: installer runtime inclusion and v3.1 packaging, then behavioral/browser tests.
+
+### MULTI-07 / Task 7 — installation
+
+- Windows package and source installer now include Connections and only its shared
+  proof utility modules (environment/store/scoped login/errors). Experimental
+  Claude PTY code/dependencies are not bundled into the production helper.
+- Existing pinned official Node/Codex runtimes and current-user discovery/registry/
+  scheduled startup retained. GUI states independent OpenAI scope and unavailable
+  Claude. NSIS removes installed utility files on uninstall and keeps the existing
+  explicit choice about deleting local authorization/profile/browser data.
+- Version advanced to 3.1.0 preview consistently in package/lock/manifest.
+- Build/PowerShell/installer acceptance is next. No Windows desktop or real
+  account setup has been claimed verified; signing/store publication out of scope.
+
+### MULTI-08 / Task 8 — verification checkpoint
+
+- Full integrated `npm run check` passed after rerunning with real child-process
+  support: TypeScript, **101 core tests**, **20 legacy native tests**, new connection
+  suite and Chrome production build. The restricted sandbox's initial fictional
+  subprocess test failed because its child stopped; elevated run passed.
+- Expanded integrated service suite: **13/13 passed**, including real fictional
+  Codex subprocesses, confirmed shutdown, two-process bound/coalescing, expired
+  auth and late generation rejection. Existing proof/PTTY suite: **28/28 passed**.
+- First real Chromium suite: **26 passed / 1 failed**. Failure was an old test
+  selecting the renamed Detect current account button. Corrected the selector;
+  added old-helper rejection coverage; full rerun in progress.
+- NSIS Windows installer compiled locally using official cached runtime assets:
+  196,689,244 bytes at this checkpoint. Final installer must be rebuilt after the
+  follow-up startup-failure message change. No Windows interactive/live proof.
+- Added current install instructions and updated privacy disclosure for transient
+  local email display, native protocol, auth browser data and actual retry policy.
+- Next: finish browser acceptance, final variant/package/installer checks, commit
+  and push branch. Required real-provider/Windows interactive matrix remains pending.
+
+### MULTI-09 / Task 9 — local delivery complete
+
+- Final sequential setup-browser checks **4/4 passed** after all extension rebuilds.
+  The earlier ERR_FILE_NOT_FOUND was caused by running a build while Chromium had
+  the same extension directory loaded; source was unchanged for that rerun.
+- Final Chrome ZIP 301,598 bytes, Firefox ZIP 300,346 bytes; manifests, optional
+  permission contracts, archive safety checks and SHA256SUMS passed.
+- Final Windows installer rebuilt: **196,689,211 bytes**, SHA256
+  `b303244471035db21ca31f7a81ee86978a543a331b9a97a1b1ae547975b9e246`.
+  This is an actual NSIS compile, not Windows interactive installation evidence.
+- Added MULTI-ACCOUNT-HANDOFF.md and MULTI-ACCOUNT-INSTALL.md; all local doc links
+  and git whitespace checks passed. Updated README/privacy/historical install
+  notices. Visually inspected the independent account screenshot.
+- Implemented tasks 1–3/5–9 and explicit Task 4 unavailable capability/decision.
+  Live OpenAI/Claude and interactive Windows matrix remain pending; Claude separate
+  automatic sign-in and monitoring route are blocked. No main merge or release.
+- Next: commit coherent source checkpoint, publish branch via available GitHub
+  access, inspect CI and record actual result without relabeling fixtures as live.
+
+### MULTI-09 published source and successful CI
+
+- Pushed `feature/independent-accounts`; source `e29a7d2571211bac4f82fc733fe531451749d340`
+  has exact tree `89b9e596132777e11f6fc7aaba28075579e39c06` (local `00437a8`).
+  Plan checkpoint `6e87354a...` has the exact local `6142aa6` tree. GitHub connector
+  published the coherent commits without rewriting existing branches or main.
+- Run **39579243525: all three jobs succeeded**. Linux full check/proof/browser/
+  variants/ZIPs passed; Windows 101 core + 20 native + 13 integrated connections
+  passed, proof 27 passed/1 intentional POSIX-only skip, zero failures; actual
+  PowerShell GUI construction and native installer compile passed. Existing
+  isolated PostgreSQL/phone/extension transport suite passed as well.
+- Final CI artifacts: extension **12335143318**; Windows helper **12336221223**.
+  The Windows CI EXE is 196,628,503 bytes. Different compiler/platform builds use
+  their own supplied checksum; local installer is a separate verified artifact.
+- Installation/handoff/README now link directly to those exact downloadable builds.
+  Final evidence commit is docs-only with redundant CI skipped. No application
+  changes after green CI. Main unchanged; no store/public release or deployment.
+- Remaining: user laptop's two real OpenAI account checks and actual renewal/logout,
+  interactive Windows acceptance. Claude automatic isolated browser login, reliable
+  fresh monitoring and applicable product route remain blocked. No credential
+  collection, provider login, model requests or external provider messages occurred.
+
+## MULTI-COMPLETE / code checklist start — 21 October 2026
+
+- User authorizes completing remaining code and keeping live account acceptance
+  separate. Added MULTI-ACCOUNT-CODE-CHECKLIST.md. Existing worktree clean at
+  local 010f7bb, published 791d82b6, same tree.
+- Re-inspected service, diagnostic, shared contracts, account merge and packaging.
+  Current missing code is Claude sign-in/adapter/UI/runtime packaging.
+- New narrow evidence: official troubleshoot-install documentation explicitly
+  describes BROWSER for browser routing, while a historical issue reports it was
+  absent. Will capability-test the unmodified official binary in an empty profile;
+  no account/credential/model interaction, no auth URLs in output.
+- Next: resolve browser launch, then implement remaining code sequentially.
+
+### MULTI-COMPLETE / Claude code integration checkpoint
+
+- Narrow official-interface investigation found documented BROWSER routing in
+  troubleshoot-install. Ran unmodified Claude Code 2.1.301, integrity checked from
+  official npm, in a fresh unauthenticated profile: BROWSER marker invoked, actual
+  authorization callback was loopback, terminal shutdown confirmed. No credentials,
+  authorization URL, code or account were entered/exported. This resolves the
+  prior lack of a known browser-routing implementation; account tests stay manual.
+- Implemented claude-adapter/browser-route/first-party-setup modules and a Windows
+  C# BROWSER launcher compiled during helper setup. Official CLI owns OAuth/code
+  exchange/storage; router launches only allowlisted provider URLs in fresh browser
+  folders and records a URL-free acknowledgment. No silent ordinary-tab fallback.
+- Service now supports provider-scoped Claude profiles, organization-aware identity
+  fencing, CLI /usage reads, five-minute cooldown, cancellation, acknowledged logout,
+  first-party onboarding action and CLI dependency readiness. Model prompts forbidden.
+- Shared schemas/merge/UI support mixed Claude/OpenAI accounts and preserve OpenAI
+  namespaces/aliases/history. Provider setup uses official prompts; trust/terms are
+  not auto-accepted. A one-time setup window may need the user's choices and closure.
+- Windows package includes terminal libraries and launcher source; setup provides
+  official Claude installer action. Updated version to 3.2.0 preview. No Claude
+  binary redistribution or custom third-party OAuth was added.
+- Actual checks: TypeScript, 102 core, 20 legacy helper and 16 integrated connection
+  tests passed in `npm run check`, including actual isolated fictional Claude PTYs.
+  Browser/proof and Windows official-interface checks are underway. Manual account
+  freshness/logout/renewal remains a separate checklist, not unfinished code.
+- Next: finish regressions, validate Windows routing on CI, package and push.
+
+### MULTI-COMPLETE / source ready for Windows CI
+
+- Full browser suite **29/29 passed**, plus final rebuilt setup-focused **4/4**.
+  All 16 integrated service tests pass, now also exercising production Claude login
+  completion and cancellation with actual fictional CLI terminals; retained quota
+  survives cancellation. Existing 28 proof/PTTY tests pass.
+- Official Linux 2.1.301 routing smoke script passes (no account sign-in). Added the
+  same Windows check with pinned official binary integrity and owned compiled router.
+  Windows native service tests compile the launcher before loading the adapter.
+- Added explicit dependency/version/router error help, per-user WinGet discovery,
+  startup-safe mixed metadata, first-party setup retry/cancel controls and bundled
+  terminal dependencies. No real-account test is marked as an unfinished code stub.
+- Updated checklist/install/privacy/README/handoff to 3.2; older unavailable-only
+  Claude statements are historical. Final variants/installer packaging in progress.
+- Next: commit/push coherent source, inspect actual Windows browser routing and
+  all CI results, then publish exact artifact links and check off code delivery.
+
+### MULTI-COMPLETE / Windows native-check investigation
+
+- Source pushed as 87a1879b390bae3fb11a6aa98e0d8a494a620377, exact local
+  c846f33 tree 5e4a0609a02b794b80639a7adaf2a847b5e9eb56.
+- CI 39583747381: Linux verify and connected-services passed. Windows compiled its
+  launcher but the integrated check has stalled; no Windows/overall success claimed.
+- Added a 45-second native test deadline, four-minute Windows check-step deadline
+  and retained diagnostic artifact. Moved official Windows BROWSER capability
+  before integration so its independent result is visible even if a fixture stalls.
+- Next: publish bounded diagnostics, inspect exact failure, fix the cause and rerun.
+
+### MULTI-COMPLETE / Windows terminal resource fix
+
+- Bounded CI 39584746042 confirmed the official Windows Claude 2.1.301 BROWSER
+  route and CLI-owned loopback callback without account sign-in. Linux and server
+  jobs passed; all Windows connection assertions passed but the test file retained
+  a terminal resource and failed the step deadline. This was a production cleanup
+  defect, not a pending real-account test.
+- Inspected pinned node-pty 1.1.0's OS-ConPTY lifecycle: natural CLI exit destroys
+  its output socket but retains its drain worker/input handle until public kill().
+  stopProbeTerminal now invokes that API once on Windows after confirmed CLI exit,
+  including successful login; failed cleanup cannot release a successful result.
+- Added a regression for natural-exit terminal disposal and cleanup failure. No
+  process.exit(), force-exit test flag, private-library patch or credential handling.
+- Next: run native/proof regressions, publish the fix and inspect fresh Windows CI.
+
+### MULTI-COMPLETE / end-to-end browser launch argument correction
+
+- Continued final integration review found the shared launcher was assigning its
+  provider argument back to OpenAI at the actual browser-spawn call. Claude route
+  marker tests did not cover this real shared launch boundary. Fixed forwarding
+  the selected provider and made browser launch dependencies injectable for a
+  regression that executes the actual allowlist/argument path without opening
+  an account/browser. Claude can now reach its external isolated sign-in window.
+- Local terminal cleanup checks: 16/16 connection tests and 29/29 proof tests passed.
+  Windows fix published as 32ae8e649d150edfa67a1656fd062289f1d43d9e; fresh CI pending.
+- Next: run/publish the browser-boundary regression and inspect Windows results.
+
+### MULTI-COMPLETE / Windows cleanup regression resolved
+
+- CI 39585758002 confirms Windows native tests finish and exit: 16/16 passed,
+  zero cancelled, 12.5-second file duration; the previous retained-worker hang is
+  resolved. Official Windows Claude routing passed again. Pinned node-pty may
+  still emit an AttachConsole cleanup warning when its enumerator sees an already
+  exited CLI; no account output or credentials are printed.
+- The subsequent Windows build was interrupted by legacy PowerShell treating WXT's
+  normal stderr progress as NativeCommandError under redirected Tee-Object. Changed
+  only capture to cmd redirection, replaying the full log and preserving npm's real
+  exit code; genuine test/build failures still fail the job. No test was disabled.
+- Local launcher-boundary regression now passes: 17 connection and 29 proof tests.
+- Next: publish this checkpoint, finish clean Windows packaging and link artifacts.
+
+### MULTI-COMPLETE / metadata command shutdown ownership
+
+- Final lifecycle review extended acknowledged cancellation to short official
+  CLI metadata/auth commands (version, status, logout), which previously called
+  kill then rejected immediately. They now wait for actual exit; a five-second
+  missing acknowledgment fails closed with terminal-stop-unconfirmed, retaining
+  service recovery state. No raw output enters error messages.
+- Added a delayed-exit subprocess regression. Next: run native/proof checks and
+  include this safety fix in the final packaged source checkpoint.
+
+### MULTI-COMPLETE / cancellation failure priority — final package follow-up
+
+- CI 39586512717 passed all three jobs on 75ac06d3, including Windows routing,
+  native regressions, GUI construction, installer and extension artifacts. Prior
+  source was green, not a substitute for testing this final follow-up.
+- Final error-path review found login cancellation could mask an unconfirmed
+  Claude shutdown as an ordinary cancelled/sign-in state. Preserve shutdown errors
+  ahead of cancellation so requiresRecovery fences all new provider operations.
+- Added an integrated regression that cancels a fictional login, simulates a
+  missing shutdown acknowledgment, and verifies safe error/state/recovery fencing.
+- Next: publish this focused fix, rerun source CI/package and update final download
+  links. Manual real-account acceptance remains separate; no account access needed.
+
+### MULTI-COMPLETE / COMPLETE — code delivered; manual accounts separate
+
+- Completed every item in MULTI-ACCOUNT-CODE-CHECKLIST.md. Independent OpenAI/Codex
+  and Claude Code adapters are integrated into the extension, with aliases, scoped
+  cancellation/reconnect/disconnect, bounded refresh and correctly dated failures.
+  Other providers retain website tracking. No remaining coding stub on this scope.
+- Final production source pushed as d3e821ad1d200c16bc6c0b6d6efc4de8315ae7dc,
+  matching local be1efc0 tree f1c036d44baba61caa5aa765119052fef99852da. Final
+  documentation follow-up changes no production code and skips duplicate source
+  CI; the following actual source build remains the authoritative package evidence.
+- CI https://github.com/voiddev011/mylimits/actions/runs/39587512847 **SUCCESS**:
+  windows-logic, verify and connected-services all passed for that exact source.
+- Actual final Linux/Windows checks: TypeScript; 102 core, 20 legacy native and
+  18 integrated connection tests each passed. Proof tests: Linux 30 passed;
+  Windows 29 passed/one explicit symlink-privilege skip. Zero failed/cancelled.
+  Full Chromium 29/29, Chrome/Edge/Firefox manifests, ZIP contracts/checksums passed.
+  Existing real-PostgreSQL/server, phone dashboard and extension transport gates
+  passed. Official unmodified Claude 2.1.301 BROWSER/loopback capability passed
+  on Windows and Linux without account login, credential export or model prompts.
+- Windows GUI scripts parsed and actual controls constructed; installer compiled
+  on Windows and uploaded with checksum. Local NSIS build also passed for the
+  final cancellation fix; staged adapter/runtime files match final source.
+  Pinned terminal dependencies included. Upstream ConPTY AttachConsole cleanup
+  warnings remain visible, but workers exit and tests finish normally.
+- Final downloads: extension artifact 12340496910 (Chrome/Firefox ZIPs and
+  SHA256SUMS); Windows x64 helper 12339618052 (EXE and checksum). Exact links,
+  artifact-envelope hashes and instructions are in MULTI-ACCOUNT-HANDOFF.md and
+  MULTI-ACCOUNT-INSTALL.md. README now describes current 3.2 behavior directly.
+- **Separate manual checks PENDING (user):** two actual accounts each provider,
+  normal browser A unaffected by B, provider values/scopes, usage elsewhere,
+  restart, ordinary website logout vs global revocation and actual token renewal.
+  Interactive clean Windows install/upgrade/uninstall is also manual. Fictional
+  CLI tests and unauthenticated capability checks do not prove these behaviors.
+- **Code blockers: none known on this checklist.** Release readiness awaits manual
+  acceptance and signing/publication review. No main merge, release, credential
+  upload or external provider message was performed.
+- Next action: user installs matching 3.2 artifacts and performs manual acceptance.
+  Implementation phase complete; no further code task queued by this instruction.
+
+### HOSTED-TRIAL / in progress — installer-free request supersedes delivery claim
+
+- User reports the actual GPT account-adding journey still opens the normal
+  session; earlier code/test completion does not establish a working user flow.
+  User now authorizes proposing a plan and trying a hosted/no-local-installer route.
+- Created sequential HOSTED-ACCOUNTS-TRIAL-PLAN.md on feature/hosted-account-proof.
+  Keep production collectors disabled; no UI-only update labeled a solved login.
+- Runtime readiness: enforced HTTP, no provider accounts/OAuth client/production
+  KMS or hosted service credentials. Existing Fastify/PostgreSQL credential/jobs
+  infrastructure is reusable after the real connector gate, not functional today.
+- Narrow official docs reveal App Server chatgptDeviceCode, including first-party
+  cancellation and CLI-owned credentials. Beta requires a user/admin setting and
+  entering a one-time code; this differs from one-click browser OAuth. Claude
+  documents remote manual-code fallback; unmodified 2.1.301 public login help
+  advertises no custom callback URL option.
+- Added developer-only redacted official transport probes in companion/proof and
+  scripts/probe-hosted-login.mjs, with six passing redaction/lifecycle tests. Not
+  imported by the extension/server. Official binary experiment now running in fresh
+  temporary homes with no account authentication, quota fetch or model request.
+- Next: record actual official results, finish bounded checks, commit and push the
+  experiment/plan. Real hosted sign-in eligibility and A/B proof remain gated.
+
+### HOSTED-TRIAL / official transport attempt completed — product gate still pending
+
+- Ran new probe with checksum-verified official Codex 0.163.0 Linux native binary
+  and unmodified Claude Code 2.1.301, in private temporary profiles. Both official
+  processes stopped and temporary profiles were removed. No accounts authenticated,
+  quotas fetched, model prompts sent or auth URL/code/credential output exported.
+- **Observed:** OpenAI initial account absent; App Server chatgptDeviceCode issued a
+  valid ticket; official cancel acknowledged; process exit confirmed. This provides
+  a real headless transport candidate, not proof of two accounts or quota access.
+  Beta device login needs code entry and may require a security/admin setting.
+- **Observed:** Claude BROWSER invoked with first-party authorize URL and loopback
+  callback; no custom callback option in public login help; shutdown confirmed.
+  Laptop-to-server automatic completion and account isolation remain unresolved.
+- Six hosted probe regression tests passed (redaction, strict verification URL,
+  callback classification, unexpected-account refusal, cancellation, error privacy).
+  Added a CI step for these tests; the experiment is not imported by production
+  collectors or the extension. Existing production collector map stays empty.
+- Plan/results/reproduction and the exact pending gates are recorded in
+  HOSTED-ACCOUNTS-TRIAL-PLAN.md. START-HERE now directs the next agent to this trial.
+- Next: finish narrow regressions and publish the research branch. Subsequent
+  account proof requires an allowed hosted integration, secure private test host
+  and user provider sign-in; none is configured here. UI replacement follows that
+  proof, with site switches replaced by + and current-account/other-account actions.
+
+### HOSTED-TRIAL / experiment ready for publication
+
+- Final narrow checks passed: 7 hosted diagnostic tests, existing 30 account-proof
+  tests, JavaScript syntax and git diff whitespace checks. Additional failure-path
+  test confirms an unacknowledged metadata process retains its private profile.
+- Added npm probe/test scripts and a CI step. README and START-HERE point at the
+  new plan/results and explicitly preserve the unresolved real user sign-in issue.
+- This checkpoint changes developer experiments/documentation, not product UI,
+  provider OAuth registration, production collectors or deployed infrastructure.
+  No real-account tests have passed and no updated extension installer is claimed.
+- Next external prerequisite: allowed hosted authorization and a secure private
+  test service/account sign-in. Next implementation milestone after that: A/B
+  identity plus quota proof, followed by + menu and hosted collection. Continue
+  only within established provider conditions; no fabricated one-click substitute.
+
+### HOSTED-TRIAL / published handoff
+
+- Pushed feature/hosted-account-proof at 0e39450974fdad7d7f47900342fd0b57e59bea9e,
+  matching local 173c06f tree 951977a461cfca454a2917be69ed6fded44b59cb.
+  CI 39630930205 queued; not marked passed. This documentation follow-up skips
+  duplicate CI and changes no code. Main/feature-independent-accounts untouched.
+- Delivered the plan, executable unauthenticated official transport experiment,
+  seven passing local diagnostic tests and 30 passing existing proof regressions.
+  OpenAI device-code initiation/cancellation observed; Claude loopback observed.
+  Neither authenticated a real account nor fetched quota. Exact one-click hosted
+  multi-account UX remains unproven; no product-complete claim.
+- Next remains the permitted hosted login/account proof described in the plan,
+  before production backend collectors and replacing site switches with +.

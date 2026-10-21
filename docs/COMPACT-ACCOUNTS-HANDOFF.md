@@ -71,7 +71,7 @@ independent account where such a connector is available.
 ## Install on Windows
 
 Download the current branch source ZIP, extract it and open PowerShell in the
-folder containing `package.json`. Node 24+ is required.
+folder containing `package.json`. Node 22.15+ is required.
 
 ```powershell
 npm ci --include=dev --include=optional

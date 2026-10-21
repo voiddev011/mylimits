@@ -1,0 +1,15 @@
+.git
+.output
+.wxt
+node_modules
+server/node_modules
+artifacts
+coverage
+playwright-report
+test-results
+.env
+.env.*
+!.env.example
+*.log
+*.pem
+*.key

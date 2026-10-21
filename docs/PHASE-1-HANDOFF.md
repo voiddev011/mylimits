@@ -45,7 +45,7 @@ click **Reload**. Do not uninstall first. A new folder/extension ID can start a
 separate empty profile. Migration runs automatically within the existing ID.
 This is a desktop Chromium preview, not a Store or Firefox/mobile release.
 
-Developer commands from the repository root, with Node 24+:
+Developer commands from the repository root, with Node 22.15+:
 
 ```sh
 npm ci                     # only if dependencies are not installed

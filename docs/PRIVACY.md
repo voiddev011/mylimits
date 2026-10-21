@@ -74,14 +74,23 @@ authorization and renewal, preferring the OS credential store with its `auto`
 setting and otherwise using its local auth file. Directories are owner-only and
 service-created files use umask 0077. File storage is not an encrypted vault.
 
-Only an opaque local profile ID, plan, quota percentages, reset times, status, and
-reading timestamp cross into the extension. The bridge does not return emails,
-access/refresh tokens, raw API responses, or conversation data. The first sign-in
-URL passes through to open the provider's authorization page.
+Protocol 2 returns only normalized profile ID, nickname, limited identity confidence,
+plan, quota percentages, reset times, authentication/error/retry state and reading
+timestamps. Verified account email is displayed locally in connection management,
+hidden in privacy mode, and is not persisted in extension account storage. Email
+is never used as a routing key or a verified workspace ID. Local service metadata
+stores a salted identity binding, not an email or token. Native messages contain
+no access/refresh tokens, raw provider responses or conversation data. Sign-in
+URLs remain inside the helper and its separate authorization browser profile.
+Those browser directories can contain browser-owned session cookies; do not share
+or sync them. MyLimits does not read those cookies.
 
-The service polls about once a minute while your computer and user session remain
-running, even after Chrome closes. Browser desktop alerts and history collection
-require the extension to be running. This service is local, not a hosted collector. Optional phone viewing uses separately synced snapshots.
+The daemon checks eligible accounts at least two minutes apart and backs off on
+failure, honoring explicit retry hints where exposed by Codex. It may continue
+while Chrome is closed if the computer/user service remains running. Browser
+alerts/history require the extension. Provider observation time remains unknown
+when not exposed; failed/empty reads never change the last successful timestamp.
+The optional phone dashboard uses synced snapshots, not independent authorization.
 
 Pausing extension sync does not stop the service or revoke accounts. Disconnect
 an account in its Overview settings to request Codex logout before deleting the
@@ -107,7 +116,7 @@ account settings and does not pause collection of subsequent new readings.
 
 Quiet hours, snooze and reset alerts are local preferences. Reset alerts require
 fresh provider evidence of a new window; the passage of a countdown alone does
-not establish a reset. The local Guide reviews text you explicitly paste; it stores none of that text and makes no AI requests. Handoff copy/download requires an explicit preview; editing invalidates that preview. No automatic conversation transfer occurs.
+not establish a reset. The Guide and prompt/handoff tools were removed in 3.0.
 
 ## Phase 2 optional snapshot sync
 
@@ -167,3 +176,44 @@ The optional Windows setup reads only extension registration metadata from brows
 Preferences/Secure Preferences to locate MyLimits. It does not read cookies or
 transfer login state. Its uninstaller offers an explicit local-credential deletion
 choice; deleting files does not prove provider-side logout.
+
+## Version 3.0 interface changes
+
+The floating preview receives only its enabled state and corner position. It
+reads no account readings, page text, selections, prompts or conversations.
+Existing per-site widget opt-ins and corner preferences remain; the old quota
+widget is replaced. No account is required to enable the preview.
+
+Privacy mode masks account/workspace names, meter labels and notification text
+without overwriting the original local data. History display and exports pause
+while it is on. This is a screen-sharing control, not encryption or authentication;
+it does not change previously configured snapshot synchronization. Diagnostics
+copy only version, counts, generic connection states and presentation settings.
+
+The updated optional helper opens official OpenAI sign-in in a fresh local browser
+profile for each connection. It does not copy cookies from your regular browser.
+Codex credentials remain in its protected local account directory/OS store.
+Email duplicate hints are hashed in memory only and never exported; the UI receives
+only a possible-duplicate flag, never the email/hash. A matching email is a warning,
+not proof of identical workspace authorization, and profiles are never auto-merged.
+
+## 3.2 independent Claude connections
+
+The optional helper invokes unmodified, user-installed Claude Code. Each account
+has a separate CLAUDE_CONFIG_DIR and empty workspace. The documented BROWSER
+setting routes its official authorization page into an account-owned fresh browser
+profile. The CLI owns the callback, code exchange, credentials and renewal. MyLimits
+never collects a pasted login code, Claude password, cookies or provider tokens.
+A URL-free router acknowledgment confirms browser launch. Temporary authorization
+URLs remain within the local helper/official browser processes and are never logged
+or sent to the extension/backend. Browser-owned profile folders may contain cookies.
+
+Only normalized /usage panel readings and allowlisted auth/account/organization
+metadata cross Native Messaging. Raw terminal output stays in native memory and
+is discarded. Display email is transient and hidden in privacy mode; salted binding
+and optional organization ID are stored locally. CLI-provided reset times are used
+only when actually supplied; unknown resets remain null. Provider observation time
+is not inferred from terminal redraws. Failed reads preserve their previous age.
+Checks wait at least five minutes and back off on failures. First-party onboarding
+may open an official setup terminal once; user trust/terms choices are not automated.
+No model prompts or API inference calls are sent by the adapter.
