@@ -61,3 +61,16 @@ provider-matching scopes/values; usage elsewhere reflected on later successful
 checks; no provider tabs required; restart; ordinary website logout vs global
 revocation; actual expiry/renewal. CLI/OS fixtures do not satisfy these checks.
 Claude automatic isolated login and permitted monitoring remain blocked.
+
+## Claude decision — 21 October 2026
+
+Rechecked [official authentication](https://code.claude.com/docs/en/authentication#log-in-with-multiple-accounts)
+and [credential conditions](https://code.claude.com/docs/en/legal-and-compliance#authentication-and-credential-use).
+Separate Claude.ai profiles are documented; Console-without-key isolation differs.
+Third-party Claude.ai credential collection remains restricted; unmodified CLI
+hosting has separate conditions. These pages do not prove automatic fresh browser
+selection or a permitted reliable idle polling interface. Existing 2.1.301 help
+inspection found no exposed no-browser flag. No real accounts are available.
+Decision: service advertises Claude `available:false`, rejects start before profile
+allocation and does not invoke the experimental PTY from production. Keep its
+existing diagnostic and website reader. No external clarification was sent.

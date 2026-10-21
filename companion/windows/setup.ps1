@@ -9,7 +9,7 @@ $form.Text = 'MyLimits optional companion — unsigned preview'
 $form.Size = New-Object Drawing.Size(650,470)
 $form.StartPosition = 'CenterScreen'
 function Label($text,$y) {$l=New-Object Windows.Forms.Label;$l.Text=$text;$l.Location=New-Object Drawing.Point(20,$y);$l.Size=New-Object Drawing.Size(590,42);$form.Controls.Add($l)}
-Label 'Optional advanced feature. Node and the official Codex runtime are included for Windows x64. No browser cookies are copied.' 16
+Label 'Independent OpenAI accounts require this helper. Node and official Codex are included for Windows x64. Claude independent connections are unavailable.' 16
 $node = Join-Path $root 'dependencies\node.exe'
 $codex = Join-Path $root 'dependencies\codex\bin\codex.exe'
 if (!(Test-Path $node)) {$node=$null}
@@ -28,7 +28,7 @@ if($choices.Items.Count -gt 0){$choices.SelectedIndex=0}
 Label 'If detection misses an unpacked profile, select a browser and paste its ID from the Extensions page below. Leave blank to use detection.' 148
 $browser=New-Object Windows.Forms.ComboBox;$browser.Location=New-Object Drawing.Point(20,195);$browser.Size=New-Object Drawing.Size(130,28);$browser.DropDownStyle='DropDownList';[void]$browser.Items.AddRange(@('chrome','brave','edge','chromium'));$browser.SelectedIndex=0;$form.Controls.Add($browser)
 $id=New-Object Windows.Forms.TextBox;$id.Location=New-Object Drawing.Point(160,195);$id.Size=New-Object Drawing.Size(450,28);$form.Controls.Add($id)
-$status=New-Object Windows.Forms.Label;$status.Location=New-Object Drawing.Point(20,235);$status.Size=New-Object Drawing.Size(590,68);$status.Text='Uses a per-user native host and sign-in task. OpenAI authorization happens later, from the extension.';$form.Controls.Add($status)
+$status=New-Object Windows.Forms.Label;$status.Location=New-Object Drawing.Point(20,235);$status.Size=New-Object Drawing.Size(590,68);$status.Text='Uses a per-user native host and sign-in task. Separate OpenAI sign-in starts later from the extension. Website tracking does not require this helper.';$form.Controls.Add($status)
 $install=New-Object Windows.Forms.Button;$install.Text='Register and start';$install.Location=New-Object Drawing.Point(20,315);$install.Size=New-Object Drawing.Size(180,36);$form.Controls.Add($install)
 $install.Add_Click({
  try{
@@ -44,7 +44,7 @@ $install.Add_Click({
  }catch{$status.Text=$_.Exception.Message}finally{$install.Enabled=$true}
 })
 $help=New-Object Windows.Forms.Button;$help.Text='Setup help';$help.Location=New-Object Drawing.Point(215,315);$help.Size=New-Object Drawing.Size(180,36);$form.Controls.Add($help)
-$help.Add_Click({Start-Process 'https://github.com/voiddev011/mylimits/blob/v3/redesign/docs/OPENAI-COMPANION.md'})
+$help.Add_Click({Start-Process 'https://github.com/voiddev011/mylimits/blob/feature/independent-accounts/docs/MULTI-ACCOUNT-INSTALL.md'})
 $close=New-Object Windows.Forms.Button;$close.Text='Close';$close.Location=New-Object Drawing.Point(410,315);$close.Size=New-Object Drawing.Size(180,36);$form.Controls.Add($close);$close.Add_Click({$form.Close()})
 Label 'Disconnect accounts in MyLimits before uninstalling to request provider logout. Uninstall alone cannot confirm remote revocation. Never run setup as Administrator.' 365
 if(!$NoShow){[void]$form.ShowDialog()}

@@ -22,9 +22,18 @@ export function frameReader(onMessage) {
   };
 }
 export function validRequest(value) {
-  return value && typeof value.id === 'string' && /^[a-zA-Z0-9-]{1,80}$/.test(value.id)
-    && ['status', 'add', 'remove', 'refresh'].includes(value.method)
-    && (value.method !== 'remove' || typeof value.profile === 'string' && /^[a-f0-9-]{36}$/.test(value.profile));
+  if (!value || typeof value !== 'object' || Array.isArray(value) || typeof value.id !== 'string' || !/^[a-zA-Z0-9-]{1,80}$/.test(value.id)) return false;
+  const allowed = {
+    status: [], capabilities: [], list: [], add: ['provider', 'alias'], start: ['provider', 'alias'],
+    cancel: ['profile'], reconnect: ['profile'], rename: ['profile', 'alias'],
+    remove: ['profile'], disconnect: ['profile'], refresh: ['profile'],
+  };
+  if (!Object.hasOwn(allowed, value.method) || Object.keys(value).some(k => !['id', 'method', ...allowed[value.method]].includes(k))) return false;
+  if (['cancel','reconnect','rename','remove','disconnect'].includes(value.method) && !value.profile) return false;
+  if (value.profile !== undefined && (typeof value.profile !== 'string' || !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(value.profile))) return false;
+  if (value.provider !== undefined && !['openai','claude'].includes(value.provider)) return false;
+  if (value.method === 'rename' && value.alias === undefined) return false;
+  return value.alias === undefined || typeof value.alias === 'string' && value.alias.length <= 60 && !/[\x00-\x1f\x7f]/.test(value.alias);
 }
 export function safeAuthUrl(value) {
   try {

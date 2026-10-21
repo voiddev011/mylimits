@@ -1,3 +1,7 @@
+> Current 3.1 branch: see [MULTI-ACCOUNT-INSTALL.md](MULTI-ACCOUNT-INSTALL.md).
+> The following describes the previous 3.0 helper/release; its package is not
+> compatible with the new independent-account setup.
+
 # Install or update MyLimits 3.0
 
 ## Short path: packaged extension

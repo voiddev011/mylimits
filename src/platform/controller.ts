@@ -111,7 +111,7 @@ export async function refreshProvider(provider: ProviderId, manual = false, reas
 }
 
 async function refreshAll(manual = false, reason: RefreshReason = manual ? 'manual' : 'scheduled'): Promise<void> {
-  const results = await Promise.allSettled([...PROVIDER_IDS.map(provider => refreshProvider(provider, manual, reason)), refreshCompanion()]);
+  const results = await Promise.allSettled([...PROVIDER_IDS.map(provider => refreshProvider(provider, manual, reason)), refreshCompanion(true)]);
   await snapshotSync.run().catch(()=>{});
   if (results.some(result => result.status === 'rejected')) await renderBadge().catch(() => undefined);
 }
@@ -259,7 +259,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
       const conn = (await readStore()).connections.find(c => c.id === command.connectionId);
       if (!conn) throw new Error('Connection is no longer saved.');
       if (conn.kind === 'website') await setProvider(conn.provider, false);
-      else if (conn.kind === 'companion') { await companionRequest('remove', conn.profileId); await refreshCompanion(); }
+      else if (conn.kind === 'companion') { await companionRequest((await companionStatus()).compatible ? 'disconnect' : 'remove', conn.profileId); await refreshCompanion(); }
       else await updateStore(store => ({ store: changeConnection(store, conn.id, { enabled:false,status:'disabled' }, true), value:undefined }));
       break;
     }
@@ -271,11 +271,12 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
       await enableCompanion(command.enabled);
       break;
     case 'companion-add': {
-      const profile = await addCompanionAccount();
+      const profile = await addCompanionAccount(command.provider, command.nickname);
       await refreshCompanion();
       if (command.nickname) await updateStore(store=>({store:{...store,accounts:store.accounts.map(a=>a.companionProfile===profile?{...a,alias:command.nickname!}:a)},value:undefined}));
       break;
     }
+    case 'companion-action': await companionRequest(command.action, command.profile); await refreshCompanion(); break;
     case 'companion-remove': await companionRequest('remove', command.profile); await refreshCompanion(); break;
     case 'refresh': {
       const source = command.connectionId ? (await readStore()).connections.find(c => c.id === command.connectionId) : undefined;
@@ -287,9 +288,15 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
       break;
     }
     case 'enable': await setProvider(command.provider, command.enabled); break;
-    case 'rename':
+    case 'rename': {
+      const account = (await readStore()).accounts.find(a => a.id === command.accountId);
+      if (account?.companionProfile) {
+        const status = await companionStatus();
+        if (status.compatible) await companionRequest('rename', account.companionProfile, { alias: command.alias });
+      }
       await updateStore(store => ({ store: { ...store, accounts: store.accounts.map(account => account.id === command.accountId ? { ...account, alias: command.alias } : account) }, value: undefined }));
       break;
+    }
     case 'account-settings':
       await updateStore(store => ({ store: { ...store, accounts: store.accounts.map(account => account.id === command.accountId ? { ...account, alertRemaining: command.alertRemaining, alertsMuted: command.alertsMuted } : account) }, value: undefined }));
       break;

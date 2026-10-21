@@ -6,6 +6,8 @@ import { bundleCompanionDependencies } from './companion-dependencies.mjs';
 const root=path.resolve('companion'),out=path.resolve('artifacts'),staging=path.join(out,'companion-windows-staging');
 await rm(staging,{recursive:true,force:true});await mkdir(path.join(staging,'windows'),{recursive:true});
 for(const name of (await readdir(root)).filter(n=>n.endsWith('.mjs')&&!n.endsWith('.test.mjs')))await copyFile(path.join(root,name),path.join(staging,name));
+await mkdir(path.join(staging,'proof'),{recursive:true});
+for(const name of ['runtime.mjs','store.mjs','codex-login.mjs','errors.mjs'])await copyFile(path.join(root,'proof',name),path.join(staging,'proof',name));
 for(const name of ['setup.ps1','uninstall.ps1'])await copyFile(path.join(root,'windows',name),path.join(staging,'windows',name));
 await writeFile(path.join(staging,'Install.cmd'),'@echo off\r\npowershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0windows\\setup.ps1"\r\n');
 const files=(await readdir(staging)).filter(n=>n.endsWith('.mjs'));await writeFile(path.join(staging,'uninstall-files.nsh'),files.map(n=>'Delete \"$INSTDIR\\'+n+'\"').join('\n'));

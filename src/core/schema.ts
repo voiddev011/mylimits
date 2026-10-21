@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { IndependentMetadataSchema } from './independent-contract';
 import { emptyStore,websiteConnection,PROVIDER_IDS, type Account, type Meter, type ProviderState, type Settings, type Store, type ConnectionRecord, type UsageSnapshot, type Workspace } from './model';
 const id = z.string().min(1).max(240);
 const time = z.number().finite().min(0).max(8.64e15);
@@ -41,7 +42,7 @@ export const ConnectionRecordSchema: z.ZodType<ConnectionRecord> = z.object({
   accountId: id.nullable(), workspaceId: id.nullable(), workspaceIds: z.array(id).max(100), enabled: z.boolean(),
   status: z.enum(['disabled','checking','active','needs-auth','needs-tab','unavailable','offline','error']),
   generation: z.number().int().min(0), lastAttemptAt: time.nullable(), lastSuccessAt: time.nullable(),
-  nextRetryAt: time.nullable(), failures: z.number().int().min(0), message: z.string().max(300).nullable(), profileId: z.string().uuid().optional(),
+  nextRetryAt: time.nullable(), failures: z.number().int().min(0), message: z.string().max(300).nullable(), profileId: z.string().uuid().optional(), independent: IndependentMetadataSchema.optional(),
 });
 export const WorkspaceSchema: z.ZodType<Workspace> = z.object({ id, provider: ProviderSchema, remoteId: id, name: z.string().max(120) });
 export const UsageSnapshotSchema: z.ZodType<UsageSnapshot> = z.object({

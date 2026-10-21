@@ -30,7 +30,7 @@ Function LaunchSetup
  Exec '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "$INSTDIR\windows\setup.ps1"'
 FunctionEnd
 Section "Uninstall"
- MessageBox MB_YESNOCANCEL|MB_ICONQUESTION "Delete local OpenAI profile credentials as well? Disconnect accounts in MyLimits first to request remote logout. Yes deletes local profiles; No retains them. Remote revocation is not confirmed by uninstall." IDYES deleteData IDNO keepData
+ MessageBox MB_YESNOCANCEL|MB_ICONQUESTION "Delete local account profiles and sign-in browser data as well? Disconnect accounts in MyLimits first to request remote logout. Yes deletes local profiles; No retains them. Remote revocation is not confirmed by uninstall." IDYES deleteData IDNO keepData
  Goto cancel
  deleteData:
   ExecWait '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$INSTDIR\windows\uninstall.ps1" -DeleteData' $0
@@ -50,6 +50,7 @@ Section "Uninstall"
   Delete "$INSTDIR\windows\uninstall.ps1"
   RMDir "$INSTDIR\windows"
   RMDir /r "$INSTDIR\dependencies"
+  RMDir /r "$INSTDIR\proof"
   Delete "$INSTDIR\Install.cmd"
   Delete "$INSTDIR\uninstall-files.nsh"
   Delete "$INSTDIR\Uninstall.exe"
