@@ -25,7 +25,7 @@ Documentation branch: `docs/hosted-accounts-execution-plan`.
 | H04 | implemented | Implement H05 secure runtime configuration and operator package. |
 | H05 | implemented | Record H06/H07 provider blockers, then implement H08 collection. |
 | H06 | blocked | Continue H07 decision and H08 independent code; external hosted route and real A/B proof required. |
-| H07 | blocked | Establish Claude remote login/monitoring route and A/B proof |
+| H07 | blocked | Implement H08 bounded jobs and H09 extension integration without enabling unsupported providers. |
 | H08 | not_started | Implement bounded collection and truthful freshness |
 | H09 | not_started | Integrate extension/API and maintain manual evidence matrix |
 | H10 | not_started | Package, verify and deliver accurate handoff |
@@ -83,6 +83,15 @@ State: **blocked**. Branch: `feature/hosted-connections`.
 - Checks: Rechecked OpenAI official hosted eligibility documentation; prior official device-code initiation/cancel observed only. No user authentication, quota read, account B selection or renewal tested.
 - Decision/blockers: https://developers.openai.com/siwc/token-sharing-open-source explicitly directs remotely hosted offerings to an interest route; no approved hosted integration or exact supported account-selection mechanism configured. Do not reuse a private CLI OAuth client as a hosted product. Adapter cannot honestly be implemented/activated to this acceptance gate yet.
 - Next action: Continue H07 decision and H08 independent code; external hosted route and real A/B proof required.
+
+## H07 checkpoint — 21 October 2026
+
+State: **blocked**. Branch: `feature/hosted-connections`.
+
+- Files: Claude hosted capability and service remain unavailable; existing isolated diagnostic retained unchanged.
+- Checks: Rechecked official Claude authentication and legal/compliance docs; no account login performed.
+- Decision/blockers: https://code.claude.com/docs/en/legal-and-compliance allows unmodified hosted CLI under conditions; https://code.claude.com/docs/en/authentication documents manual-code fallback when loopback is inaccessible. Exact automatic remote completion and quota-only monitoring not established; no custom Claude OAuth or cookie interception added. Normal browser account preservation remains PENDING.
+- Next action: Implement H08 bounded jobs and H09 extension integration without enabling unsupported providers.
 
 ## Documentation consolidation checkpoint
 
