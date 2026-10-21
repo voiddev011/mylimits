@@ -941,3 +941,16 @@ No AGENTS.md applies; one workstream, no parallel agents.
   service recovery state. No raw output enters error messages.
 - Added a delayed-exit subprocess regression. Next: run native/proof checks and
   include this safety fix in the final packaged source checkpoint.
+
+### MULTI-COMPLETE / cancellation failure priority — final package follow-up
+
+- CI 39586512717 passed all three jobs on 75ac06d3, including Windows routing,
+  native regressions, GUI construction, installer and extension artifacts. Prior
+  source was green, not a substitute for testing this final follow-up.
+- Final error-path review found login cancellation could mask an unconfirmed
+  Claude shutdown as an ordinary cancelled/sign-in state. Preserve shutdown errors
+  ahead of cancellation so requiresRecovery fences all new provider operations.
+- Added an integrated regression that cancels a fictional login, simulates a
+  missing shutdown acknowledgment, and verifies safe error/state/recovery fencing.
+- Next: publish this focused fix, rerun source CI/package and update final download
+  links. Manual real-account acceptance remains separate; no account access needed.
