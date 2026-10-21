@@ -69,6 +69,20 @@ Steps 5–9: incomplete and gated. No real provider account has connected.**
 
 The H01–H10 ledger below records **previous supporting work**, not current delivery.
 
+### Delivery checkpoint — blocked feature, existing preview packaged
+
+- Changed: INDEPENDENT-ACCOUNTS-FINAL-HANDOFF.md, STARTER-PROMPT.md, INSTALL.md,
+  README.md, ARCHITECTURE.md and historical trial/plan entrypoints now use the
+  current real-provider-first plan. Provider requests are prepared, not submitted.
+- Check: `npm run zip` passed; existing 3.3 Chrome ZIP is 306395 bytes with SHA-256
+  `85f3190ad92f6d376128ef4443d54e28768926bde05cc0d6e0f81ef138dfb811`.
+  Extension production code and UI are unchanged; no new login feature is claimed.
+- State: only the transport diagnostic and prerequisite documentation were
+  implemented this run. Real drivers, deployment and both live acceptance matrices
+  remain incomplete. No main merge/release, provider submission or public hosting.
+- Next: establish the exact supported hosted contract/access from providers;
+  implement and prove real account connections before further foundation work.
+
 ## Current facts
 
 - Local website readers and experimental native/helper adapters exist.

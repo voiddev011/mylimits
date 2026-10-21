@@ -5,7 +5,7 @@ Your AI account readings in one browser dashboard. Website tracking is available
 supported hosted authorization and actual account acceptance.
 
 [Install/test](INSTALL.md) · [Status](IMPLEMENTATION-STATUS.md) ·
-[Plan](HOSTED-ACCOUNTS-IMPLEMENTATION-PLAN.md) · [Handoff](HOSTED-ACCOUNTS-HANDOFF.md)
+[Plan](INDEPENDENT-ACCOUNTS-FINAL-PLAN.md) · [Current handoff](INDEPENDENT-ACCOUNTS-FINAL-HANDOFF.md)
 
 ## Current behavior
 

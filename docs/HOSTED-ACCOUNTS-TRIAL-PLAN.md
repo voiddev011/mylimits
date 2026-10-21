@@ -1,5 +1,11 @@
 # Hosted accounts trial — plan and evidence
 
+Historical trial. The active work order is now
+[INDEPENDENT-ACCOUNTS-FINAL-PLAN.md](INDEPENDENT-ACCOUNTS-FINAL-PLAN.md).
+The new managed-browser callback observation is recorded in the
+[current handoff](INDEPENDENT-ACCOUNTS-FINAL-HANDOFF.md); the prior results below
+are retained as historical evidence.
+
 21 October 2026 · branch `feature/hosted-account-proof`.
 
 ## User outcome

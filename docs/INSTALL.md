@@ -13,8 +13,8 @@ branches; if Git refuses, commit or stash those edits first, never force a reset
 
 ```powershell
 git fetch origin
-git switch feature/hosted-connections
-git pull --ff-only origin feature/hosted-connections
+git switch feature/independent-provider-proof
+git pull --ff-only origin feature/independent-provider-proof
 node -v
 npm ci --include=optional
 npm run build
@@ -70,6 +70,10 @@ Hosted developer/operator setup is in [SERVER-SETUP.md](SERVER-SETUP.md).
 No production hosted service URL is configured in the default package. Replacing
 it requires an operator build, secure deployed service and supported provider
 adapters; no end-user command can enable a missing provider route.
+
+This branch adds a developer-only official-login transport check and records the
+remaining provider access requirements. It does **not** add working independent
+account login to the extension. The user interface and version remain 3.3 preview.
 
 ## Update and recovery
 
