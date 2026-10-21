@@ -17,13 +17,13 @@ export function authArguments(directory,url,provider='openai') {
   if(!safeAuthUrl(url,provider)||!path.isAbsolute(directory))throw new Error('Invalid authorization launch.');
   return [`--user-data-dir=${directory}`,'--no-first-run','--no-default-browser-check','--new-window',url];
 }
-export async function openAuthBrowser({directory,url,provider='openai'}) {
-  if(!safeAuthUrl(url,provider))throw new Error('Invalid OpenAI sign-in URL.');
+export async function openAuthBrowser({directory,url,provider='openai'}, {candidates=browserCandidates,accessFile=access,createDirectory=mkdir,spawnProcess=spawn}={}) {
+  if(!safeAuthUrl(url,provider))throw new Error('Invalid provider sign-in URL.');
   let executable;
-  for(const candidate of browserCandidates())try{await access(candidate);executable=candidate;break}catch{}
+  for(const candidate of candidates())try{await accessFile(candidate);executable=candidate;break}catch{}
   if(!executable)throw new Error('Install Chrome, Brave, Edge or Chromium to authorize an independent profile.');
-  await mkdir(directory,{recursive:true,mode:0o700});
-  const child=spawn(executable,authArguments(directory,url,provider='openai'),{detached:true,stdio:'ignore',windowsHide:false});
+  await createDirectory(directory,{recursive:true,mode:0o700});
+  const child=spawnProcess(executable,authArguments(directory,url,provider),{detached:true,stdio:'ignore',windowsHide:false});
   await new Promise((resolve,reject)=>{child.once('spawn',resolve);child.once('error',reject)});
   child.unref();
 }

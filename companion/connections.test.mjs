@@ -215,6 +215,22 @@ test('Claude browser URL validation requires first-party authorize and local fir
  finally{await rm(directory,{recursive:true,force:true});}
 });
 
+test('actual browser launcher forwards the Claude provider to isolated authorization validation',async()=>{
+ const {openAuthBrowser}=await import('./auth-browser.mjs');
+ const {EventEmitter}=await import('node:events');
+ const url='https://claude.com/cai/oauth/authorize?response_type=code&state=fixture&code_challenge=fixture&redirect_uri='+encodeURIComponent('http://localhost:42345/callback');
+ const directory=path.resolve('fictional-browser-profile');let launched=false,unreferenced=false;
+ await openAuthBrowser({directory,url,provider:'claude'},{
+  candidates:()=>['fictional-browser'],accessFile:async()=>{},createDirectory:async()=>{},
+  spawnProcess:(file,args,options)=>{
+   launched=true;assert.equal(file,'fictional-browser');
+   assert.ok(args.includes('--user-data-dir='+directory));assert.ok(args.includes(url));assert.equal(options.stdio,'ignore');
+   const child=new EventEmitter();child.unref=()=>{unreferenced=true;};queueMicrotask(()=>child.emit('spawn'));return child;
+  },
+ });
+ assert.ok(launched);assert.ok(unreferenced);
+});
+
 test('production Claude adapter reads two isolated fictional CLI profiles through actual PTYs',async t=>{
  const {mkdir}=await import('node:fs/promises');
  const {createClaudeAdapter}=await import('./claude-adapter.mjs');
