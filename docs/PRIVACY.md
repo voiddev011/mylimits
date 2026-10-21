@@ -217,3 +217,29 @@ is not inferred from terminal redraws. Failed reads preserve their previous age.
 Checks wait at least five minutes and back off on failures. First-party onboarding
 may open an official setup terminal once; user trust/terms choices are not automated.
 No model prompts or API inference calls are sent by the adapter.
+
+## Hosted foundation preview (3.3)
+
+No hosted OpenAI/Claude provider is enabled by this preview and its default build
+has no service URL. Website tracking needs no MyLimits identity or local helper.
+If a supported hosted service is deployed later, the user must explicitly connect
+MyLimits and authorize each provider. MyLimits identity is separate from provider
+consent. Hosted-only device pairing does not enable uploading website snapshots.
+
+The extension receives normalized account metadata and readings. Provider
+credentials remain server-side in encrypted storage backed by operator-configured
+Vault transit, or an approved runtime's protected credential store when established.
+The extension stores only safe pending-attempt IDs; auth URLs/state/codes/tokens
+are not saved there or sent to dashboard messages. Account-ID confirmation is
+hidden by privacy mode. The MyLimits device bearer remains private background
+storage, as in existing snapshot sync; it is not a provider credential.
+
+Disconnect fences jobs and deletes the account credential locally on the server;
+optional provider revocation is attempted when supported, otherwise unconfirmed.
+It does not sign other accounts out. Forget additionally removes hosted readings
+and attempts. Hosted history is capped at5000 readings/connection and30 days,
+retaining the newest dated reading; completed attempts expire after7 days.
+Existing local retention controls continue. Global data deletion includes hosted
+attempts, jobs, readings, credentials and connections. Operator backups require
+separate retention/deletion handling; deleting active DB records does not rewrite
+old backups. Public hosting and actual provider renewal/logout remain unverified.

@@ -249,3 +249,9 @@ measure idle API/worker memory, successful refresh duration, retained reading si
 and required provider-permitted interval. For N accounts and interval S seconds,
 upper request demand is N*86400/S per day before throttling/backoff; use measured
 values to set admission limits. This is a capacity formula, not measured pricing.
+
+Private operator smoke in this workspace: image built, API+worker started as
+non-root with read-only filesystem; /health200, capabilities unavailable200 and
+unauthenticated hosted list401. Idle memory snapshot API82.68MiB/worker90.45MiB
+with zero providers/accounts; active provider runtime costs are unmeasured.
+See [handoff](HOSTED-ACCOUNTS-HANDOFF.md) for exact verification limits.

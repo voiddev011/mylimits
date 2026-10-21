@@ -24,9 +24,9 @@ export async function hostedCapabilities(){
 export async function refreshHosted(manual=false){
  if(flight)return flight;if(Date.now()-last<(manual?15000:60000))return;
  last=Date.now();flight=(async()=>{
-  const auth=await snapshotSync.status();if(!auth.connected){await updateStore(s=>({store:hostedUnavailable(s),value:undefined}));return;}
   try{
-   if(manual){const cached=HostedListSchema.parse(await snapshotSync.hostedRequest('/v1/hosted/connections'));for(const c of cached.connections)if(c.state!=='disconnected'&&c.state!=='needs-auth'&&(c.nextEligibleAt===null||c.nextEligibleAt<=Date.now()))await snapshotSync.hostedRequest(`/v1/hosted/connections/${c.id}/refresh`,'POST',{});}
+   const auth=await snapshotSync.status();if(!auth.connected){await updateStore(s=>({store:hostedUnavailable(s),value:undefined}));return;}
+   if(manual){const cached=HostedListSchema.parse(await snapshotSync.hostedRequest('/v1/hosted/connections'));for(const c of cached.connections)if(c.state!=='disconnected'&&c.state!=='needs-auth'&&(c.nextEligibleAt===null||c.nextEligibleAt<=Date.now()))await snapshotSync.hostedRequest(`/v1/hosted/connections/${c.id}/refresh`,'POST',{}).catch(()=>{});}
    const list=HostedListSchema.parse(await snapshotSync.hostedRequest('/v1/hosted/connections'));
    const snapshots=await updateStore(s=>{const store=mergeHosted(s,list,Date.now());return {store,value:store.snapshots.filter(x=>x.accountId.startsWith('hosted:'))};});
    for(const s of snapshots)await saveHistory(historyPoint(s));

@@ -1,3 +1,30 @@
+# Current hosted foundation extension
+
+Version3.3 adds `src/core/hosted-contracts.ts` (strict public metadata),
+`src/core/hosted.ts` (additive local projection), `src/platform/hosted.ts`
+(background-only API/auth-window routing), and capability-aware + UI.
+
+`server/src/hosted.ts` owns durable owner-scoped attempts/identity/lifecycle;
+`hosted-jobs.ts` owns bounded leases, cooldown/backoff and successful dated reads;
+`transit-kms.ts` wraps envelope keys through configured Vault transit. Migrations
+006–008 are additive. Official driver maps are empty: actual OpenAI/Claude
+hosted integration is blocked. No generic credential-upload or callback proxy
+exists. Test drivers are forbidden outside test environment.
+
+MyLimits identity and optional device pairing reuse the existing OIDC/API boundary.
+Hosted-only pairing does not consent to website snapshot upload. The compact view
+uses prefixed remote IDs; it never merges remote identity into website/native
+accounts by email or nickname. Existing local IDs/preferences/IndexedDB history
+are preserved. History mirrors are bounded; immutable server/IndexedDB records
+retain their original successful fetch/observation timestamps.
+
+See [current plan](HOSTED-ACCOUNTS-IMPLEMENTATION-PLAN.md),
+[handoff](HOSTED-ACCOUNTS-HANDOFF.md) and [operator setup](SERVER-SETUP.md).
+The older architecture below records the earlier Phase2 baseline; Guide was
+removed in3.0 and is not restored by this work.
+
+---
+
 # Architecture — implemented Phase 2
 
 MyLimits 2.1 is a local Manifest V3 extension with an optional separate snapshot service. Local tracking requires no backend account. The [master plan](https://github.com/voiddev011/mylimits/blob/73799f592b43a8aeac89776700239a42a06056b8/docs/V2-IMPLEMENTATION-PLAN.md) defines contracts; [this handoff](https://github.com/voiddev011/mylimits/blob/73799f592b43a8aeac89776700239a42a06056b8/docs/PHASE-2-HANDOFF.md) records current evidence.

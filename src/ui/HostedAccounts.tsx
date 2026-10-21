@@ -14,7 +14,7 @@ type Attempt=z.infer<typeof HostedAttemptSchema>;
 export function HostedAccounts({provider,demo,privacy=false,reconnectId,initialAlias='' }:{provider?:HostedProvider|null;demo:boolean;privacy?:boolean;reconnectId?:string;initialAlias?:string}){
  const [status,setStatus]=useState<Status|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[attempt,setAttempt]=useState<Attempt|null>(null),[alias,setAlias]=useState(initialAlias);
  const [pairing,setPairing]=useState(false),[finished,setFinished]=useState(false);
- useEffect(()=>{let live=true;if(!demo)void command<Status>({type:'hosted-status'}).then(s=>{if(live){setStatus(s);if(s.pending?.provider===provider)setAttempt(s.pending);}},()=>{if(live)setError('Hosted service unavailable. Website tracking still works.');});return()=>{live=false;};},[demo]);
+ useEffect(()=>{let live=true;if(!demo)void command<Status>({type:'hosted-status'}).then(s=>{if(live){setStatus(s);if(s.pairing)setPairing(true);if(s.pending?.provider===provider)setAttempt(s.pending);}},()=>{if(live)setError('Hosted service unavailable. Website tracking still works.');});return()=>{live=false;};},[demo]);
  useEffect(()=>{
   if(!attempt||attempt.state!=='pending'||demo)return;let live=true;
   const timer=setInterval(()=>{void command<Attempt>({type:'hosted-attempt',id:attempt.id}).then(a=>{if(live)setAttempt(a);},()=>{if(live)setError('Could not check sign-in. Retry or cancel.');});},3000);

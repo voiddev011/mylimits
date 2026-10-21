@@ -30,7 +30,7 @@ Implementation branch: `feature/hosted-connections` (from `docs/hosted-accounts-
 | H07 | blocked | Implement H08 bounded jobs and H09 extension integration without enabling unsupported providers. |
 | H08 | implemented | Implement H09 background client, account projection and management UI; then integrated verification. |
 | H09 | implemented | Perform H10 packaging, final private image smoke, installation docs, handoff and push. |
-| H10 | not_started | Package, verify and deliver accurate handoff |
+| H10 | implemented | Push feature/hosted-connections and record CI evidence; next product work requires supported H06/H07 routes. |
 
 ## H01 checkpoint — 21 October 2026
 
@@ -104,7 +104,7 @@ State: **implemented**. Branch: `feature/hosted-connections`.
 - Decision/blockers: Durable per-account jobs, global4/owner2 concurrency, provider30/min budget, min60s plus adapter interval, Retry-After/backoff/jitter, lease fencing, bounded reads, separate timestamps and history retention. No active providers: no real hosted refresh runs.
 - Next action: Implement H09 background client, account projection and management UI; then integrated verification.
 
-## H09 checkpoint — 21 October 2026
+## H09 checkpoint — 22 October 2026
 
 State: **in_progress**. Branch: `feature/hosted-connections`.
 
@@ -113,7 +113,7 @@ State: **in_progress**. Branch: `feature/hosted-connections`.
 - Decision/blockers: No production provider activated. Hosted-only pairing keeps website snapshot uploads off; projection preserves aliases/history/timestamps and marks missing/offline readings. Sign-in windows are driven by server capability, not ordinary provider tabs. Both provider live matrices remain PENDING.
 - Next action: Finish rechecks for pending-attempt/identity changes; commit H09, then package/document H10.
 
-## H09 checkpoint — 21 October 2026
+## H09 checkpoint — 22 October 2026
 
 State: **implemented**. Branch: `feature/hosted-connections`.
 
@@ -121,6 +121,15 @@ State: **implemented**. Branch: `feature/hosted-connections`.
 - Checks: 109 core tests; 43 PostgreSQL backend tests; 31 Chromium browser tests; 2 actual extension/API/PostgreSQL transport tests with fictional providers passed. Root and server typechecks passed. Pending-attempt state contains IDs only, never authorization URLs; verified server identity required before success.
 - Decision/blockers: Hosted-only pairing does not upload website snapshots. Accounts share the compact popup/dashboard projection, preserve old IDs/history/preferences, and retain dated readings on failure. Cancellation/reconnect/disconnect fenced; optional adapter revocation handled. All real-provider A/B and logout/renewal tests remain PENDING, production drivers empty.
 - Next action: Perform H10 packaging, final private image smoke, installation docs, handoff and push.
+
+## H10 checkpoint — 22 October 2026
+
+State: **implemented**. Branch: `feature/hosted-connections`.
+
+- Files: 3.3 preview package metadata; INSTALL/README/ARCHITECTURE/PRIVACY/SERVER-SETUP; HOSTED-ACCOUNTS-HANDOFF.md; final background consent/resume safeguards.
+- Checks: 109 core, 43 PostgreSQL, 31 Chromium, 2 browser/API/DB transport, 20+18 native, 30 proof, 7 hosted-probe and 1 responsive dashboard checks passed. Chrome/Edge/Firefox build contracts passed. 306395-byte ZIP inspected and hashed. Private image built; read-only API/worker startup and unauthenticated401 smoke passed. Final packaged browser suite:31 passed. All47 relative documentation links exist and whitespace check passed. Push/CI status follows publication.
+- Decision/blockers: Foundation delivered only; H06/H07 remain blocked and all actual provider/Windows acceptance PENDING. No public deployment or release. Default extension has no hosted service URL. Real Vault/OIDC provisioning and provider-specific runtime integration not live-verified.
+- Next action: Push feature/hosted-connections and record CI evidence; next product work requires supported H06/H07 routes.
 
 ## Documentation consolidation checkpoint
 
