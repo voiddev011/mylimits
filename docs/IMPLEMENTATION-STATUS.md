@@ -24,7 +24,7 @@ Documentation branch: `docs/hosted-accounts-execution-plan`.
 | H03 | implemented | Implement H04 durable authenticated connection attempts and tests. |
 | H04 | implemented | Implement H05 secure runtime configuration and operator package. |
 | H05 | implemented | Record H06/H07 provider blockers, then implement H08 collection. |
-| H06 | blocked | Establish permitted OpenAI hosted route and actual A/B proof |
+| H06 | blocked | Continue H07 decision and H08 independent code; external hosted route and real A/B proof required. |
 | H07 | blocked | Establish Claude remote login/monitoring route and A/B proof |
 | H08 | not_started | Implement bounded collection and truthful freshness |
 | H09 | not_started | Integrate extension/API and maintain manual evidence matrix |
@@ -74,6 +74,15 @@ State: **implemented**. Branch: `feature/hosted-connections`.
 - Checks: Server typecheck and 38 PostgreSQL tests passed. Private Docker image build in progress; real Vault policy and TLS/OIDC deployment not tested.
 - Decision/blockers: Real Vault-transit envelope wrapping supports protected key service, binding and safe failures. Private operator image/compose and cost worksheet prepared. No hosted provider runtime or public deployment claimed; actual KMS/provisioning remains operator prerequisite.
 - Next action: Record H06/H07 provider blockers, then implement H08 collection.
+
+## H06 checkpoint — 21 October 2026
+
+State: **blocked**. Branch: `feature/hosted-connections`.
+
+- Files: Provider availability contract and hosted service retain OpenAI unavailable state; source review in HOSTED-ACCOUNTS-TRIAL-PLAN.md.
+- Checks: Rechecked OpenAI official hosted eligibility documentation; prior official device-code initiation/cancel observed only. No user authentication, quota read, account B selection or renewal tested.
+- Decision/blockers: https://developers.openai.com/siwc/token-sharing-open-source explicitly directs remotely hosted offerings to an interest route; no approved hosted integration or exact supported account-selection mechanism configured. Do not reuse a private CLI OAuth client as a hosted product. Adapter cannot honestly be implemented/activated to this acceptance gate yet.
+- Next action: Continue H07 decision and H08 independent code; external hosted route and real A/B proof required.
 
 ## Documentation consolidation checkpoint
 
