@@ -23,7 +23,7 @@ Documentation branch: `docs/hosted-accounts-execution-plan`.
 | H02 | implemented | Implement H03 simplified UI with explicit unavailable hosted state. |
 | H03 | implemented | Implement H04 durable authenticated connection attempts and tests. |
 | H04 | implemented | Implement H05 secure runtime configuration and operator package. |
-| H05 | not_started | Prepare secure private runtime and operator deployment |
+| H05 | implemented | Record H06/H07 provider blockers, then implement H08 collection. |
 | H06 | blocked | Establish permitted OpenAI hosted route and actual A/B proof |
 | H07 | blocked | Establish Claude remote login/monitoring route and A/B proof |
 | H08 | not_started | Implement bounded collection and truthful freshness |
@@ -65,6 +65,15 @@ State: **implemented**. Branch: `feature/hosted-connections`.
 - Checks: Server typecheck passed; 37 PostgreSQL backend tests passed including 7 new hosted tests. Initial sandbox TCP run could not connect; rerun with permitted local-container access passed. Initial unsupported TS parameter-property syntax corrected before passing.
 - Decision/blockers: Durable owner-scoped attempts, hashed proof, idempotency, duplicate identity, reconnect generations and cancellation are implemented. No generic token upload/callback endpoint. Fixture drivers forbidden outside tests; production map empty. Official provider-specific callback/PKCE remains gated with adapters, not invented.
 - Next action: Implement H05 secure runtime configuration and operator package.
+
+## H05 checkpoint — 21 October 2026
+
+State: **implemented**. Branch: `feature/hosted-connections`.
+
+- Files: server/src/transit-kms.ts, config.ts, app.ts, main.ts; Dockerfile/compose/.dockerignore; transit tests; SERVER-SETUP.md and .env.example
+- Checks: Server typecheck and 38 PostgreSQL tests passed. Private Docker image build in progress; real Vault policy and TLS/OIDC deployment not tested.
+- Decision/blockers: Real Vault-transit envelope wrapping supports protected key service, binding and safe failures. Private operator image/compose and cost worksheet prepared. No hosted provider runtime or public deployment claimed; actual KMS/provisioning remains operator prerequisite.
+- Next action: Record H06/H07 provider blockers, then implement H08 collection.
 
 ## Documentation consolidation checkpoint
 

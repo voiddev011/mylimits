@@ -8,7 +8,7 @@ import { transaction } from './db';
 import { SyncPreferencesSchema } from '../../src/core/sync-contracts';
 import { authRoutes } from './oidc';
 import { JobRunner } from './jobs';
-import { CredentialStore } from './credentials';
+import { type Kms,CredentialStore } from './credentials';
 import { pairingRoutes } from './pairing';
 import { startRetention } from './retention';
 import { webRoutes } from './web';
@@ -16,12 +16,12 @@ import { HostedService } from './hosted';
 export type RequestWithPrincipal=FastifyRequest&{principal:Principal};
 const identifier=z.string().uuid();
 const params=(request:FastifyRequest)=>z.object({id:identifier}).parse(request.params).id;
-export function createApp(options:{config:Config;pool:pg.Pool;testVerifier?:Verify}){
+export function createApp(options:{config:Config;pool:pg.Pool;kms?:Kms;testVerifier?:Verify}){
  const config=ConfigSchema.parse(options.config),pool=options.pool;
  if(options.testVerifier&&config.environment!=='test')throw new Error('Test authentication is forbidden outside tests.');
  const verify=options.testVerifier??oidcVerifier(config);
- const jobs=new JobRunner({pool,credentials:new CredentialStore(pool),environment:config.environment});
- const hosted=new HostedService(pool,new CredentialStore(pool),config.environment);
+ const jobs=new JobRunner({pool,credentials:new CredentialStore(pool,options.kms),environment:config.environment});
+ const hosted=new HostedService(pool,new CredentialStore(pool,options.kms),config.environment);
  const app=Fastify({logger:false,bodyLimit:512*1024,requestTimeout:15000,trustProxy:false});
  app.decorateRequest('principal',null);
  const budgets=new Map<string,{at:number;count:number}>();
