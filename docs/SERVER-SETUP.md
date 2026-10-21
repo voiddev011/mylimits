@@ -191,3 +191,67 @@ npm run build   # restore the default local-only package before distribution
 On PowerShell set `$env:MYLIMITS_SYNC_ORIGIN` for that build and remove it before
 building the default release. Test host grants exist only in temporary fixture
 copies; shipped packages keep every provider/server grant optional.
+
+## Hosted account foundation (current feature branch)
+
+The API has owner-scoped `/v1/hosted/` connection/attempt operations and public
+`/hosted/capabilities`. Both production providers are unavailable. This is not a
+working OpenAI/Claude hosted login deployment. There is no generic callback,
+credential-upload endpoint or environment switch that enables fictional drivers.
+
+Private operator package: `server/Dockerfile` (build from repository root),
+`server/compose.yaml`, and `server/.env.example`. End users do not install these.
+Copy the example to a private `server/.env`, supply a private database password
+and DATABASE_URL pointing to `db:5432`, valid MyLimits OIDC settings, exact app and
+extension origins, and an HTTPS reverse proxy before external use. Compose only
+publishes loopback port8787. The existing OIDC callback is `/auth/callback`; this
+is MyLimits identity, not provider authorization. Provider-specific callbacks are
+not configured until the provider route has passed its gate.
+
+```sh
+docker compose --env-file server/.env -f server/compose.yaml build
+docker compose --env-file server/.env -f server/compose.yaml up -d
+```
+
+On managed hosts needing a proxy CA, supply the documented BuildKit proxy_ca
+secret; retain proxy routing and TLS verification. Build and tag immutable image
+versions for deployment. API migrations are additive and checksum-validated; back
+up PostgreSQL before upgrading and roll back the application image, not applied
+migration SQL. Validate restoring backups in a separate database.
+
+Real envelope-key wrapping is implemented with Vault transit. Configure
+VAULT_TRANSIT_ORIGIN (HTTPS origin), VAULT_TRANSIT_KEY and VAULT_TOKEN_FILE. Provision
+an operator-controlled derived transit key with export/backup disabled. Mount the
+least-privilege token file read-only (Unix0600; ensure container user can read it).
+Give only encrypt/decrypt permission on that key, rotate Vault tokens and wrapping
+key versions, retain decrypt access to old versions while envelopes exist. Never
+store the master wrapping key in PostgreSQL or extension storage. Startup rejects
+non-private token files; hosted adapters cannot start without MyLimits identity
+and configured encryption. Vault availability and policy require actual operator
+acceptance; mocked transit tests do not prove a production KMS deployment.
+
+The private API image runs as non-root, with a read-only filesystem, bounded tmpfs,
+no extra Linux capabilities and no local provider profiles. No production adapter
+runtime is bundled. A provider-approved CLI route would additionally need isolated
+server-owned profiles, encrypted persistence and bounded process management; do not
+mount users' local CLI caches or claim the image already provides that integration.
+
+Operator bounds: maximum200 connections/owner, 3 simultaneous authorization attempts,
+10-minute attempt lifetime, authenticated request budget120/minute. Collection
+bounds/retention are described by the current hosted implementation and status.
+Restrict outbound destinations at deployment; do not expose database/Vault publicly.
+No infrastructure was purchased or publicly deployed by this change.
+
+Cost worksheet: total = API + PostgreSQL/backups + KMS + active official runtimes +
+egress. Quota sources and provider worker memory/latency remain unmeasured because
+no provider is enabled; no per-user price estimate is justified yet. Before launch,
+measure idle API/worker memory, successful refresh duration, retained reading size,
+and required provider-permitted interval. For N accounts and interval S seconds,
+upper request demand is N*86400/S per day before throttling/backoff; use measured
+values to set admission limits. This is a capacity formula, not measured pricing.
+
+Private operator smoke in this workspace: image built, API+worker started as
+non-root with read-only filesystem; /health200, capabilities unavailable200 and
+unauthenticated hosted list401. Idle memory snapshot API82.68MiB/worker90.45MiB
+with zero providers/accounts; active provider runtime costs are unmeasured.
+See [handoff](HOSTED-ACCOUNTS-HANDOFF.md) for exact verification limits.

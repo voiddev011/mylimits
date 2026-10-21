@@ -1,97 +1,45 @@
-# MyLimits — current work
+# MyLimits — hosted foundation preview (3.3)
 
-The installer-free independent OpenAI/Claude account experience is **not complete**.
-See [start here](START-HERE.md), [active plan](HOSTED-ACCOUNTS-IMPLEMENTATION-PLAN.md),
-[current status](IMPLEMENTATION-STATUS.md), and [Sol 6.1 prompt](STARTER-PROMPT.md).
-The earlier preview description below is historical implementation context;
-independent account behavior still needs live acceptance.
+Your AI account readings in one browser dashboard. Website tracking is available;
+**installer-free independent OpenAI/Claude connections remain blocked** pending
+supported hosted authorization and actual account acceptance.
 
-# Current experiment: installer-free hosted accounts
+[Install/test](INSTALL.md) · [Status](IMPLEMENTATION-STATUS.md) ·
+[Plan](HOSTED-ACCOUNTS-IMPLEMENTATION-PLAN.md) · [Handoff](HOSTED-ACCOUNTS-HANDOFF.md)
 
-See [trial plan and actual results](HOSTED-ACCOUNTS-TRIAL-PLAN.md) on
-`feature/hosted-account-proof`. Official OpenAI device-code initiation/cancellation
-was observed on a server; Claude returned a loopback callback. No real account was
-authenticated and no quota fetched. The user reports the existing GPT sign-in
-journey still opens the ordinary browser session; it remains unresolved. This
-experiment is not a shipped cloud connector or a new extension release.
+## Current behavior
 
-# Previous checkpoint: MyLimits 3.2 — Independent accounts preview
+- + beside each service offers Use current account or Connect another account.
+- Current-account tracking uses the website login already in this browser.
+- Independent choices check the hosted service's capabilities. Unsupported
+  providers show Not available yet and do not open an ordinary website tab.
+- Compact popup: real provider logos, aliases, scoped quota bars, reset times,
+  freshness, refresh and Full dashboard. No Guide. No provider on/off switches.
+- Dashboard retains account management, notifications, history, accessibility,
+  permission revocation and optional snapshot sync.
+- Local helper experiments remain optional in advanced Settings. End-user
+  extension packages contain no helper/CLI/server runtimes.
 
-Current branch: **`feature/independent-accounts`**.
-[Install](MULTI-ACCOUNT-INSTALL.md) · [Code checklist](https://github.com/voiddev011/mylimits/blob/73799f592b43a8aeac89776700239a42a06056b8/docs/MULTI-ACCOUNT-CODE-CHECKLIST.md) ·
-[Status](IMPLEMENTATION-STATUS.md) · [Handoff and downloads](MULTI-ACCOUNT-HANDOFF.md).
+## Implemented foundation, not provider proof
 
-Track available OpenAI Codex/Work and Claude Code subscription quotas from
-multiple independently connected accounts in one browser dashboard. Real-account
-acceptance is a separate manual checklist; this is an unpublished preview.
+The backend and extension support owner-scoped account attempts, verified identity,
+duplicates, cancellation, reconnect, aliases, encrypted server credentials,
+bounded jobs and dated readings. Fictional drivers exercised the real Chromium →
+API → PostgreSQL transport. Production driver maps remain empty. No real account
+was authenticated or quota fetched in this hosted integration.
 
-## Connections
-
-- **Website tracking:** reads the account signed into this browser. No helper
-  required. Other saved website accounts keep clearly dated readings.
-- **Independent accounts:** optional local helper, one official CLI profile per
-  account, and separate browser sign-in windows. Add B while keeping your normal
-  website session on A. The extension operates subsequent connection actions.
-- **History:** retained values keep their actual successful fetch timestamp.
-  Missing quotas remain unknown; stale data does not become fresh on restart.
-
-Open + → choose OpenAI or Claude → Connect an independent account. Install the
-3.2 helper once, authorize its optional browser connection, then complete official
-sign-in. Give each connection its own nickname. Claude requires the official
-Claude Code CLI and may need one-time onboarding in its own setup window.
-
-The official CLIs own credentials and renewal. MyLimits does not request passwords,
-copy browser cookies, extract CLI tokens or put credentials into extension storage.
-
-## Scope and behavior
-
-OpenAI reports returned **Codex/Work** windows, not all ordinary ChatGPT chat,
-image, upload or voice allowances. Claude reports supported **subscription /usage**
-percentages; unknown reset timestamps stay unknown. Other providers retain their
-existing website adapters and are not independently connected by this update.
-
-Eligible refreshes respect provider waits and error backoff: at least two minutes
-for OpenAI, five minutes for Claude. These intervals do not guarantee immediate
-provider data. Other-device changes, website logout and actual credential renewal
-are pending manual acceptance. Global session revocation may require reconnecting.
-
-The helper is optional for website tracking and required for independent accounts.
-Windows x64 provides a guided current-user installer. Linux needs official components
-and xterm for first-party Claude onboarding. Firefox remains website-only.
-
-## Interface
-
-Compact popup: provider logos, aliases, quota bars/reset times, dated status,
-refresh, + account and Full dashboard. The dashboard contains account management,
-history, settings, privacy controls and diagnostics. Guide/prompt features remain
-removed. The optional floating button still displays Coming soon.
-
-Existing account IDs, nicknames, pins, alerts and history are preserved. Optional
-snapshot sync copies readings; it does not maintain remote AI login sessions.
-No backend is required for local independent connections.
+OpenAI Codex/Work windows do not represent every ordinary ChatGPT limit. Claude
+subscription usage is distinct from API credits. Cached readings remain dated;
+website logout, provider-wide revocation and credential renewal are separate
+pending live checks. Snapshot sync does not maintain provider login sessions.
 
 ## Develop
 
-Run commands from the repository root with Node **24+**:
-
-```sh
-npm ci --include=optional
-npm run dev
-npm run check
-npm run test:account-proof
-npm run test:browser
-npm run zip
-npm run build:firefox
-npm run zip:firefox
-```
-
-Load `.output/chrome-mv3` in Chrome/Brave/Edge after building. The packaged ZIP is
-`.output/mylimits-3.2.0-chrome.zip`. Browser tests need Playwright Chromium and use
-isolated fictional profiles; they do not prove real provider behavior.
-
-Built packages do not require Node/npm. Follow the current install guide for the
-matching 3.2 extension and helper, not historical 3.0/3.1 artifacts. All maintained
-project Markdown belongs directly in `docs/`.
+Node24+, existing lockfiles, one workstream. Start with [START-HERE.md](START-HERE.md).
+Use `npm ci --include=optional`, `npm run build`, `npm test`, `npm run typecheck`
+and the focused suites described in the handoff. Backend tests need an isolated
+PostgreSQL database; browser tests need extension-capable Playwright Chromium.
+[Server operator setup](SERVER-SETUP.md) describes the private deployment package.
 
 [Privacy](PRIVACY.md) · [Architecture](ARCHITECTURE.md) ·
-[Provider evidence](PROVIDER-CAPABILITIES.md) · [Support](SUPPORT.md).
+[Provider scope](PROVIDER-CAPABILITIES.md) · [Research evidence](HOSTED-ACCOUNTS-TRIAL-PLAN.md)

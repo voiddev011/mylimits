@@ -1,8 +1,8 @@
 # Current implementation status — hosted independent accounts
 
-Updated 21 October 2026. **Requested installer-free multi-account product NOT complete.**
+Updated 22 October 2026. **Requested installer-free multi-account product NOT complete.**
 Active plan: [H01–H10](HOSTED-ACCOUNTS-IMPLEMENTATION-PLAN.md).
-Documentation branch: `docs/hosted-accounts-execution-plan`.
+Implementation branch: `feature/hosted-connections` (from `docs/hosted-accounts-execution-plan`).
 
 ## Current facts
 
@@ -11,7 +11,9 @@ Documentation branch: `docs/hosted-accounts-execution-plan`.
   loopback callback; no real authentication or quota read occurred.
 - Production hosted collector map is empty. Hosted provider eligibility,
   account-selection/remote callback and actual A/B login behavior remain unresolved.
-- No toggle removal or installer-free independent login is delivered by this docs work.
+- Provider switches are removed; + offers current website tracking or capability-gated hosted sign-in.
+- Hosted UI/API/jobs are integrated and fixture-tested; no production OpenAI/Claude
+  driver or installer-free real-account login is delivered yet.
 - Historical “code complete” statements below concern earlier local implementations;
   they are not proof of this requested end-user experience.
 
@@ -19,16 +21,115 @@ Documentation branch: `docs/hosted-accounts-execution-plan`.
 
 | Task | State | Next action |
 | --- | --- | --- |
-| H01 | not_started | Inspect current code and resolve remaining provider route questions |
-| H02 | not_started | Define hosted connection/attempt contracts and migration |
-| H03 | not_started | Remove provider toggles; add capability-aware + choices |
-| H04 | not_started | Implement owner-scoped hosted connection orchestration |
-| H05 | not_started | Prepare secure private runtime and operator deployment |
-| H06 | blocked | Establish permitted OpenAI hosted route and actual A/B proof |
-| H07 | blocked | Establish Claude remote login/monitoring route and A/B proof |
-| H08 | not_started | Implement bounded collection and truthful freshness |
-| H09 | not_started | Integrate extension/API and maintain manual evidence matrix |
-| H10 | not_started | Package, verify and deliver accurate handoff |
+| H01 | implemented | Implement H02 contracts; continue available work while provider proofs remain blocked. |
+| H02 | implemented | Implement H03 simplified UI with explicit unavailable hosted state. |
+| H03 | implemented | Implement H04 durable authenticated connection attempts and tests. |
+| H04 | implemented | Implement H05 secure runtime configuration and operator package. |
+| H05 | implemented | Record H06/H07 provider blockers, then implement H08 collection. |
+| H06 | blocked | Continue H07 decision and H08 independent code; external hosted route and real A/B proof required. |
+| H07 | blocked | Implement H08 bounded jobs and H09 extension integration without enabling unsupported providers. |
+| H08 | implemented | Implement H09 background client, account projection and management UI; then integrated verification. |
+| H09 | implemented | Perform H10 packaging, final private image smoke, installation docs, handoff and push. |
+| H10 | implemented | Push feature/hosted-connections and record CI evidence; next product work requires supported H06/H07 routes. |
+
+## H01 checkpoint — 21 October 2026
+
+State: **implemented**. Branch: `feature/hosted-connections`.
+
+- Files: Inspected UI, native connection messages, sync client, API, jobs, credential store and migrations; hosted trial sources reused.
+- Checks: Clean starting checkout; no AGENTS.md found under workspace or ancestor paths. Official provider pages rechecked; no account authorization attempted.
+- Decision/blockers: OpenAI experimental transport only: hosted entitlement and exact selection unresolved. Claude hosted unmodified CLI conditions exist, but remote completion/monitoring unresolved. Both production routes remain unavailable; no blanket impossibility claim. Runtime has no account credentials or configured identity/KMS.
+- Next action: Implement H02 contracts; continue available work while provider proofs remain blocked.
+
+## H02 checkpoint — 21 October 2026
+
+State: **implemented**. Branch: `feature/hosted-connections`.
+
+- Files: src/core/hosted-contracts.ts, its tests, scripts/run-tests.mjs
+- Checks: Typecheck passed; core suite 104 tests passed.
+- Decision/blockers: Strict versioned public contracts exclude secrets, require verified subject/workspace, distinguish fetch and provider times, preserve unknown values. New hosted data is additive; legacy local IDs/history untouched. Durable identity/idempotency tests follow H04.
+- Next action: Implement H03 simplified UI with explicit unavailable hosted state.
+
+## H03 checkpoint — 21 October 2026
+
+State: **implemented**. Branch: `feature/hosted-connections`.
+
+- Files: src/ui/AccountConnect.tsx, HostedAccounts.tsx, App.tsx
+- Checks: Typecheck passed. Browser acceptance follows H09/H10.
+- Decision/blockers: Provider switches replaced by + choices; current-account flow focuses existing tab. Independent flow explicitly unavailable instead of opening ordinary website. Legacy helper moved into advanced Settings; explicit website permission removal retained. Existing setup/history preserved.
+- Next action: Implement H04 durable authenticated connection attempts and tests.
+
+## H04 checkpoint — 21 October 2026
+
+State: **implemented**. Branch: `feature/hosted-connections`.
+
+- Files: server/migrations/006_hosted_connections.sql; server/src/hosted.ts; app.ts; server/tests/hosted.test.ts
+- Checks: Server typecheck passed; 37 PostgreSQL backend tests passed including 7 new hosted tests. Initial sandbox TCP run could not connect; rerun with permitted local-container access passed. Initial unsupported TS parameter-property syntax corrected before passing.
+- Decision/blockers: Durable owner-scoped attempts, hashed proof, idempotency, duplicate identity, reconnect generations and cancellation are implemented. No generic token upload/callback endpoint. Fixture drivers forbidden outside tests; production map empty. Official provider-specific callback/PKCE remains gated with adapters, not invented.
+- Next action: Implement H05 secure runtime configuration and operator package.
+
+## H05 checkpoint — 21 October 2026
+
+State: **implemented**. Branch: `feature/hosted-connections`.
+
+- Files: server/src/transit-kms.ts, config.ts, app.ts, main.ts; Dockerfile/compose/.dockerignore; transit tests; SERVER-SETUP.md and .env.example
+- Checks: Server typecheck and 38 PostgreSQL tests passed. Private Docker image build in progress; real Vault policy and TLS/OIDC deployment not tested.
+- Decision/blockers: Real Vault-transit envelope wrapping supports protected key service, binding and safe failures. Private operator image/compose and cost worksheet prepared. No hosted provider runtime or public deployment claimed; actual KMS/provisioning remains operator prerequisite.
+- Next action: Record H06/H07 provider blockers, then implement H08 collection.
+
+## H06 checkpoint — 21 October 2026
+
+State: **blocked**. Branch: `feature/hosted-connections`.
+
+- Files: Provider availability contract and hosted service retain OpenAI unavailable state; source review in HOSTED-ACCOUNTS-TRIAL-PLAN.md.
+- Checks: Rechecked OpenAI official hosted eligibility documentation; prior official device-code initiation/cancel observed only. No user authentication, quota read, account B selection or renewal tested.
+- Decision/blockers: https://developers.openai.com/siwc/token-sharing-open-source explicitly directs remotely hosted offerings to an interest route; no approved hosted integration or exact supported account-selection mechanism configured. Do not reuse a private CLI OAuth client as a hosted product. Adapter cannot honestly be implemented/activated to this acceptance gate yet.
+- Next action: Continue H07 decision and H08 independent code; external hosted route and real A/B proof required.
+
+## H07 checkpoint — 21 October 2026
+
+State: **blocked**. Branch: `feature/hosted-connections`.
+
+- Files: Claude hosted capability and service remain unavailable; existing isolated diagnostic retained unchanged.
+- Checks: Rechecked official Claude authentication and legal/compliance docs; no account login performed.
+- Decision/blockers: https://code.claude.com/docs/en/legal-and-compliance allows unmodified hosted CLI under conditions; https://code.claude.com/docs/en/authentication documents manual-code fallback when loopback is inaccessible. Exact automatic remote completion and quota-only monitoring not established; no custom Claude OAuth or cookie interception added. Normal browser account preservation remains PENDING.
+- Next action: Implement H08 bounded jobs and H09 extension integration without enabling unsupported providers.
+
+## H08 checkpoint — 21 October 2026
+
+State: **implemented**. Branch: `feature/hosted-connections`.
+
+- Files: server/src/hosted-jobs.ts; worker.ts; app.ts refresh route; hosted lifecycle tests; deployment worker service
+- Checks: Server typecheck and 42 PostgreSQL tests passed; new coalescing/cooldown, last-success retention, crashed lease, wrong identity, late disconnect, auth expiry and owner concurrency tests passed. Earlier operator image build passed; final worker image rebuild follows delivery.
+- Decision/blockers: Durable per-account jobs, global4/owner2 concurrency, provider30/min budget, min60s plus adapter interval, Retry-After/backoff/jitter, lease fencing, bounded reads, separate timestamps and history retention. No active providers: no real hosted refresh runs.
+- Next action: Implement H09 background client, account projection and management UI; then integrated verification.
+
+## H09 checkpoint — 22 October 2026
+
+State: **in_progress**. Branch: `feature/hosted-connections`.
+
+- Files: Hosted projection/client/controller/UI; additive failure and verified-identity attempt migrations; browser/API transport and consent tests.
+- Checks: 108 core tests, 42 PostgreSQL tests, 30/31 Chromium checks plus corrected layout rerun passed; 2 real Chromium/API/PostgreSQL transport checks passed using fictional hosted provider. System Chromium lacked extension loading; installed Playwright Chromium resolved it. New safe pending-attempt persistence and verified-ID confirmation are now under final recheck.
+- Decision/blockers: No production provider activated. Hosted-only pairing keeps website snapshot uploads off; projection preserves aliases/history/timestamps and marks missing/offline readings. Sign-in windows are driven by server capability, not ordinary provider tabs. Both provider live matrices remain PENDING.
+- Next action: Finish rechecks for pending-attempt/identity changes; commit H09, then package/document H10.
+
+## H09 checkpoint — 22 October 2026
+
+State: **implemented**. Branch: `feature/hosted-connections`.
+
+- Files: src/core/hosted.ts/tests, hosted contracts, sync consent/auth handling, platform hosted client/messages/controller, account UI/management/popup, additive migrations007/008, backend revocation and transport/browser tests.
+- Checks: 109 core tests; 43 PostgreSQL backend tests; 31 Chromium browser tests; 2 actual extension/API/PostgreSQL transport tests with fictional providers passed. Root and server typechecks passed. Pending-attempt state contains IDs only, never authorization URLs; verified server identity required before success.
+- Decision/blockers: Hosted-only pairing does not upload website snapshots. Accounts share the compact popup/dashboard projection, preserve old IDs/history/preferences, and retain dated readings on failure. Cancellation/reconnect/disconnect fenced; optional adapter revocation handled. All real-provider A/B and logout/renewal tests remain PENDING, production drivers empty.
+- Next action: Perform H10 packaging, final private image smoke, installation docs, handoff and push.
+
+## H10 checkpoint — 22 October 2026
+
+State: **implemented**. Branch: `feature/hosted-connections`.
+
+- Files: 3.3 preview package metadata; INSTALL/README/ARCHITECTURE/PRIVACY/SERVER-SETUP; HOSTED-ACCOUNTS-HANDOFF.md; final background consent/resume safeguards.
+- Checks: 109 core, 43 PostgreSQL, 31 Chromium, 2 browser/API/DB transport, 20+18 native, 30 proof, 7 hosted-probe and 1 responsive dashboard checks passed. Chrome/Edge/Firefox build contracts passed. 306395-byte ZIP inspected and hashed. Private image built; read-only API/worker startup and unauthenticated401 smoke passed. Final packaged browser suite:31 passed. All47 relative documentation links exist and whitespace check passed. Push/CI status follows publication.
+- Decision/blockers: Foundation delivered only; H06/H07 remain blocked and all actual provider/Windows acceptance PENDING. No public deployment or release. Default extension has no hosted service URL. Real Vault/OIDC provisioning and provider-specific runtime integration not live-verified.
+- Next action: Push feature/hosted-connections and record CI evidence; next product work requires supported H06/H07 routes.
 
 ## Documentation consolidation checkpoint
 

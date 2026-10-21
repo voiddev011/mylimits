@@ -1,80 +1,80 @@
-> Current 3.1 branch: see [MULTI-ACCOUNT-INSTALL.md](MULTI-ACCOUNT-INSTALL.md).
-> The following describes the previous 3.0 helper/release; its package is not
-> compatible with the new independent-account setup.
+# Install or test the hosted foundation preview (3.3)
 
-# Install or update MyLimits 3.0
+This preview adds provider + choices and the hosted account infrastructure.
+**Real independent OpenAI/Claude sign-in is not enabled.** Both providers show
+“Not available yet”. Website tracking works without the local helper. Do not
+install the old200MB helper to test this new UI.
 
-## Short path: packaged extension
+## Windows: update an existing clone
 
-Download the [verified MyLimits 3.0 extension package](https://github.com/voiddev011/mylimits/actions/runs/38932629756/artifacts/12059023187)
-from the `v3/redesign` Checks run. Extract it, then extract
-`mylimits-3.0.0-chrome.zip` into a permanent folder containing `manifest.json`.
-
-Chrome: `chrome://extensions`; Brave: `brave://extensions`; Edge:
-`edge://extensions`. Enable Developer mode → Load unpacked → choose that folder.
-
-To update, replace files **inside the same unpacked extension folder** and click
-Reload. Keep the extension ID and path. Do not uninstall: removal deletes local
-accounts, preferences and history. Restart existing website tabs after upgrading.
-
-Firefox: open `about:debugging#/runtime/this-firefox` → Load Temporary Add-on →
-select `manifest.json` from the extracted Firefox ZIP. Temporary add-ons disappear
-on restart. Permanent Firefox installation needs Mozilla signing.
-
-## From source on Windows PowerShell
+Run in your repository folder (for example
+`C:\Users\Jainam\Desktop\MyLimits\mylimits`). Preserve local edits before switching
+branches; if Git refuses, commit or stash those edits first, never force a reset.
 
 ```powershell
-git clone -b v3/redesign https://github.com/voiddev011/mylimits.git
-cd mylimits
+git fetch origin
+git switch feature/hosted-connections
+git pull --ff-only origin feature/hosted-connections
 node -v
 npm ci --include=optional
 npm run build
 ```
 
-Use Node 24 or newer. With an extracted source ZIP, open the terminal inside that
-folder and start at `node -v`. No Git setup is needed just to build.
+Node24+ is required only for building from source. An extracted source ZIP can
+start at `node -v` from its package.json folder, without Git commands.
 
-The Chrome/Brave/Edge load folder is **`.output/chrome-mv3`** inside the project.
-The leading dot matters. Build first; source folders do not contain a loadable
-manifest. For frequent testing, `npm run dev` rebuilds changes while running.
+## Load or reload
 
-For Firefox use `npm run build:firefox`; load `.output/firefox-mv3/manifest.json`.
+Chrome: `chrome://extensions`; Brave: `brave://extensions`; Edge:
+`edge://extensions`. Enable Developer mode → Load unpacked → select:
 
-If npm reports a missing Rolldown native binding after changing computers/Node:
-
-```powershell
-Remove-Item -Recurse -Force node_modules
-npm ci --include=optional
-npm run build
+```text
+C:\Users\Jainam\Desktop\MyLimits\mylimits\.output\chrome-mv3
 ```
 
-If that still fails, preserve a copy of `package-lock.json`, remove it and
-`node_modules`, then run `npm install --include=optional`. Do not copy
-`node_modules` between operating systems or architectures.
+Use your actual checkout path if different. The selected folder must contain
+`manifest.json`. For an existing installation from that same folder, click Reload.
+Keep the folder/extension ID to preserve local accounts, aliases and history.
+Uninstalling an extension deletes its local data; do not uninstall just to update.
+Refresh existing provider tabs after updating.
 
-## Try the update
+To build a shareable extension ZIP: `npm run zip`; extract
+`.output/mylimits-3.3.0-chrome.zip`, then load its manifest folder. A packaged
+extension needs no Node/npm on the end user's machine. A GitHub source archive
+is source code, not the extension ZIP. CI packages appear under the working
+branch's Checks → mylimits-extension-packages artifact after a successful run.
 
-- Popup: limits, refresh, +, Full dashboard. Clicking + opens setup in the dashboard.
-- Dashboard: Overview, Accounts, History, Settings. No Guide feature.
-- Settings → Text size / Privacy mode → Save preferences. Reload to verify.
-- Settings → Floating preview → choose an AI site and grant its exact host.
-  No AI account is required. On that site click the round MyLimits button:
-  **Coming soon**. Escape/outside click closes; position/hide are available there.
-- Basic detection uses the current browser login. Other saved website accounts
-  keep their last reading. This is distinct from independent authorization.
+Firefox: `npm run zip:firefox`; load the extracted manifest from
+`about:debugging#/runtime/this-firefox` as a temporary add-on. Persistent Firefox
+installation requires Mozilla signing. Windows Chrome/Brave manual testing remains
+pending; Linux Chromium results do not certify Windows behavior.
 
-## Optional independent OpenAI helper
+## What to test now
 
-Use the [verified Windows helper artifact](https://github.com/voiddev011/mylimits/actions/runs/38931432647/artifacts/12058892440).
-Windows x64 only: its installer bundles pinned Node 24.22.0 and official Codex
-0.163.0; no terminal/npm prerequisite. Run setup as your normal user, choose the
-installed extension (or paste its Extensions-page ID), then Register and start.
+1. Accounts → **+** beside a service → **Use current account**. Grant site access;
+   an existing website tab is focused, or one is opened. Confirm the detected
+   account before saving. Rename it from account details if needed.
+2. **Connect another account** shows an explicit unavailable state for OpenAI/
+   Claude. It must not open your existing login and claim another account connected.
+3. Verify site on/off switches are gone; Settings → Website access offers explicit
+   Disconnect. Other notification/privacy switches remain.
+4. Verify old nicknames, readings, alerts and history remain. Popup stays compact;
+   management stays in Full dashboard. Guide remains removed.
 
-In MyLimits → + → OpenAI → Independent OpenAI connection, authorize each account
-in its fresh local browser profile. Your regular ChatGPT browser session stays
-separate. Use the **updated helper**; old helpers can reuse the ordinary browser.
+The legacy helper remains under Settings → Legacy local helper · advanced for
+existing experimental users. Its installation guide is [MULTI-ACCOUNT-INSTALL.md](MULTI-ACCOUNT-INSTALL.md).
+It is not the installer-free hosted experience or a workaround that passes its
+acceptance. Do not infer all ChatGPT limits from Codex/Work readings.
 
-The installer is an unsigned preview. Windows installation/startup/uninstall and
-real two-account renewal/logout behavior still require live desktop acceptance.
-The helper only reports returned Codex quotas. Independent Claude and ordinary
-ChatGPT model/image quotas are not implemented. Basic tracking needs no helper.
+Hosted developer/operator setup is in [SERVER-SETUP.md](SERVER-SETUP.md).
+No production hosted service URL is configured in the default package. Replacing
+it requires an operator build, secure deployed service and supported provider
+adapters; no end-user command can enable a missing provider route.
+
+## Update and recovery
+
+Export important local history before changing installations. For source rollback,
+use a separate checkout/build; do not overwrite uncommitted changes. Keep backups
+outside the source repository and never publish provider credentials. Database
+migrations are additive and forward-only; rollback the operator image, not applied
+migration SQL. See [handoff](HOSTED-ACCOUNTS-HANDOFF.md) for verification and blockers.

@@ -1,0 +1,48 @@
+# Private operator preview. Public TLS proxy and identity configuration are external.
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: mylimits
+      POSTGRES_DB: mylimits
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set a private database password}
+    volumes:
+      - database:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U mylimits -d mylimits]
+      interval: 5s
+      retries: 12
+  api:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    ports: [127.0.0.1:8787:8787]
+    read_only: true
+    tmpfs: [/tmp:size=64m,mode=1777]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    init: true
+    stop_grace_period: 30s
+    # Mount a private Vault token file read-only when transit is configured.
+    # No provider collector is activated by this deployment.
+  worker:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    env_file: .env
+    command: [npm, --prefix, server, run, worker]
+    depends_on:
+      db:
+        condition: service_healthy
+    read_only: true
+    tmpfs: [/tmp:size=64m,mode=1777]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    init: true
+    stop_grace_period: 30s
+volumes:
+  database:

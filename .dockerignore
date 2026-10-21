@@ -1,0 +1,13 @@
+.git
+**/node_modules
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+artifacts
+local-data
+.output
+.wxt
+test-results
+playwright-report
+server/web-dist
