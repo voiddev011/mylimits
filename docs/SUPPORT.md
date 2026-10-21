@@ -3,7 +3,7 @@
 Code/fixture verification does not establish live provider support. All quota
 readers remain **live-unverified prototypes** until tested with the relevant
 signed-in plan. See the dated [capability matrix](PROVIDER-CAPABILITIES.md) and
-[automated evidence](PHASE-2-HANDOFF.md).
+[automated evidence](https://github.com/voiddev011/mylimits/blob/73799f592b43a8aeac89776700239a42a06056b8/docs/PHASE-2-HANDOFF.md).
 
 ## Implemented sources
 

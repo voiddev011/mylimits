@@ -6,7 +6,7 @@ fixture test never establishes live quota access or survival of website logout.
 
 Implemented build: **2.0.0 Phase 1 preview**, branch `v2/phase-1`.
 Evidence: production Chromium fixtures, pure domain/parser tests and native
-service fixtures. The [handoff](PHASE-1-HANDOFF.md) lists exact commands/results.
+service fixtures. The [handoff](https://github.com/voiddev011/mylimits/blob/73799f592b43a8aeac89776700239a42a06056b8/docs/PHASE-1-HANDOFF.md) lists exact commands/results.
 Runtime connection kinds remain independent; merely having a `cloud` type does
 not make cloud collection available.
 

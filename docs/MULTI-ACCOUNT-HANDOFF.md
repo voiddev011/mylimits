@@ -1,7 +1,7 @@
 # MyLimits 3.2 code completion handoff
 
 Branch `feature/independent-accounts`, 21 October 2026.
-[Code checklist](MULTI-ACCOUNT-CODE-CHECKLIST.md) · [Install](MULTI-ACCOUNT-INSTALL.md).
+[Code checklist](https://github.com/voiddev011/mylimits/blob/73799f592b43a8aeac89776700239a42a06056b8/docs/MULTI-ACCOUNT-CODE-CHECKLIST.md) · [Install](MULTI-ACCOUNT-INSTALL.md).
 
 ## Implemented source
 

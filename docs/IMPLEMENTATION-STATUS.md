@@ -1,4 +1,48 @@
-# MyLimits implementation status
+# Current implementation status — hosted independent accounts
+
+Updated 21 October 2026. **Requested installer-free multi-account product NOT complete.**
+Active plan: [H01–H10](HOSTED-ACCOUNTS-IMPLEMENTATION-PLAN.md).
+Documentation branch: `docs/hosted-accounts-execution-plan`.
+
+## Current facts
+
+- Local website readers and experimental native/helper adapters exist.
+- Hosted probe observed OpenAI device-code initiation/cancellation and Claude
+  loopback callback; no real authentication or quota read occurred.
+- Production hosted collector map is empty. Hosted provider eligibility,
+  account-selection/remote callback and actual A/B login behavior remain unresolved.
+- No toggle removal or installer-free independent login is delivered by this docs work.
+- Historical “code complete” statements below concern earlier local implementations;
+  they are not proof of this requested end-user experience.
+
+## Active task ledger
+
+| Task | State | Next action |
+| --- | --- | --- |
+| H01 | not_started | Inspect current code and resolve remaining provider route questions |
+| H02 | not_started | Define hosted connection/attempt contracts and migration |
+| H03 | not_started | Remove provider toggles; add capability-aware + choices |
+| H04 | not_started | Implement owner-scoped hosted connection orchestration |
+| H05 | not_started | Prepare secure private runtime and operator deployment |
+| H06 | blocked | Establish permitted OpenAI hosted route and actual A/B proof |
+| H07 | blocked | Establish Claude remote login/monitoring route and A/B proof |
+| H08 | not_started | Implement bounded collection and truthful freshness |
+| H09 | not_started | Integrate extension/API and maintain manual evidence matrix |
+| H10 | not_started | Package, verify and deliver accurate handoff |
+
+## Documentation consolidation checkpoint
+
+Created the active plan, replaced stale entry/starter instructions, removed 12
+superseded plans/status/checklists/handoffs, and converted historical links to an
+immutable published checkpoint. Operational documentation and unique evidence
+remain. No runtime code changed; no application tests or live-account tests claimed.
+Validation: all 39 relative Markdown link targets exist; `git diff --check` passed.
+Documentation-only checkpoint; no runtime tests needed or claimed.
+Next action: execute H01 on a new implementation branch, then available H02–H10.
+
+---
+
+# Historical implementation ledger
 
 Updated: **21 October 2026**. **3.2 code completion in progress**.
 User will perform real-account acceptance separately. No main merge/public release.
@@ -23,8 +67,8 @@ remain separately pending, not a reason to omit source implementation.
 - Next action: use the packaged preview; live provider/Windows acceptance remains pending. No additional product work is assumed.
 - Working branch: `v2/compact-accounts`; published code `7a8f48fb76babfa9b02e29a02e01fc339bb68441`.
 - Main and completed Phase 1/2 branches preserved.
-- Current handoff: [compact accounts upgrade](COMPACT-ACCOUNTS-HANDOFF.md).
-- Historical scope: [master plan](V2-IMPLEMENTATION-PLAN.md), [Phase 1](PHASE-1.md), [Phase 2](PHASE-2.md).
+- Current handoff: [compact accounts upgrade](https://github.com/voiddev011/mylimits/blob/73799f592b43a8aeac89776700239a42a06056b8/docs/COMPACT-ACCOUNTS-HANDOFF.md).
+- Historical scope: [master plan](https://github.com/voiddev011/mylimits/blob/73799f592b43a8aeac89776700239a42a06056b8/docs/V2-IMPLEMENTATION-PLAN.md), [Phase 1](https://github.com/voiddev011/mylimits/blob/73799f592b43a8aeac89776700239a42a06056b8/docs/PHASE-1.md), [Phase 2](https://github.com/voiddev011/mylimits/blob/73799f592b43a8aeac89776700239a42a06056b8/docs/PHASE-2.md).
 
 ## Task ledger
 
@@ -186,7 +230,7 @@ Next: P1-10 — publish final documentation and verify the branch/package handof
 ## Changed-file index
 
 The task-to-file and local checkpoint map is maintained in
-[PHASE-1-HANDOFF.md](PHASE-1-HANDOFF.md#changed-files-and-task-checkpoints).
+[PHASE-1-HANDOFF.md](https://github.com/voiddev011/mylimits/blob/73799f592b43a8aeac89776700239a42a06056b8/docs/PHASE-1-HANDOFF.md#changed-files-and-task-checkpoints).
 New tests are explicitly imported by `scripts/run-tests.mjs`; the final browser
 suite is `tests/browser/extension.spec.ts`. All authored Markdown remains directly
 in `docs/`. No Phase 2 files or implementation tasks were started.

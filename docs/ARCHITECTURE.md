@@ -1,6 +1,6 @@
 # Architecture — implemented Phase 2
 
-MyLimits 2.1 is a local Manifest V3 extension with an optional separate snapshot service. Local tracking requires no backend account. The [master plan](V2-IMPLEMENTATION-PLAN.md) defines contracts; [this handoff](PHASE-2-HANDOFF.md) records current evidence.
+MyLimits 2.1 is a local Manifest V3 extension with an optional separate snapshot service. Local tracking requires no backend account. The [master plan](https://github.com/voiddev011/mylimits/blob/73799f592b43a8aeac89776700239a42a06056b8/docs/V2-IMPLEMENTATION-PLAN.md) defines contracts; [this handoff](https://github.com/voiddev011/mylimits/blob/73799f592b43a8aeac89776700239a42a06056b8/docs/PHASE-2-HANDOFF.md) records current evidence.
 
 ```mermaid
 flowchart TD
