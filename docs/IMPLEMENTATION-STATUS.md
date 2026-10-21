@@ -21,7 +21,7 @@ Documentation branch: `docs/hosted-accounts-execution-plan`.
 | --- | --- | --- |
 | H01 | implemented | Implement H02 contracts; continue available work while provider proofs remain blocked. |
 | H02 | implemented | Implement H03 simplified UI with explicit unavailable hosted state. |
-| H03 | not_started | Remove provider toggles; add capability-aware + choices |
+| H03 | implemented | Implement H04 durable authenticated connection attempts and tests. |
 | H04 | not_started | Implement owner-scoped hosted connection orchestration |
 | H05 | not_started | Prepare secure private runtime and operator deployment |
 | H06 | blocked | Establish permitted OpenAI hosted route and actual A/B proof |
@@ -47,6 +47,15 @@ State: **implemented**. Branch: `feature/hosted-connections`.
 - Checks: Typecheck passed; core suite 104 tests passed.
 - Decision/blockers: Strict versioned public contracts exclude secrets, require verified subject/workspace, distinguish fetch and provider times, preserve unknown values. New hosted data is additive; legacy local IDs/history untouched. Durable identity/idempotency tests follow H04.
 - Next action: Implement H03 simplified UI with explicit unavailable hosted state.
+
+## H03 checkpoint — 21 October 2026
+
+State: **implemented**. Branch: `feature/hosted-connections`.
+
+- Files: src/ui/AccountConnect.tsx, HostedAccounts.tsx, App.tsx
+- Checks: Typecheck passed. Browser acceptance follows H09/H10.
+- Decision/blockers: Provider switches replaced by + choices; current-account flow focuses existing tab. Independent flow explicitly unavailable instead of opening ordinary website. Legacy helper moved into advanced Settings; explicit website permission removal retained. Existing setup/history preserved.
+- Next action: Implement H04 durable authenticated connection attempts and tests.
 
 ## Documentation consolidation checkpoint
 
