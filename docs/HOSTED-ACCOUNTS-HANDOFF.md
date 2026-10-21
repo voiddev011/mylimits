@@ -132,3 +132,16 @@ provider submission action. User completes first-party sign-in; never request
 passwords, cookies or tokens in chat. Keep unsupported providers unavailable.
 Do not call this release-ready until both requested providers and the no-helper
 Windows user journey pass the required acceptance matrix.
+
+## Published checkpoint
+
+Published source: `195ac07938e40da46235aa985dc02fd6cd61675b` on
+`feature/hosted-connections`; tree `05b94ec9ea2fa81246b0e51700b09987ab6db642`.
+Matching local checkpoint: `2966719`. Commit SHAs differ because publication used
+GitHub Git-data tools; source trees match. Do not force-push/reset to reconcile
+those histories. Main and the documentation branch are unchanged.
+
+[CI run39661885089](https://github.com/voiddev011/mylimits/actions/runs/39661885089)
+was queued when checked. No CI success is claimed here. The verification table
+above records actual local results. This documentation follow-up changes no
+production source or packaged extension bytes.
