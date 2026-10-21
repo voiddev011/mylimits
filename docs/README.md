@@ -1,3 +1,11 @@
+# MyLimits — current work
+
+The installer-free independent OpenAI/Claude account experience is **not complete**.
+See [start here](START-HERE.md), [active plan](HOSTED-ACCOUNTS-IMPLEMENTATION-PLAN.md),
+[current status](IMPLEMENTATION-STATUS.md), and [Sol 6.1 prompt](STARTER-PROMPT.md).
+The earlier preview description below is historical implementation context;
+independent account behavior still needs live acceptance.
+
 # Current experiment: installer-free hosted accounts
 
 See [trial plan and actual results](HOSTED-ACCOUNTS-TRIAL-PLAN.md) on
@@ -10,7 +18,7 @@ experiment is not a shipped cloud connector or a new extension release.
 # Previous checkpoint: MyLimits 3.2 — Independent accounts preview
 
 Current branch: **`feature/independent-accounts`**.
-[Install](MULTI-ACCOUNT-INSTALL.md) · [Code checklist](MULTI-ACCOUNT-CODE-CHECKLIST.md) ·
+[Install](MULTI-ACCOUNT-INSTALL.md) · [Code checklist](https://github.com/voiddev011/mylimits/blob/73799f592b43a8aeac89776700239a42a06056b8/docs/MULTI-ACCOUNT-CODE-CHECKLIST.md) ·
 [Status](IMPLEMENTATION-STATUS.md) · [Handoff and downloads](MULTI-ACCOUNT-HANDOFF.md).
 
 Track available OpenAI Codex/Work and Claude Code subscription quotas from

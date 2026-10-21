@@ -1,38 +1,47 @@
-# Starter prompt for GPT-6.1 Sol
+# Starter prompt for Sol 6.1
 
-Open the `voiddev011/mylimits` repository in a coding environment, select
-**GPT-6.1 Sol**, and paste the following. The prompt authorizes Phase 1 work;
-it does not start Phase 2 or deploy cloud services.
+Use the branch containing this file. Select Sol 6.1 and paste:
 
 ```text
-Implement Phase 1 of MyLimits 2.0 in this repository. Start coding after the
-initial inspection; do not stop at another plan or after the first task.
+Implement the installer-free, independent multi-account MyLimits experience.
 
-Read applicable repository instructions, then docs/START-HERE.md,
-docs/IMPLEMENTATION-STATUS.md, the relevant shared contracts in
-docs/V2-IMPLEMENTATION-PLAN.md, and docs/PHASE-1.md.
+Read repository instructions, docs/START-HERE.md, docs/IMPLEMENTATION-STATUS.md,
+docs/HOSTED-ACCOUNTS-IMPLEMENTATION-PLAN.md and
+ docs/HOSTED-ACCOUNTS-TRIAL-PLAN.md. Inspect existing code before changing it.
 
-Execute P1-01 through P1-10 in order, one workstream and one work package at a
-time. Do not spawn parallel agents. Preserve existing user changes and create
-a v2/phase-1 branch (or a non-conflicting equivalent); keep main stable.
+Execute H01–H10 sequentially on a new feature branch. No parallel agents.
+Preserve user changes. Reuse existing extension/server/diagnostic code; do not
+restart the project or repeat broad competitor research. Start implementation
+after inspection; do not stop at another plan.
 
-Keep the current stack. Preserve account nicknames/history with a resumable
-migration. Make website tracking easy, the limits view compact, connection
-status honest, and the companion optional. Never invent provider quotas,
-live verification or support after logout. Implement no Phase 2 features.
+Required UX: remove provider toggles; + beside each service offers Use current
+account or Connect another account. Personal and Work must appear together;
+adding Personal must preserve the normal browser's Work login. Target a small
+first-party sign-in window and hosted quota refresh without any local helper,
+CLI, terminal commands or token copying for users. Keep website tracking working.
 
-After each package, update docs/IMPLEMENTATION-STATUS.md with changed files,
-actual checks/results, decisions, blockers and the exact next action. Run
-meaningful focused tests and the required phase gate. Keep all project Markdown
-directly in docs/. Continue independent work if a provider login or OS check
-is unavailable; record it as pending and do not request passwords or tokens.
+Treat the provider mechanism as unresolved until verified. A regular popup
+shares cookies. Never use opening a website as independent connection success.
+Verify permitted hosted authorization, account selection, identity and quota
+scope per provider. OpenAI device-code initiation is observed, not real login;
+Claude's remote completion is unresolved. Do not invent custom OAuth, copy
+cookies, extract CLI credentials, collect passwords or bypass restrictions.
 
-Use reasonable judgment for routine implementation choices without repeatedly
-asking confirmation. Commit coherent checkpoints and push the working branch
-when access allows; never force-push or overwrite unrelated work. If access is
-blocked, preserve the completed local work and report the exact limitation.
+Implement independent UI/contracts/backend/tests while provider proof is blocked.
+Leave blocked adapters unavailable; never present fixtures as live capabilities.
+Codex quotas do not cover every ChatGPT limit. Keep timestamps/stale states honest.
+Preserve account IDs, aliases and history. Protect server credentials and tenants.
 
-Finish with the packaged extension, docs/PHASE-1-HANDOFF.md, installation steps,
-actual test results and pending live checks. Stop before Phase 2. If context
-is compacted, resume from the status file rather than restarting the phase.
+After every task update docs/IMPLEMENTATION-STATUS.md with changed files, actual
+checks/results, decisions, blockers and next action. Keep Markdown directly in
+docs/. Record unavailable live checks as PENDING and continue independent work.
+Resolve routine choices without repeated permission requests. Before any public
+deployment/purchase/provider submission, prepare concrete reviewable artifacts
+and request the necessary authorization. Do not merge main or publish a release.
+
+Commit coherent checkpoints and push when access permits. Finish with a packaged
+extension, short Windows Chrome/Brave instructions, operator setup and a handoff.
+Report IMPLEMENTED / AUTOMATED TESTED / LIVE VERIFIED / STILL BLOCKED separately.
+Do not claim the full goal is complete until both providers meet the plan's actual
+account and no-helper acceptance criteria. On resume, continue from the ledger.
 ```
