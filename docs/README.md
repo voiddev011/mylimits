@@ -1,3 +1,13 @@
+# MyLimits 3.1 — Independent OpenAI preview
+
+Current branch: **`feature/independent-accounts`**.
+[Install/test](MULTI-ACCOUNT-INSTALL.md) · [Plan](MULTI-ACCOUNT-IMPLEMENTATION.md) ·
+[Status](IMPLEMENTATION-STATUS.md) · [Handoff](MULTI-ACCOUNT-HANDOFF.md).
+Independent OpenAI service/UI is implemented; real accounts remain unverified.
+Independent Claude remains unavailable. The older diagnostic remains available.
+
+## Previous 3.0 release record
+
 # MyLimits 3.0 — Clean dashboard preview
 
 Current development: [independent-account proof tool](ACCOUNT-PROOF.md) on

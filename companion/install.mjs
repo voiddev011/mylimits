@@ -34,8 +34,12 @@ if (windows) {
 } else await chmod(dataDir, 0o700);
 const runtime = path.join(dataDir, 'runtime'); await mkdir(runtime, { recursive: true, mode: 0o700 });
 // Copy the runtime so downloading a new ZIP or moving the checkout cannot break the host.
-for (const name of ['paths.mjs', 'local-auth.mjs', 'protocol.mjs', 'limits.mjs', 'app-server.mjs', 'service.mjs', 'auth-browser.mjs', 'daemon.mjs', 'host.mjs']) {
+for (const name of ['paths.mjs', 'local-auth.mjs', 'protocol.mjs', 'limits.mjs', 'app-server.mjs', 'service.mjs', 'connections.mjs', 'auth-browser.mjs', 'daemon.mjs', 'host.mjs']) {
   await writeFile(path.join(runtime, name), await readFile(path.join(source, name)), { mode: 0o600 });
+}
+await mkdir(path.join(runtime, 'proof'), { recursive: true, mode: 0o700 });
+for (const name of ['runtime.mjs','store.mjs','codex-login.mjs','errors.mjs']) {
+  await writeFile(path.join(runtime, 'proof', name), await readFile(path.join(source, 'proof', name)), { mode: 0o600 });
 }
 const quote = value => "'" + value.replaceAll("'", "'\\''") + "'";
 const launcher = path.join(dataDir, windows ? 'native-host.cmd' : 'native-host');
@@ -47,29 +51,28 @@ const manifestPath = path.join(manifestDir, hostName + '.json');
 let origins = [];
 try { origins = JSON.parse(await readFile(manifestPath, 'utf8')).allowed_origins ?? []; } catch (error) { if (error.code !== 'ENOENT') throw new Error('Existing native-host manifest is invalid.'); }
 origins = [...new Set([...origins.filter(origin => /^chrome-extension:\/\/[a-p]{32}\/$/.test(origin)), `chrome-extension://${extensionId}/`])];
-await writeFile(manifestPath, JSON.stringify({ name: hostName, description: 'MyLimits OpenAI quota companion', path: launcher, type: 'stdio', allowed_origins: origins }, null, 2), { mode: 0o600 });
+await writeFile(manifestPath, JSON.stringify({ name: hostName, description: 'MyLimits independent account helper', path: launcher, type: 'stdio', allowed_origins: origins }, null, 2), { mode: 0o600 });
 if (windows) {
   execFileSync('reg.exe', ['ADD', `${registryRoots[browserName]}\\${hostName}`, '/ve', '/t', 'REG_SZ', '/d', manifestPath, '/f'], { stdio: 'ignore' });
   try {
     execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encodedPowerShell(taskScript(process.execPath, path.join(runtime, 'daemon.mjs'), executable, dataDir))], { stdio: 'pipe' });
-    console.log('Windows companion registered and startup task requested. Reload MyLimits and Connect OpenAI.');
+    console.log('Windows companion registered and startup task requested. Reload MyLimits and connect an independent OpenAI account.');
     console.log('Check Task Scheduler > MyLimitsCompanion if the bridge is unavailable.');
   } catch {
-    console.log('Browser registration succeeded, but Windows startup setup failed. Keep this PowerShell command running:');
-    console.log('& ' + [process.execPath, path.join(runtime, 'daemon.mjs'), executable].map(psLiteral).join(' '));
+    throw new Error('Browser registration succeeded, but Windows startup failed. Reopen helper setup and retry as the same Windows user.');
   }
   console.log('The companion requires an awake computer and a signed-in Windows session.');
   process.exit(0);
 }
 const unitDir = path.join(homedir(), '.config', 'systemd', 'user'); await mkdir(unitDir, { recursive: true });
 const unitArg = value => '"' + value.replaceAll('\\', '\\\\').replaceAll('"', '\\"').replaceAll('%', '%%').replaceAll('$', '$$') + '"';
-const unit = `[Unit]\nDescription=MyLimits OpenAI quota companion\nAfter=network.target\n\n[Service]\nType=simple\nExecStart=${[process.execPath, path.join(runtime, 'daemon.mjs'), executable].map(unitArg).join(' ')}\nRestart=on-failure\nRestartSec=5\nUMask=0077\n\n[Install]\nWantedBy=default.target\n`;
+const unit = `[Unit]\nDescription=MyLimits independent account helper\nAfter=network.target\n\n[Service]\nType=simple\nExecStart=${[process.execPath, path.join(runtime, 'daemon.mjs'), executable].map(unitArg).join(' ')}\nRestart=on-failure\nRestartSec=5\nUMask=0077\n\n[Install]\nWantedBy=default.target\n`;
 await writeFile(path.join(unitDir, 'mylimits-companion.service'), unit, { mode: 0o600 });
 try {
   execFileSync('systemctl', ['--user', 'daemon-reload'], { stdio: 'pipe' });
   execFileSync('systemctl', ['--user', 'enable', 'mylimits-companion.service'], { stdio: 'pipe' });
   execFileSync('systemctl', ['--user', 'restart', 'mylimits-companion.service'], { stdio: 'pipe' });
-  console.log('Companion installed and started. Reload MyLimits, open Websites, then Connect OpenAI.');
+  console.log('Companion installed and started. Reload MyLimits, open Websites, then connect an independent OpenAI account.');
 } catch {
   console.log('Native host installed. Automatic service startup was unavailable. Keep this command running in a terminal:');
   console.log([process.execPath, path.join(runtime, 'daemon.mjs'), executable].map(quote).join(' '));

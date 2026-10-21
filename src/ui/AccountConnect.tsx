@@ -62,19 +62,18 @@ export function AccountConnect({ store, run, busy, demo, notify, onClose }: {
         <h3>{pending.mode === 'another' ? 'Sign in to your other account' : 'Detecting your current login'}</h3>
         <p>{pending.mode === 'another' ? 'Switch accounts on the website, then check again. This saves a dated reading; it does not create an independent connection.' : 'MyLimits reads the login already in this browser. If you are signed out, open the website and sign in, then check again.'}</p>
         {store.providers[pending.provider].message && <p className="notice">{store.providers[pending.provider].message}</p>}
+        {pending.mode === 'another' && (pending.provider === 'chatgpt' || pending.provider === 'claude') && <button className="button" disabled={disabled} onClick={() => { const previous=pending; void run({type:'account-setup-cancel',setupId:previous.id}).then(ok => {if(ok){setSelected(previous.provider);setNickname(previous.nickname);setIndependent(true);}}); }}>Use independent connection instead</button>}
         {pending.mode === 'another' && store.providers[pending.provider].activeAccountId === pending.previousAccountId && <p className="small-note">Still seeing the original account. It will not be renamed by this setup.</p>}
         <div className="inline-actions"><button className="button" disabled={disabled || demo} onClick={() => void browser.tabs.create({url: providers[pending.provider].home}).catch(() => notify('Could not open the website.'))}>Open {providers[pending.provider].name}<ExternalLink size={13}/></button><button className="button button--primary" disabled={disabled} onClick={() => void run({type:'refresh',provider:pending.provider})}><RefreshCw size={13}/>Check account</button></div>
         <small>Checks respect the provider’s retry wait. No password or token copying.</small>
       </>}
       <p className="connection-boundary">Website tracking updates the account currently signed in. Other accounts show their last reading until reconnected.</p>
       <button className="text-button" disabled={disabled} onClick={() => void run({type:'account-setup-cancel',setupId:pending.id})}>Cancel setup</button>
-    </div> : independent ? <OpenAICompanion run={run} busy={disabled} demo={demo} notify={notify} nickname={nickname}/> : <div className="connect-steps">
-      <p>{activity ? 'Count requests from this browser.' : 'Website detection uses the account currently signed in.'}</p>
+    </div> : independent ? <OpenAICompanion run={run} busy={disabled} demo={demo} notify={notify} nickname={nickname} provider={provider === 'claude' ? 'claude' : 'openai'} privacy={!!store.settings.privacyMode}/> : <div className="connect-steps">
+      <p>{activity ? 'Count requests from this browser.' : 'Choose how to connect.'}</p>
       {!activity && <label>Nickname (optional)<input aria-label="New account nickname" placeholder="For example: Personal or Work" maxLength={60} disabled={store.settings.privacyMode} value={store.settings.privacyMode ? '' : nickname} onChange={e => setNickname(e.target.value)}/></label>}
-      <button className="button button--primary" disabled={disabled} onClick={() => void start('detect')}><RefreshCw size={14}/>{activity ? 'Enable browser activity' : 'Detect current account'}</button>
-      {!activity && <button className="button" disabled={disabled || !store.providers[provider].activeAccountId} onClick={() => void start('another')}><Plus size={14}/>Save another website account</button>}
-      {!activity && !store.providers[provider].activeAccountId && <small>Detect your current account first to keep the two accounts separate.</small>}
-      {provider === 'chatgpt' && __MYLIMITS_BROWSER__ !== 'firefox' && <button className="text-button independent-option" onClick={() => setIndependent(true)}>Independent OpenAI connection<ExternalLink size={12}/></button>}
+      <button className="button button--primary" disabled={disabled} onClick={() => void start('detect')}><RefreshCw size={14}/>{activity ? 'Enable browser activity' : 'Track this browser account'}</button>
+      {!activity && (provider === 'chatgpt' || provider === 'claude') && <button className="button" onClick={() => setIndependent(true)}><Plus size={14}/>Connect an independent account</button>}
       <p className="connection-boundary">{activity ? 'This service currently reports local browser activity here. Separate account quotas are unavailable.' : provider === 'claude' ? 'Uses your Claude website login. Shared Claude Code allowance depends on your plan. An independent Claude connection is not available in this build.' : provider === 'chatgpt' ? 'Website detection uses your current login. Separate OpenAI connections use the optional companion; ordinary ChatGPT model limits are separate.' : 'Uses your current website login. Independent sign-in is not available for this service in this build.'}</p>
     </div>}
   </section>;

@@ -74,14 +74,23 @@ authorization and renewal, preferring the OS credential store with its `auto`
 setting and otherwise using its local auth file. Directories are owner-only and
 service-created files use umask 0077. File storage is not an encrypted vault.
 
-Only an opaque local profile ID, plan, quota percentages, reset times, status, and
-reading timestamp cross into the extension. The bridge does not return emails,
-access/refresh tokens, raw API responses, or conversation data. The first sign-in
-URL passes through to open the provider's authorization page.
+Protocol 2 returns only normalized profile ID, nickname, limited identity confidence,
+plan, quota percentages, reset times, authentication/error/retry state and reading
+timestamps. Verified account email is displayed locally in connection management,
+hidden in privacy mode, and is not persisted in extension account storage. Email
+is never used as a routing key or a verified workspace ID. Local service metadata
+stores a salted identity binding, not an email or token. Native messages contain
+no access/refresh tokens, raw provider responses or conversation data. Sign-in
+URLs remain inside the helper and its separate authorization browser profile.
+Those browser directories can contain browser-owned session cookies; do not share
+or sync them. MyLimits does not read those cookies.
 
-The service polls about once a minute while your computer and user session remain
-running, even after Chrome closes. Browser desktop alerts and history collection
-require the extension to be running. This service is local, not a hosted collector. Optional phone viewing uses separately synced snapshots.
+The daemon checks eligible accounts at least two minutes apart and backs off on
+failure, honoring explicit retry hints where exposed by Codex. It may continue
+while Chrome is closed if the computer/user service remains running. Browser
+alerts/history require the extension. Provider observation time remains unknown
+when not exposed; failed/empty reads never change the last successful timestamp.
+The optional phone dashboard uses synced snapshots, not independent authorization.
 
 Pausing extension sync does not stop the service or revoke accounts. Disconnect
 an account in its Overview settings to request Codex logout before deleting the

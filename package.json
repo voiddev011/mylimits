@@ -1,6 +1,6 @@
 {
   "name": "mylimits",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "private": true,
   "description": "Your AI usage limits, accounts, and reset times in one place.",
   "type": "module",
@@ -15,13 +15,14 @@
     "postinstall": "wxt prepare",
     "companion:install": "node companion/install.mjs",
     "companion:start": "node companion/daemon.mjs",
-    "test:companion": "node companion/companion.test.mjs",
+    "test:companion": "node companion/companion.test.mjs && node --test companion/connections.test.mjs",
     "build:firefox": "wxt build -b firefox",
     "zip:firefox": "wxt zip -b firefox",
     "build:edge": "wxt build -b edge",
     "package:companion": "node scripts/package-companion.mjs",
     "account-proof": "node scripts/account-proof.mjs",
-    "test:account-proof": "node --test companion/proof/proof.test.mjs"
+    "test:account-proof": "node --test companion/proof/proof.test.mjs",
+    "test:connections": "node --test companion/connections.test.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

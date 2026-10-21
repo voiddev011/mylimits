@@ -1,3 +1,4 @@
+import type { IndependentMetadata } from './independent-contract';
 // Pure domain types and calculations. No browser APIs or package dependencies.
 export const PROVIDER_IDS = ['claude', 'chatgpt', 'gemini', 'grok', 'perplexity', 'cursor'] as const;
 export type ProviderId = typeof PROVIDER_IDS[number];
@@ -117,7 +118,7 @@ export interface ConnectionRecord {
   workspaceId: string | null; workspaceIds: string[]; enabled: boolean;
   status: ConnectionStatus; generation: number; lastAttemptAt: number | null;
   lastSuccessAt: number | null; nextRetryAt: number | null; failures: number;
-  message: string | null; profileId?: string;
+  message: string | null; profileId?: string; independent?: IndependentMetadata;
 }
 export interface Workspace { id: string; provider: ProviderId; remoteId: string; name: string; }
 export interface UsageSnapshot {

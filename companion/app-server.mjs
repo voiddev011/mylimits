@@ -24,7 +24,7 @@ export class AppServer extends EventEmitter {
           const message = JSON.parse(line);
           if (message.id !== undefined && this.pending.has(message.id)) {
             const pending = this.pending.get(message.id); this.pending.delete(message.id); clearTimeout(pending.timer);
-            message.error ? pending.reject(new Error('OpenAI could not complete this request. Reconnect if authorization expired.')) : pending.resolve(message.result);
+            message.error ? pending.reject(upstreamError(message.error)) : pending.resolve(message.result);
           } else if (typeof message.method === 'string' && message.id === undefined) this.emit('notification', message);
           else if (message.id !== undefined) {
             // This tracker never approves tool calls, commands or other server requests.
@@ -57,4 +57,26 @@ export class AppServer extends EventEmitter {
     });
   }
   close() { this.fail(); this.child.kill(); }
+}
+
+// Preserve only explicit structured retry/status hints. No raw provider text,
+// credentials or arbitrary error data escape this transport. Some CLI versions
+// do not expose upstream Retry-After; then the service uses conservative backoff.
+export function upstreamError(value, now = Date.now()) {
+  const data = value?.data;
+  const status = data?.status ?? data?.statusCode;
+  const error = new Error('OpenAI could not complete this request. Reconnect if authorization expired.');
+  error.code = status === 401 ? 'needs-sign-in' : status === 429 ? 'throttled' : 'unavailable';
+  const seconds = data?.retryAfterSeconds;
+  const milliseconds = data?.retryAfterMs;
+  let retryAt = typeof seconds === 'number' && Number.isFinite(seconds) && seconds >= 0 ? now + seconds * 1000
+    : typeof milliseconds === 'number' && Number.isFinite(milliseconds) && milliseconds >= 0 ? now + milliseconds : null;
+  const header = data?.headers?.['retry-after'];
+  if (typeof header === 'string' && header.length < 100) {
+    const parsed = /^\d+(?:\.\d+)?$/.test(header) ? now + Number(header) * 1000 : Date.parse(header);
+    if (Number.isFinite(parsed) && parsed >= now) retryAt = Math.max(retryAt ?? 0, parsed);
+  }
+  if (Number.isFinite(data?.retryAt) && data.retryAt >= now) retryAt = Math.max(retryAt ?? 0, data.retryAt);
+  if (retryAt !== null && retryAt <= 8.64e15) error.retryAt = retryAt;
+  return error;
 }

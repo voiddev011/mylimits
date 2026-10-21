@@ -1,4 +1,4 @@
-import { ProbeError } from './claude.mjs';
+import { ProbeError } from './errors.mjs';
 
 // Completion can arrive before login/start's response. Buffer only a handful of
 // scoped completion flags, never URLs, credentials or arbitrary notifications.

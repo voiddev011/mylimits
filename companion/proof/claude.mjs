@@ -2,9 +2,8 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { command, runCli } from './runtime.mjs';
 
-export class ProbeError extends Error {
-  constructor(code, message) { super(message); this.code = code; }
-}
+import { ProbeError } from './errors.mjs';
+export { ProbeError } from './errors.mjs';
 
 // Read only documented auth metadata. Never open .credentials.json or a keychain.
 export function claudeIdentity(value, expectedDirectory, platform = process.platform) {
