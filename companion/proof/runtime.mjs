@@ -44,18 +44,29 @@ export function runCli(executable, args, { env, cwd, timeout = 15_000, inherit =
   return new Promise((resolve, reject) => {
     if (signal?.aborted) { reject(new Error('CLI operation cancelled.')); return; }
     const child = spawnProcess(file, argv, { env, cwd, shell: false, windowsHide: !inherit, stdio: inherit ? 'inherit' : ['ignore', 'pipe', 'pipe'] });
-    let output = ''; let settled = false;
-    const finish = (error, result) => { if (settled) return; settled = true; clearTimeout(timer); signal?.removeEventListener('abort', abort); error ? reject(new Error(error)) : resolve(result); };
-    const abort = () => { child.kill(); finish('CLI operation cancelled.'); };
-    const timer = setTimeout(() => { child.kill(); finish('CLI operation timed out.'); }, timeout);
+    let output = '', stopReason = null, stopTimer; let settled = false;
+    const finish = (error, result, code) => {
+      if (settled) return; settled = true; clearTimeout(timer); clearTimeout(stopTimer); signal?.removeEventListener('abort', abort);
+      error ? reject(Object.assign(new Error(error), code ? { code } : {})) : resolve(result);
+    };
+    // Cancellation is not complete until the owned process acknowledges exit.
+    // A timed-out auth command must not overlap a new writer in the same profile.
+    const stop = reason => {
+      if (settled || stopReason) return; stopReason = reason; clearTimeout(timer);
+      stopTimer = setTimeout(() => finish('CLI shutdown was not confirmed. Restart the helper.', null, 'terminal-stop-unconfirmed'), 5000);
+      try { child.kill(); } catch {}
+    };
+    const abort = () => stop('CLI operation cancelled.');
+    const timer = setTimeout(() => stop('CLI operation timed out.'), timeout);
     signal?.addEventListener('abort', abort, { once: true });
     child.stdout?.on('data', data => {
       output += data.toString();
-      if (Buffer.byteLength(output) > 256 * 1024) { child.kill(); finish('CLI output exceeded the diagnostic limit.'); }
+      if (Buffer.byteLength(output) > 256 * 1024) { output = ''; stop('CLI output exceeded the diagnostic limit.'); }
     });
     child.stderr?.on('data', () => {});
     child.once('error', () => finish('Could not start the official CLI.'));
-    child.once('exit', code => finish(null, { code, output }));
+    child.once('exit', code => finish(stopReason, { code, output }));
+    if (signal?.aborted) abort();
   });
 }
 

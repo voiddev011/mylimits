@@ -172,6 +172,15 @@ test('CLI process failures and timeouts do not expose raw output', async () => {
   await assert.rejects(runCli('/definitely-missing/cli', ['auth', 'status']), /Could not start/);
   await assert.rejects(runCli(process.execPath, ['-e', 'process.stderr.write("NEVER_EXPORT_FIXTURE_TOKEN");setTimeout(()=>{},10000)'], { timeout: 30 }), error => /timed out/.test(error.message) && !error.message.includes('TOKEN'));
 });
+test('cancelled metadata commands retain ownership until their process acknowledges exit', async () => {
+  const child = new EventEmitter(), abort = new AbortController(); let killed = false, settled = false;
+  child.kill = () => { killed = true; };
+  const command = runCli('fictional-cli', ['auth','status'], { spawnProcess: () => child, signal: abort.signal });
+  const rejected = assert.rejects(command, /cancelled/).then(() => { settled = true; });
+  abort.abort(); await new Promise(resolve => setTimeout(resolve, 20));
+  assert.ok(killed); assert.equal(settled, false);
+  child.emit('exit', 1); await rejected; assert.ok(settled);
+});
 
 test('OpenAI login completion is scoped, supports early notifications, and cleans up listeners', async () => {
   const client = new EventEmitter(); const waiter = codexLoginWaiter(client);

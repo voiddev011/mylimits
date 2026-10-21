@@ -931,3 +931,13 @@ No AGENTS.md applies; one workstream, no parallel agents.
   exit code; genuine test/build failures still fail the job. No test was disabled.
 - Local launcher-boundary regression now passes: 17 connection and 29 proof tests.
 - Next: publish this checkpoint, finish clean Windows packaging and link artifacts.
+
+### MULTI-COMPLETE / metadata command shutdown ownership
+
+- Final lifecycle review extended acknowledged cancellation to short official
+  CLI metadata/auth commands (version, status, logout), which previously called
+  kill then rejected immediately. They now wait for actual exit; a five-second
+  missing acknowledgment fails closed with terminal-stop-unconfirmed, retaining
+  service recovery state. No raw output enters error messages.
+- Added a delayed-exit subprocess regression. Next: run native/proof checks and
+  include this safety fix in the final packaged source checkpoint.
