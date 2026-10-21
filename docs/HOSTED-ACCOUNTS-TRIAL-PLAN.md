@@ -140,3 +140,11 @@ Do not put authorization output into test fixtures or publish CLI profile folder
 
 No production cloud collector, login button replacement, removed site toggle,
 deployed service or new extension release is claimed by this feasibility trial.
+
+## Published checkpoint
+
+Experiment source: `0e39450974fdad7d7f47900342fd0b57e59bea9e` on
+`feature/hosted-account-proof`. [CI run](https://github.com/voiddev011/mylimits/actions/runs/39630930205)
+was queued at handoff; no CI success is claimed here. Actual local and official
+transport results above stand separately. Documentation follow-up changes no
+experiment or production code. Main and the prior feature branch are unchanged.
