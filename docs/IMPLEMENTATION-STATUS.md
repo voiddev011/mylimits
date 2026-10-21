@@ -6,7 +6,8 @@ Implementation branch: `feature/independent-provider-proof` (from `feature/hoste
 
 ## Current execution — provider proof before more infrastructure
 
-**Step 1: implemented. Steps 2–4: investigation in progress. Steps 5–9: gated.**
+**Step 1: implemented. Steps 2–4: BLOCKED on supported provider routes/access.
+Steps 5–9: incomplete and gated. No real provider account has connected.**
 
 - Changed: active plan, START-HERE.md and the status heading; older H01–H10 marked
   historical. No existing user changes were present; no AGENTS.md found in the
@@ -20,6 +21,51 @@ Implementation branch: `feature/independent-provider-proof` (from `feature/hoste
   not complete the product. User data/aliases/history remain untouched.
 - Next: establish supported hosted OpenAI mechanism; verify actual managed-browser
   callback separately from prior device-code issuance, then resolve Claude route.
+
+### Step 2 checkpoint — actual OpenAI managed-browser transport
+
+- Changed: `companion/proof/hosted-login.mjs`, its tests and
+  `scripts/probe-hosted-login.mjs`. Added bounded `--codex-browser` observation of
+  official managed login, including `useHostedLoginSuccessPage:true`, with only
+  redacted callback classification. No URL rewriting, callback relay, token
+  access, provider driver or user-facing connection was added.
+- Actual check: official Codex **0.163.0**, fresh temporary profile, account absent,
+  login URL issued, callback **loopback**, cancellation acknowledged, process exit
+  confirmed. `authenticated:false`, `quotaFetched:false`. Hosted-success option
+  changes the post-login page, not the observed loopback callback.
+- Protocol inspection: official `app-server generate-ts` succeeded in a disposable
+  directory. Managed `Account.chatgpt` exposes email and plan, not immutable
+  subject/workspace. External-token `chatgptAccountId` is caller-supplied, not an
+  independent identity verification source. No auth cache was read.
+- Tests: 10 redaction/lifecycle tests passed with explicit Node test isolation
+  disabled to report individual cases; 30 existing account-proof subprocess/PTY
+  regression tests passed (fictional accounts). Syntax and whitespace checks
+  passed. These do not prove real authentication, identity or quota access.
+- Execution issue: initial restricted run could not establish transport/shutdown.
+  Exact disposable process identified, stopped and profile removed; permitted
+  local execution succeeded. No provider auth restriction was bypassed.
+- Blocker: published OSS redirect is loopback; hosted client access/eligibility
+  is not configured. No supported hosted read-only quota contract was established.
+  An approved identity-only client would not resolve that missing quota permission.
+- Next: owner/provider access request in PROVIDER-ACCESS-REQUESTS.md, then actual
+  executable route using the supported contract. Do not implement imagined APIs.
+
+### Step 4 checkpoint — Claude decision and prerequisite delivery
+
+- Checks: official legal/compliance, authentication, CLI reference and remote
+  login troubleshooting reviewed. Conditional unmodified hosting is documented;
+  direct third-party subscription login is restricted. Published remote fallback
+  needs manual code entry. No automatic supported remote completion for this
+  quota-only product established. Absence from CLI help is not proof of absence.
+- Changed: `docs/PROVIDER-ACCESS-REQUESTS.md` prepares actual OpenAI form fields,
+  both use-case descriptions, unresolved technical questions and private deployment
+  inputs. No email/form submission, provider registration, hosting purchase or
+  deployment was performed. No new Claude trial/authentication is claimed.
+- Decision: both production capabilities remain unavailable. Existing profiles,
+  aliases, quotas and timestamps remain unchanged. No additional UI/backend
+  foundation work or fictitious adapter is substituted for the missing feature.
+- Next: obtain supported hosted completion/monitoring route and access from the
+  provider. Real-account tests remain PENDING, not the only missing work.
 
 The H01–H10 ledger below records **previous supporting work**, not current delivery.
 

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { access, rm } from 'node:fs/promises';
-import { summarizeDeviceStart, classifyClaudeAuthorization, probeCodexDevice } from './hosted-login.mjs';
+import { summarizeDeviceStart, summarizeCodexBrowserStart, classifyClaudeAuthorization, probeCodexDevice, probeCodexBrowser } from './hosted-login.mjs';
 const valid = { type: 'chatgptDeviceCode', loginId: 'PRIVATE-login', userCode: 'ABCD-1234', verificationUrl: 'https://auth.openai.com/codex/device' };
 test('device-code observation excludes codes, IDs, tokens and arbitrary provider output', () => {
   const result = summarizeDeviceStart({ ...valid, accessToken: 'PRIVATE', raw: 'PRIVATE' });
@@ -51,4 +51,41 @@ test('unconfirmed metadata-command shutdown retains its owned profile for recove
     assert.equal(result.status,'blocked');assert.equal(result.errorCode,'terminal-stop-unconfirmed');
     assert.equal(result.shutdownConfirmed,false);await access(directory);
   } finally {if(directory)await rm(directory,{recursive:true,force:true});}
+});
+
+const browserStart = { type:'chatgpt', loginId:'PRIVATE-login', authUrl:
+  'https://auth.openai.com/oauth/authorize?response_type=code&state=PRIVATE&code_challenge=PRIVATE&code_challenge_method=S256&redirect_uri='+
+  encodeURIComponent('http://localhost:1455/auth/callback') };
+test('official browser observation reports only callback class, never authorization material', () => {
+  assert.deepEqual(summarizeCodexBrowserStart({...browserStart,accessToken:'PRIVATE'}), {issued:true,callback:'loopback'});
+  const url = new URL(browserStart.authUrl);
+  url.searchParams.set('redirect_uri','https://example.test/callback');
+  assert.deepEqual(summarizeCodexBrowserStart({...browserStart,authUrl:url.href}), {issued:true,callback:'unestablished'});
+  assert.ok(!JSON.stringify(summarizeCodexBrowserStart(browserStart)).includes('PRIVATE'));
+});
+test('official browser observation rejects lookalikes, unsafe redirects and malformed OAuth', () => {
+  for (const value of [null, {...browserStart,type:'apiKey'}, {...browserStart,loginId:''},
+    {...browserStart,authUrl:browserStart.authUrl.replace('auth.openai.com','auth.openai.com.evil.test')},
+    {...browserStart,authUrl:browserStart.authUrl.replace('https://','http://')},
+    {...browserStart,authUrl:browserStart.authUrl.replace('S256','plain')}]) {
+    assert.deepEqual(summarizeCodexBrowserStart(value), {issued:false,callback:'unsupported'});
+  }
+  const url = new URL(browserStart.authUrl);
+  for (const redirect of ['http://user@localhost:1455/auth/callback','http://localhost:1455/auth/callback?code=PRIVATE',
+    'http://localhost.evil.test:1455/auth/callback','http://localhost:1455/auth/callback#PRIVATE']) {
+    url.searchParams.set('redirect_uri',redirect);
+    assert.equal(summarizeCodexBrowserStart({...browserStart,authUrl:url.href}).callback,'unestablished');
+  }
+});
+test('managed browser probe cancels the official login without opening it or reading a quota', async () => {
+  const methods = [];
+  const result = await probeCodexBrowser(process.execPath,{version:async()=>'0.163.0',makeClient:()=>({child:{exitCode:0,signalCode:null},ready:Promise.resolve(),close(){},
+    async request(method,params){methods.push(method);if(method==='account/read')return {account:null};
+      if(method==='account/login/start'){assert.deepEqual(params,{type:'chatgpt',useHostedLoginSuccessPage:true});return browserStart;}
+      if(method==='account/login/cancel'){assert.equal(params.loginId,browserStart.loginId);return {};}
+      assert.fail('No other provider operations are allowed');}})});
+  assert.deepEqual(methods,['account/read','account/login/start','account/login/cancel']);
+  assert.equal(result.callback,'loopback');assert.equal(result.status,'transport-observed-only');
+  assert.equal(result.authenticated,false);assert.equal(result.quotaFetched,false);
+  assert.ok(!JSON.stringify(result).includes('PRIVATE'));
 });

@@ -20,6 +20,30 @@ export function summarizeDeviceStart(value) {
   } catch { return { issued: false }; }
 }
 
+// Observe the official managed browser route without opening it or changing it.
+// A loopback callback issued on a server cannot complete in a laptop browser.
+// This deliberately does not relay codes or substitute a redirect URI.
+export function summarizeCodexBrowserStart(value) {
+  const rejected = { issued: false, callback: 'unsupported' };
+  try {
+    const url = new URL(value?.authUrl);
+    if (value?.type !== 'chatgpt' || typeof value.loginId !== 'string' ||
+        !value.loginId.length || value.loginId.length > 200 ||
+        url.protocol !== 'https:' || url.hostname !== 'auth.openai.com' ||
+        url.username || url.password || url.port || url.hash ||
+        !['/oauth/authorize', '/api/accounts/authorize'].includes(url.pathname) ||
+        url.searchParams.get('response_type') !== 'code' ||
+        !url.searchParams.get('state') || !url.searchParams.get('code_challenge') ||
+        url.searchParams.get('code_challenge_method') !== 'S256') return rejected;
+    const redirect = new URL(url.searchParams.get('redirect_uri'));
+    const loopback = redirect.protocol === 'http:' &&
+      ['127.0.0.1', 'localhost', '[::1]'].includes(redirect.hostname) &&
+      !!redirect.port && redirect.pathname === '/auth/callback' &&
+      !redirect.username && !redirect.password && !redirect.search && !redirect.hash;
+    return { issued: true, callback: loopback ? 'loopback' : 'unestablished' };
+  } catch { return rejected; }
+}
+
 export function classifyClaudeAuthorization(value) {
   try {
     const url = new URL(value);
@@ -49,11 +73,23 @@ async function stopServer(client) {
   try { return await stopped; } finally { clearTimeout(timer); child.removeListener('exit', onExit); }
 }
 
-export async function probeCodexDevice(executable, { makeClient = options => new AppServer(options), version = cliVersion } = {}) {
+export async function probeCodexDevice(executable, options = {}) {
+  return probeCodexTransport(executable, 'device', options);
+}
+
+export async function probeCodexBrowser(executable, options = {}) {
+  return probeCodexTransport(executable, 'browser', options);
+}
+
+async function probeCodexTransport(executable, mode, { makeClient = options => new AppServer(options), version = cliVersion } = {}) {
   const root = await mkdtemp(path.join(tmpdir(), 'mylimits-hosted-codex-'));
-  const result = { provider: 'openai', version: null, transport: 'official-device-code',
+  const result = { provider: 'openai', version: null, transport: mode === 'browser' ? 'official-managed-browser' : 'official-device-code',
     initialAccountAbsent: false, issued: false, cancelAcknowledged: false,
     shutdownConfirmed: false, authenticated: false, quotaFetched: false, status: 'blocked', errorCode: null };
+  if (mode === 'browser') {
+    result.callback = 'unobserved';
+    result.hostedSuccessPageRequested = true;
+  }
   let client, loginId, retainProfile = false;
   try {
     const env = profileEnvironment('openai', root);
@@ -65,9 +101,13 @@ export async function probeCodexDevice(executable, { makeClient = options => new
     const account = await client.request('account/read', { refreshToken: false });
     if (account?.account !== null) throw Object.assign(Error(), { code: 'unexpected-account' });
     result.initialAccountAbsent = true;
-    const response = await client.request('account/login/start', { type: 'chatgptDeviceCode' });
+    const response = await client.request('account/login/start', mode === 'browser'
+      ? { type: 'chatgpt', useHostedLoginSuccessPage: true }
+      : { type: 'chatgptDeviceCode' });
     if (typeof response?.loginId === 'string' && response.loginId.length < 200) loginId = response.loginId;
-    result.issued = summarizeDeviceStart(response).issued;
+    const summary = mode === 'browser' ? summarizeCodexBrowserStart(response) : summarizeDeviceStart(response);
+    result.issued = summary.issued;
+    if (mode === 'browser') result.callback = summary.callback;
     if (!result.issued) throw Object.assign(Error(), { code: 'unsupported-response' });
     // Do not open the link, approve anything or request any quota/model operation.
     await client.request('account/login/cancel', { loginId }); loginId = null;
