@@ -905,3 +905,29 @@ No AGENTS.md applies; one workstream, no parallel agents.
 - Added a regression for natural-exit terminal disposal and cleanup failure. No
   process.exit(), force-exit test flag, private-library patch or credential handling.
 - Next: run native/proof regressions, publish the fix and inspect fresh Windows CI.
+
+### MULTI-COMPLETE / end-to-end browser launch argument correction
+
+- Continued final integration review found the shared launcher was assigning its
+  provider argument back to OpenAI at the actual browser-spawn call. Claude route
+  marker tests did not cover this real shared launch boundary. Fixed forwarding
+  the selected provider and made browser launch dependencies injectable for a
+  regression that executes the actual allowlist/argument path without opening
+  an account/browser. Claude can now reach its external isolated sign-in window.
+- Local terminal cleanup checks: 16/16 connection tests and 29/29 proof tests passed.
+  Windows fix published as 32ae8e649d150edfa67a1656fd062289f1d43d9e; fresh CI pending.
+- Next: run/publish the browser-boundary regression and inspect Windows results.
+
+### MULTI-COMPLETE / Windows cleanup regression resolved
+
+- CI 39585758002 confirms Windows native tests finish and exit: 16/16 passed,
+  zero cancelled, 12.5-second file duration; the previous retained-worker hang is
+  resolved. Official Windows Claude routing passed again. Pinned node-pty may
+  still emit an AttachConsole cleanup warning when its enumerator sees an already
+  exited CLI; no account output or credentials are printed.
+- The subsequent Windows build was interrupted by legacy PowerShell treating WXT's
+  normal stderr progress as NativeCommandError under redirected Tee-Object. Changed
+  only capture to cmd redirection, replaying the full log and preserving npm's real
+  exit code; genuine test/build failures still fail the job. No test was disabled.
+- Local launcher-boundary regression now passes: 17 connection and 29 proof tests.
+- Next: publish this checkpoint, finish clean Windows packaging and link artifacts.
