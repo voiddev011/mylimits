@@ -69,6 +69,12 @@ Steps 5–9: incomplete and gated. No real provider account has connected.**
 
 The H01–H10 ledger below records **previous supporting work**, not current delivery.
 
+Published source checkpoint: `6ac9ae6b3582f666d8d52c23f7a7eb41e48480f8`, branch
+`feature/independent-provider-proof`, matching local `95eb7e8` source tree
+`68c60057ea29ff60865062201cacc28359f81484`. CI run39665803268 was in progress,
+not reported passed. Main unchanged. Documentation-only publication follow-up
+does not change the preview or enable provider connections.
+
 ### Delivery checkpoint — blocked feature, existing preview packaged
 
 - Changed: INDEPENDENT-ACCOUNTS-FINAL-HANDOFF.md, STARTER-PROMPT.md, INSTALL.md,
