@@ -22,7 +22,7 @@ Documentation branch: `docs/hosted-accounts-execution-plan`.
 | H01 | implemented | Implement H02 contracts; continue available work while provider proofs remain blocked. |
 | H02 | implemented | Implement H03 simplified UI with explicit unavailable hosted state. |
 | H03 | implemented | Implement H04 durable authenticated connection attempts and tests. |
-| H04 | not_started | Implement owner-scoped hosted connection orchestration |
+| H04 | implemented | Implement H05 secure runtime configuration and operator package. |
 | H05 | not_started | Prepare secure private runtime and operator deployment |
 | H06 | blocked | Establish permitted OpenAI hosted route and actual A/B proof |
 | H07 | blocked | Establish Claude remote login/monitoring route and A/B proof |
@@ -56,6 +56,15 @@ State: **implemented**. Branch: `feature/hosted-connections`.
 - Checks: Typecheck passed. Browser acceptance follows H09/H10.
 - Decision/blockers: Provider switches replaced by + choices; current-account flow focuses existing tab. Independent flow explicitly unavailable instead of opening ordinary website. Legacy helper moved into advanced Settings; explicit website permission removal retained. Existing setup/history preserved.
 - Next action: Implement H04 durable authenticated connection attempts and tests.
+
+## H04 checkpoint — 21 October 2026
+
+State: **implemented**. Branch: `feature/hosted-connections`.
+
+- Files: server/migrations/006_hosted_connections.sql; server/src/hosted.ts; app.ts; server/tests/hosted.test.ts
+- Checks: Server typecheck passed; 37 PostgreSQL backend tests passed including 7 new hosted tests. Initial sandbox TCP run could not connect; rerun with permitted local-container access passed. Initial unsupported TS parameter-property syntax corrected before passing.
+- Decision/blockers: Durable owner-scoped attempts, hashed proof, idempotency, duplicate identity, reconnect generations and cancellation are implemented. No generic token upload/callback endpoint. Fixture drivers forbidden outside tests; production map empty. Official provider-specific callback/PKCE remains gated with adapters, not invented.
+- Next action: Implement H05 secure runtime configuration and operator package.
 
 ## Documentation consolidation checkpoint
 
