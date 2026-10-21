@@ -231,6 +231,22 @@ test('actual browser launcher forwards the Claude provider to isolated authoriza
  assert.ok(launched);assert.ok(unreferenced);
 });
 
+test('cancelled Claude login preserves an unconfirmed shutdown as a service recovery failure',async t=>{
+ const {service}=await fixture(t);let notify;
+ const started=new Promise(resolve=>{notify=resolve;});
+ service.claudeAdapter={readiness:async()=>({available:true}),
+  context:async(root,generation,signal)=>({signal}),
+  login:async({signal})=>new Promise((resolve,reject)=>{
+   signal.addEventListener('abort',()=>reject(Object.assign(Error('PRIVATE'),{code:'terminal-stop-unconfirmed'})),{once:true});notify();
+  }),
+ };
+ const added=await service.add('claude','Work');await started;await service.cancel(added.profile);
+ assert.equal(service.get(added.profile).errorCode,'terminal-stop-unconfirmed');
+ assert.equal(service.get(added.profile).authState,'unavailable');assert.equal(service.requiresRecovery,true);
+ await assert.rejects(service.serial(added.profile,async()=>assert.fail('Recovery must fence new operations.')),e=>e.code==='service-unavailable');
+ assert.ok(!JSON.stringify(service.snapshot()).includes('PRIVATE'));
+});
+
 test('production Claude adapter reads two isolated fictional CLI profiles through actual PTYs',async t=>{
  const {mkdir}=await import('node:fs/promises');
  const {createClaudeAdapter}=await import('./claude-adapter.mjs');

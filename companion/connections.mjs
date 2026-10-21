@@ -224,7 +224,12 @@ export class Connections extends EventEmitter {
             throw error;
           } finally { waiter.dispose(); }
         });
-      } catch (error) { this.setFailure(p, abort.signal.aborted ? failure('cancelled') : error); }
+      } catch (error) {
+        // Cancellation must not downgrade an unconfirmed shutdown into an
+        // ordinary signed-out state and release the service for more writers.
+        const shutdownFailed = ['shutdown-unconfirmed','terminal-stop-unconfirmed'].includes(error?.code);
+        this.setFailure(p, shutdownFailed ? error : abort.signal.aborted ? failure('cancelled') : error);
+      }
       await this.changed();
     });
     entry.task = task;
