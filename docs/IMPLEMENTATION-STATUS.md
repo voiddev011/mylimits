@@ -669,3 +669,16 @@ No AGENTS.md applies; one workstream, no parallel agents.
   provider; verify default-browser preservation, scope/value matching, phone-only
   changes, ordinary logout vs global revocation and actual renewal. Resolve the
   automatic Claude sign-in and acceptable-use gates before Gates 2–5.
+
+## MULTI-01 — independent account integration / Task 1
+
+- Branch `feature/independent-accounts`, clean baseline local `9ad8085`.
+- Read requested start/status/proof/handoff/research and service, diagnostic,
+  native bridge/controller, account model/UI, installation and CI code. No AGENTS.md
+  found under workspace; no parallel agents. New authorization permits integration
+  despite prior live-gate stop, retaining explicit pending/unavailable labels.
+- Added `MULTI-ACCOUNT-IMPLEMENTATION.md` with task sequence/contracts/acceptance.
+- Actual checks: inspection only; no implementation tests run at this checkpoint.
+- Blockers: no real provider identities; Claude isolated browser routing and fresh
+  monitoring/conditions unresolved. Existing auth folders will not be inspected.
+- Next: strict versioned native contract and migration-compatible service metadata.

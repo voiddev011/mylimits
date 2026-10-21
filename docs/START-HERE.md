@@ -1,4 +1,11 @@
-# Current work: independent-account connector proof
+# Current work: independent-account extension integration
+
+Latest authorization: implement on `feature/independent-accounts`. Read
+[MULTI-ACCOUNT-IMPLEMENTATION.md](MULTI-ACCOUNT-IMPLEMENTATION.md) and current status.
+The user authorizes integration while unavailable live checks remain explicitly
+pending. Claude independent signup stays unavailable until its blockers are resolved.
+
+# Previous checkpoint: independent-account connector proof
 
 Latest authorization: implement the connector-proof milestone on `v3/account-proof`.
 Read [INDEPENDENT-ACCOUNTS-RESEARCH-AND-PLAN.md](INDEPENDENT-ACCOUNTS-RESEARCH-AND-PLAN.md)
