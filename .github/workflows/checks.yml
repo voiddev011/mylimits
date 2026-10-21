@@ -22,6 +22,8 @@ jobs:
       - name: Account proof subprocess and PTY regressions (fictional accounts)
         timeout-minutes: 3
         run: npm run test:account-proof
+      - name: Hosted transport observation redaction and lifecycle regressions
+        run: npm run test:hosted-probe
       - name: Install Chromium for browser tests
         run: npx playwright install --with-deps chromium
       - name: Browser tests

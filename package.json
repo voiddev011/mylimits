@@ -22,7 +22,9 @@
     "package:companion": "node scripts/package-companion.mjs",
     "account-proof": "node scripts/account-proof.mjs",
     "test:account-proof": "node --test companion/proof/proof.test.mjs",
-    "test:connections": "node --test --test-timeout=45000 companion/connections.test.mjs"
+    "test:connections": "node --test --test-timeout=45000 companion/connections.test.mjs",
+    "probe:hosted": "node scripts/probe-hosted-login.mjs",
+    "test:hosted-probe": "node --test companion/proof/hosted-login.test.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
