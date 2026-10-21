@@ -20,7 +20,11 @@ and are not substitutes for completing source code and automated regression test
   Claude setup into the Windows helper; no manual recurring terminal operation.
 - [x] Add regression coverage for two accounts per provider, mixed accounts,
   cancellation, identity changes, cooldowns, restart and disconnect isolation.
-- [ ] Build/package, inspect Linux and Windows CI, update handoff, commit and push.
+- [x] Build/package, inspect Linux and Windows CI, update handoff, commit and push.
+
+All code items are complete. [Successful source CI](https://github.com/voiddev011/mylimits/actions/runs/39587512847)
+and [downloads / handoff](MULTI-ACCOUNT-HANDOFF.md). Real-account checks below
+remain manual and are not claimed verified by the implementation or CI.
 
 ## Separate manual account acceptance (user)
 

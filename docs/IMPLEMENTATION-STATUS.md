@@ -954,3 +954,42 @@ No AGENTS.md applies; one workstream, no parallel agents.
   missing shutdown acknowledgment, and verifies safe error/state/recovery fencing.
 - Next: publish this focused fix, rerun source CI/package and update final download
   links. Manual real-account acceptance remains separate; no account access needed.
+
+### MULTI-COMPLETE / COMPLETE — code delivered; manual accounts separate
+
+- Completed every item in MULTI-ACCOUNT-CODE-CHECKLIST.md. Independent OpenAI/Codex
+  and Claude Code adapters are integrated into the extension, with aliases, scoped
+  cancellation/reconnect/disconnect, bounded refresh and correctly dated failures.
+  Other providers retain website tracking. No remaining coding stub on this scope.
+- Final production source pushed as d3e821ad1d200c16bc6c0b6d6efc4de8315ae7dc,
+  matching local be1efc0 tree f1c036d44baba61caa5aa765119052fef99852da. Final
+  documentation follow-up changes no production code and skips duplicate source
+  CI; the following actual source build remains the authoritative package evidence.
+- CI https://github.com/voiddev011/mylimits/actions/runs/39587512847 **SUCCESS**:
+  windows-logic, verify and connected-services all passed for that exact source.
+- Actual final Linux/Windows checks: TypeScript; 102 core, 20 legacy native and
+  18 integrated connection tests each passed. Proof tests: Linux 30 passed;
+  Windows 29 passed/one explicit symlink-privilege skip. Zero failed/cancelled.
+  Full Chromium 29/29, Chrome/Edge/Firefox manifests, ZIP contracts/checksums passed.
+  Existing real-PostgreSQL/server, phone dashboard and extension transport gates
+  passed. Official unmodified Claude 2.1.301 BROWSER/loopback capability passed
+  on Windows and Linux without account login, credential export or model prompts.
+- Windows GUI scripts parsed and actual controls constructed; installer compiled
+  on Windows and uploaded with checksum. Local NSIS build also passed for the
+  final cancellation fix; staged adapter/runtime files match final source.
+  Pinned terminal dependencies included. Upstream ConPTY AttachConsole cleanup
+  warnings remain visible, but workers exit and tests finish normally.
+- Final downloads: extension artifact 12340496910 (Chrome/Firefox ZIPs and
+  SHA256SUMS); Windows x64 helper 12339618052 (EXE and checksum). Exact links,
+  artifact-envelope hashes and instructions are in MULTI-ACCOUNT-HANDOFF.md and
+  MULTI-ACCOUNT-INSTALL.md. README now describes current 3.2 behavior directly.
+- **Separate manual checks PENDING (user):** two actual accounts each provider,
+  normal browser A unaffected by B, provider values/scopes, usage elsewhere,
+  restart, ordinary website logout vs global revocation and actual token renewal.
+  Interactive clean Windows install/upgrade/uninstall is also manual. Fictional
+  CLI tests and unauthenticated capability checks do not prove these behaviors.
+- **Code blockers: none known on this checklist.** Release readiness awaits manual
+  acceptance and signing/publication review. No main merge, release, credential
+  upload or external provider message was performed.
+- Next action: user installs matching 3.2 artifacts and performs manual acceptance.
+  Implementation phase complete; no further code task queued by this instruction.
