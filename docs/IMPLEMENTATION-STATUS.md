@@ -890,3 +890,18 @@ No AGENTS.md applies; one workstream, no parallel agents.
   and retained diagnostic artifact. Moved official Windows BROWSER capability
   before integration so its independent result is visible even if a fixture stalls.
 - Next: publish bounded diagnostics, inspect exact failure, fix the cause and rerun.
+
+### MULTI-COMPLETE / Windows terminal resource fix
+
+- Bounded CI 39584746042 confirmed the official Windows Claude 2.1.301 BROWSER
+  route and CLI-owned loopback callback without account sign-in. Linux and server
+  jobs passed; all Windows connection assertions passed but the test file retained
+  a terminal resource and failed the step deadline. This was a production cleanup
+  defect, not a pending real-account test.
+- Inspected pinned node-pty 1.1.0's OS-ConPTY lifecycle: natural CLI exit destroys
+  its output socket but retains its drain worker/input handle until public kill().
+  stopProbeTerminal now invokes that API once on Windows after confirmed CLI exit,
+  including successful login; failed cleanup cannot release a successful result.
+- Added a regression for natural-exit terminal disposal and cleanup failure. No
+  process.exit(), force-exit test flag, private-library patch or credential handling.
+- Next: run native/proof regressions, publish the fix and inspect fresh Windows CI.

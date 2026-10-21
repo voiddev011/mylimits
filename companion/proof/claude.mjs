@@ -75,16 +75,27 @@ export async function loadTerminalDependencies() {
   } catch { throw new ProbeError('missing-terminal', 'Terminal support is unavailable. Install optional dependencies: npm install --include=optional.'); }
 }
 
-export function stopProbeTerminal(child, alreadyExited = false, timeout = 7000) {
+export function stopProbeTerminal(child, alreadyExited = false, timeout = 7000, platform = process.platform) {
   return new Promise(resolve => {
-    let exited = alreadyExited;
+    let exited = alreadyExited, closed = false, finished = false;
     const pid = child.pid;
     const subscription = child.onExit(() => { exited = true; });
     const timer = setTimeout(() => finish(false), timeout);
     const interval = setInterval(check, 50);
     const secondInterrupt = setTimeout(() => { if (!exited) try { child.write('\x03'); } catch {} }, 150);
-    const forceStop = setTimeout(() => { if (!exited) try { child.kill(); } catch {} }, 500);
-    function finish(stopped) { clearTimeout(timer); clearInterval(interval); clearTimeout(secondInterrupt); clearTimeout(forceStop); subscription.dispose(); resolve(stopped); }
+    const close = () => { if (!closed) { child.kill(); closed = true; } };
+    const forceStop = setTimeout(() => { if (!exited) try { close(); } catch {} }, 500);
+    function finish(stopped) {
+      if (finished) return; finished = true;
+      clearTimeout(timer); clearInterval(interval); clearTimeout(secondInterrupt); clearTimeout(forceStop); subscription.dispose();
+      // On Windows, observing process exit is not equivalent to disposing the
+      // PTY. node-pty's OS-ConPTY backend retains its drain worker/input handle
+      // after a natural exit until kill() closes the terminal. This matters for
+      // successful auth login as well as cancelled probes in a long-lived host.
+      // Use its public cleanup API, once, only after the CLI is confirmed gone.
+      if (stopped && platform === 'win32') try { close(); } catch { stopped = false; }
+      resolve(stopped);
+    }
     function check() {
       let alive = false;
       if (Number.isInteger(pid) && pid > 0) {
