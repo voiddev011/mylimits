@@ -19,7 +19,7 @@ Documentation branch: `docs/hosted-accounts-execution-plan`.
 
 | Task | State | Next action |
 | --- | --- | --- |
-| H01 | not_started | Inspect current code and resolve remaining provider route questions |
+| H01 | implemented | Implement H02 contracts; continue available work while provider proofs remain blocked. |
 | H02 | not_started | Define hosted connection/attempt contracts and migration |
 | H03 | not_started | Remove provider toggles; add capability-aware + choices |
 | H04 | not_started | Implement owner-scoped hosted connection orchestration |
@@ -29,6 +29,15 @@ Documentation branch: `docs/hosted-accounts-execution-plan`.
 | H08 | not_started | Implement bounded collection and truthful freshness |
 | H09 | not_started | Integrate extension/API and maintain manual evidence matrix |
 | H10 | not_started | Package, verify and deliver accurate handoff |
+
+## H01 checkpoint — 21 October 2026
+
+State: **implemented**. Branch: `feature/hosted-connections`.
+
+- Files: Inspected UI, native connection messages, sync client, API, jobs, credential store and migrations; hosted trial sources reused.
+- Checks: Clean starting checkout; no AGENTS.md found under workspace or ancestor paths. Official provider pages rechecked; no account authorization attempted.
+- Decision/blockers: OpenAI experimental transport only: hosted entitlement and exact selection unresolved. Claude hosted unmodified CLI conditions exist, but remote completion/monitoring unresolved. Both production routes remain unavailable; no blanket impossibility claim. Runtime has no account credentials or configured identity/KMS.
+- Next action: Implement H02 contracts; continue available work while provider proofs remain blocked.
 
 ## Documentation consolidation checkpoint
 
