@@ -6,10 +6,10 @@ Add-Type -AssemblyName System.Drawing
 $root = Split-Path $PSScriptRoot -Parent
 $form = New-Object Windows.Forms.Form
 $form.Text = 'MyLimits optional companion — unsigned preview'
-$form.Size = New-Object Drawing.Size(650,470)
+$form.Size = New-Object Drawing.Size(650,540)
 $form.StartPosition = 'CenterScreen'
 function Label($text,$y) {$l=New-Object Windows.Forms.Label;$l.Text=$text;$l.Location=New-Object Drawing.Point(20,$y);$l.Size=New-Object Drawing.Size(590,42);$form.Controls.Add($l)}
-Label 'Independent OpenAI accounts require this helper. Node and official Codex are included for Windows x64. Claude independent connections are unavailable.' 16
+Label 'Independent OpenAI and Claude accounts use this helper. Node/Codex and terminal runtimes are included. Install official Claude Code below if needed.' 16
 $node = Join-Path $root 'dependencies\node.exe'
 $codex = Join-Path $root 'dependencies\codex\bin\codex.exe'
 if (!(Test-Path $node)) {$node=$null}
@@ -28,7 +28,7 @@ if($choices.Items.Count -gt 0){$choices.SelectedIndex=0}
 Label 'If detection misses an unpacked profile, select a browser and paste its ID from the Extensions page below. Leave blank to use detection.' 148
 $browser=New-Object Windows.Forms.ComboBox;$browser.Location=New-Object Drawing.Point(20,195);$browser.Size=New-Object Drawing.Size(130,28);$browser.DropDownStyle='DropDownList';[void]$browser.Items.AddRange(@('chrome','brave','edge','chromium'));$browser.SelectedIndex=0;$form.Controls.Add($browser)
 $id=New-Object Windows.Forms.TextBox;$id.Location=New-Object Drawing.Point(160,195);$id.Size=New-Object Drawing.Size(450,28);$form.Controls.Add($id)
-$status=New-Object Windows.Forms.Label;$status.Location=New-Object Drawing.Point(20,235);$status.Size=New-Object Drawing.Size(590,68);$status.Text='Uses a per-user native host and sign-in task. Separate OpenAI sign-in starts later from the extension. Website tracking does not require this helper.';$form.Controls.Add($status)
+$status=New-Object Windows.Forms.Label;$status.Location=New-Object Drawing.Point(20,235);$status.Size=New-Object Drawing.Size(590,68);$status.Text='Uses a per-user native host and sign-in task. Separate provider sign-in starts later from the extension. Website tracking does not require this helper.';$form.Controls.Add($status)
 $install=New-Object Windows.Forms.Button;$install.Text='Register and start';$install.Location=New-Object Drawing.Point(20,315);$install.Size=New-Object Drawing.Size(180,36);$form.Controls.Add($install)
 $install.Add_Click({
  try{
@@ -46,5 +46,15 @@ $install.Add_Click({
 $help=New-Object Windows.Forms.Button;$help.Text='Setup help';$help.Location=New-Object Drawing.Point(215,315);$help.Size=New-Object Drawing.Size(180,36);$form.Controls.Add($help)
 $help.Add_Click({Start-Process 'https://github.com/voiddev011/mylimits/blob/feature/independent-accounts/docs/MULTI-ACCOUNT-INSTALL.md'})
 $close=New-Object Windows.Forms.Button;$close.Text='Close';$close.Location=New-Object Drawing.Point(410,315);$close.Size=New-Object Drawing.Size(180,36);$form.Controls.Add($close);$close.Add_Click({$form.Close()})
-Label 'Disconnect accounts in MyLimits before uninstalling to request provider logout. Uninstall alone cannot confirm remote revocation. Never run setup as Administrator.' 365
+$claudeInstall=New-Object Windows.Forms.Button;$claudeInstall.Text='Install official Claude Code';$claudeInstall.Location=New-Object Drawing.Point(20,365);$claudeInstall.Size=New-Object Drawing.Size(280,36);$form.Controls.Add($claudeInstall)
+$claudeInstall.Add_Click({
+ try {
+  $claudeInstall.Enabled=$false
+  $status.Text='Opening the official Claude Code installer. Review provider terms. Reopen MyLimits after installation.'
+  Start-Process 'winget.exe' -ArgumentList @('install','--id','Anthropic.ClaudeCode','--exact','--source','winget')
+ }catch{$status.Text='WinGet is unavailable. Open the official setup guide to install Claude Code.'}finally{$claudeInstall.Enabled=$true}
+})
+$claudeHelp=New-Object Windows.Forms.Button;$claudeHelp.Text='Claude setup and terms';$claudeHelp.Location=New-Object Drawing.Point(315,365);$claudeHelp.Size=New-Object Drawing.Size(280,36);$form.Controls.Add($claudeHelp)
+$claudeHelp.Add_Click({Start-Process 'https://code.claude.com/docs/en/setup'})
+Label 'Disconnect accounts in MyLimits before uninstalling to request provider logout. Uninstall alone cannot confirm remote revocation. Never run setup as Administrator.' 420
 if(!$NoShow){[void]$form.ShowDialog()}

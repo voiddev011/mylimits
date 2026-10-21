@@ -29,7 +29,7 @@ export const CommandSchema = z.discriminatedUnion('type', [
 
   z.object({ type: z.literal('companion-status') }),
   z.object({ type: z.literal('companion-enable'), enabled: z.boolean() }),
-  z.object({ type: z.literal('companion-action'), action: z.enum(['cancel','reconnect','disconnect']), profile: z.string().uuid() }),
+  z.object({ type: z.literal('companion-action'), action: z.enum(['setup','cancel','reconnect','disconnect']), profile: z.string().uuid() }),
   z.object({ type: z.literal('companion-add'), provider: z.enum(['openai','claude']).optional(), nickname: z.string().trim().max(60).optional() }),
   z.object({ type: z.literal('companion-remove'), profile: z.string().uuid() }),
   z.object({ type: z.literal('refresh'), provider: ProviderSchema.optional(), connectionId: z.string().min(1).max(240).optional() }),

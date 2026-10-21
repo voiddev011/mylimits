@@ -79,7 +79,7 @@ export async function connectCompanion() {
     pending.clear(); delivery = delivery.catch(() => {}).then(() => onSnapshot(null));
   });
 }
-export type CompanionMethod = 'status'|'capabilities'|'list'|'start'|'cancel'|'reconnect'|'rename'|'disconnect'|'remove'|'refresh';
+export type CompanionMethod = 'status'|'capabilities'|'list'|'start'|'setup'|'cancel'|'reconnect'|'rename'|'disconnect'|'remove'|'refresh';
 export async function companionRequest(method: CompanionMethod, profile?: string, extra: { provider?: 'openai'|'claude'; alias?: string } = {}): Promise<unknown> {
   await connectCompanion();
   if (!port) throw unavailable();

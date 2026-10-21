@@ -60,7 +60,13 @@ jobs:
         with:
           node-version: 24
       - run: npm ci
+      - name: Compile the owned Windows Claude browser launcher
+        shell: powershell
+        run: ./companion/windows/compile-claude-browser.ps1 -Source ./companion/windows/claude-browser.cs -Output ./companion/windows/claude-browser.exe
       - run: npm run check
+      - name: Official Claude browser interface (no account sign-in)
+        timeout-minutes: 3
+        run: node scripts/check-claude-browser.mjs
       - name: Account proof Windows ConPTY regressions (fictional accounts)
         timeout-minutes: 3
         run: npm run test:account-proof

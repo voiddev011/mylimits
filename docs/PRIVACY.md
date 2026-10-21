@@ -196,3 +196,24 @@ Codex credentials remain in its protected local account directory/OS store.
 Email duplicate hints are hashed in memory only and never exported; the UI receives
 only a possible-duplicate flag, never the email/hash. A matching email is a warning,
 not proof of identical workspace authorization, and profiles are never auto-merged.
+
+## 3.2 independent Claude connections
+
+The optional helper invokes unmodified, user-installed Claude Code. Each account
+has a separate CLAUDE_CONFIG_DIR and empty workspace. The documented BROWSER
+setting routes its official authorization page into an account-owned fresh browser
+profile. The CLI owns the callback, code exchange, credentials and renewal. MyLimits
+never collects a pasted login code, Claude password, cookies or provider tokens.
+A URL-free router acknowledgment confirms browser launch. Temporary authorization
+URLs remain within the local helper/official browser processes and are never logged
+or sent to the extension/backend. Browser-owned profile folders may contain cookies.
+
+Only normalized /usage panel readings and allowlisted auth/account/organization
+metadata cross Native Messaging. Raw terminal output stays in native memory and
+is discarded. Display email is transient and hidden in privacy mode; salted binding
+and optional organization ID are stored locally. CLI-provided reset times are used
+only when actually supplied; unknown resets remain null. Provider observation time
+is not inferred from terminal redraws. Failed reads preserve their previous age.
+Checks wait at least five minutes and back off on failures. First-party onboarding
+may open an official setup terminal once; user trust/terms choices are not automated.
+No model prompts or API inference calls are sent by the adapter.

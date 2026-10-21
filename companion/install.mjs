@@ -1,4 +1,4 @@
-import { mkdir, writeFile, chmod, readFile } from 'node:fs/promises';
+import { mkdir, writeFile, chmod, readFile, cp, access } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { homedir } from 'node:os';
 import path from 'node:path';
@@ -34,12 +34,25 @@ if (windows) {
 } else await chmod(dataDir, 0o700);
 const runtime = path.join(dataDir, 'runtime'); await mkdir(runtime, { recursive: true, mode: 0o700 });
 // Copy the runtime so downloading a new ZIP or moving the checkout cannot break the host.
-for (const name of ['paths.mjs', 'local-auth.mjs', 'protocol.mjs', 'limits.mjs', 'app-server.mjs', 'service.mjs', 'connections.mjs', 'auth-browser.mjs', 'daemon.mjs', 'host.mjs']) {
+for (const name of ['paths.mjs', 'local-auth.mjs', 'protocol.mjs', 'limits.mjs', 'app-server.mjs', 'service.mjs', 'connections.mjs', 'claude-adapter.mjs', 'claude-browser-route.mjs', 'claude-setup.mjs', 'windows.mjs', 'auth-browser.mjs', 'daemon.mjs', 'host.mjs']) {
   await writeFile(path.join(runtime, name), await readFile(path.join(source, name)), { mode: 0o600 });
 }
 await mkdir(path.join(runtime, 'proof'), { recursive: true, mode: 0o700 });
-for (const name of ['runtime.mjs','store.mjs','codex-login.mjs','errors.mjs']) {
+for (const name of ['runtime.mjs','store.mjs','codex-login.mjs','errors.mjs','claude.mjs']) {
   await writeFile(path.join(runtime, 'proof', name), await readFile(path.join(source, 'proof', name)), { mode: 0o600 });
+}
+// Copy only the pinned terminal runtimes; CLI credentials/configuration are never
+// copied. Windows' node-pty package includes its official native prebuilds.
+let modules;
+for(const candidate of [path.join(source,'node_modules'),path.join(source,'..','node_modules')]) {
+  try{await access(path.join(candidate,'node-pty','package.json'));modules=candidate;break;}catch{}
+}
+if(!modules)throw new Error('Terminal runtime is missing. Download the complete helper package.');
+for(const name of ['node-pty','@xterm/headless'])await cp(path.join(modules,name),path.join(runtime,'node_modules',name),{recursive:true});
+if(windows){
+  await mkdir(path.join(runtime,'windows'),{recursive:true,mode:0o700});
+  for(const name of ['claude-browser.cs','compile-claude-browser.ps1'])await cp(path.join(source,'windows',name),path.join(runtime,'windows',name));
+  execFileSync('powershell.exe',['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',path.join(runtime,'windows','compile-claude-browser.ps1'),'-Source',path.join(runtime,'windows','claude-browser.cs'),'-Output',path.join(runtime,'windows','claude-browser.exe')],{stdio:'pipe'});
 }
 const quote = value => "'" + value.replaceAll("'", "'\\''") + "'";
 const launcher = path.join(dataDir, windows ? 'native-host.cmd' : 'native-host');
@@ -56,7 +69,7 @@ if (windows) {
   execFileSync('reg.exe', ['ADD', `${registryRoots[browserName]}\\${hostName}`, '/ve', '/t', 'REG_SZ', '/d', manifestPath, '/f'], { stdio: 'ignore' });
   try {
     execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encodedPowerShell(taskScript(process.execPath, path.join(runtime, 'daemon.mjs'), executable, dataDir))], { stdio: 'pipe' });
-    console.log('Windows companion registered and startup task requested. Reload MyLimits and connect an independent OpenAI account.');
+    console.log('Windows companion registered and startup task requested. Reload MyLimits and connect an independent OpenAI or Claude account.');
     console.log('Check Task Scheduler > MyLimitsCompanion if the bridge is unavailable.');
   } catch {
     throw new Error('Browser registration succeeded, but Windows startup failed. Reopen helper setup and retry as the same Windows user.');
@@ -72,7 +85,7 @@ try {
   execFileSync('systemctl', ['--user', 'daemon-reload'], { stdio: 'pipe' });
   execFileSync('systemctl', ['--user', 'enable', 'mylimits-companion.service'], { stdio: 'pipe' });
   execFileSync('systemctl', ['--user', 'restart', 'mylimits-companion.service'], { stdio: 'pipe' });
-  console.log('Companion installed and started. Reload MyLimits, open Websites, then connect an independent OpenAI account.');
+  console.log('Companion installed and started. Reload MyLimits, open Websites, then connect an independent OpenAI or Claude account.');
 } catch {
   console.log('Native host installed. Automatic service startup was unavailable. Keep this command running in a terminal:');
   console.log([process.execPath, path.join(runtime, 'daemon.mjs'), executable].map(quote).join(' '));

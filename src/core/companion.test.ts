@@ -64,3 +64,13 @@ test('v2 disconnect retains remembered readings and reconnect restores same acco
  const restored=mergeCompanion(disconnected,[{...profile,updatedAt:now+2000,independent:{...independent,authState:'connected'}}],now+2000);
  assert.equal(restored.accounts.length,1);assert.equal(restored.accounts[0]!.connection,'active');assert.equal(restored.accounts[0]!.updatedAt,now+2000);
 });
+
+test('mixed native providers preserve OpenAI namespace and create separate Claude accounts',()=>{
+ const independent={provider:'claude' as const,alias:'Claude Work',authState:'connected' as const,identityConfidence:'email-and-organization' as const,providerSubject:null,workspaceIdentity:'claude-org',capability:'subscription' as const,lastAttemptAt:now,providerObservedAt:null,nextRetryAt:now+300000,failures:0,errorCode:null,possibleDuplicate:false};
+ const claude={...profile,id:'6c7b581a-333d-4016-955e-98e84dcf22aa',independent,meters:profile.meters.map(m=>({...m,scope:'subscription' as const}))};
+ const store=mergeCompanion(emptyStore('test'),[profile,claude],now);
+ assert.equal(store.accounts.find(a=>a.id.startsWith('openai-companion:'))!.provider,'chatgpt');
+ assert.equal(store.accounts.find(a=>a.id.startsWith('claude-companion:'))!.provider,'claude');
+ assert.equal(store.accounts.find(a=>a.provider==='claude')!.alias,'Claude Work');
+ assert.equal(store.connections.find(c=>c.provider==='claude'&&c.kind==='companion')!.independent!.workspaceIdentity,'claude-org');
+});

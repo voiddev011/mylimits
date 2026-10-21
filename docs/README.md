@@ -1,12 +1,13 @@
-# MyLimits 3.1 — Independent OpenAI preview
+# MyLimits 3.2 — Independent accounts preview
 
 Current branch: **`feature/independent-accounts`**.
-[Install/test](MULTI-ACCOUNT-INSTALL.md) · [Plan](MULTI-ACCOUNT-IMPLEMENTATION.md) ·
+[Install/test](MULTI-ACCOUNT-INSTALL.md) · [Code checklist](MULTI-ACCOUNT-CODE-CHECKLIST.md) ·
 [Status](IMPLEMENTATION-STATUS.md) · [Handoff](MULTI-ACCOUNT-HANDOFF.md).
-Independent OpenAI service/UI is implemented; real accounts remain unverified.
-Independent Claude remains unavailable. The older diagnostic remains available.
-[Download extension](https://github.com/voiddev011/mylimits/actions/runs/39579243525/artifacts/12335143318) ·
-[Download Windows helper](https://github.com/voiddev011/mylimits/actions/runs/39579243525/artifacts/12336221223).
+
+Independent OpenAI and Claude Code connectors are implemented. Claude uses the
+user-installed official CLI; Windows helper setup includes its install action.
+Real-account acceptance is a separate manual checklist. Website tracking remains
+optional and works without the helper. No universal all-provider quota claim.
 
 ## Previous 3.0 release record
 

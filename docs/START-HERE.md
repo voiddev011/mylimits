@@ -3,7 +3,9 @@
 Latest authorization: implement on `feature/independent-accounts`. Read
 [MULTI-ACCOUNT-IMPLEMENTATION.md](MULTI-ACCOUNT-IMPLEMENTATION.md) and current status.
 The user authorizes integration while unavailable live checks remain explicitly
-pending. Claude independent signup stays unavailable until its blockers are resolved.
+pending. Version 3.2 implements the Claude CLI adapter and first-party BROWSER routing.
+Read [MULTI-ACCOUNT-CODE-CHECKLIST.md](MULTI-ACCOUNT-CODE-CHECKLIST.md). Manual
+provider acceptance is separate; do not restore the old unavailable-only stub.
 
 # Previous checkpoint: independent-account connector proof
 

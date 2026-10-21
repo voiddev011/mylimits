@@ -26,6 +26,7 @@ export async function findCli(provider, env = process.env, platform = process.pl
   }
   const dirs = (env.PATH ?? env.Path ?? '').split(path.delimiter).filter(Boolean);
   const candidates = dirs.map(dir => path.join(dir, platform === 'win32' ? `${name}.exe` : name));
+  if (provider === 'claude' && platform === 'win32' && env.LOCALAPPDATA) candidates.push(path.join(env.LOCALAPPDATA,'Microsoft','WinGet','Links','claude.exe'));
   if (provider === 'claude') candidates.unshift(path.join(homedir(), '.local', 'bin', platform === 'win32' ? 'claude.exe' : 'claude'));
   if (provider === 'openai' && platform === 'win32' && env.APPDATA) candidates.push(path.join(env.APPDATA, 'npm', 'node_modules', '@openai', 'codex', 'bin', 'codex.js'));
   for (const candidate of candidates) try { await access(candidate); return candidate; } catch {}
