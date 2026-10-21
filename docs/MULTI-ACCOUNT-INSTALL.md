@@ -6,8 +6,10 @@ No real-provider signup, logout survival or renewal has been verified here.
 
 ## Built downloads
 
-Use the **3.2** extension and helper artifacts from this branch's successful CI
-run, linked in MULTI-ACCOUNT-HANDOFF.md. The old 3.1 downloads do not contain the
+Download the [3.2 extension packages](https://github.com/voiddev011/mylimits/actions/runs/39587512847/artifacts/12340496910)
+and [3.2 Windows x64 helper](https://github.com/voiddev011/mylimits/actions/runs/39587512847/artifacts/12339618052)
+from this branch's [successful CI run](https://github.com/voiddev011/mylimits/actions/runs/39587512847).
+The old 3.1 downloads do not contain the
 Claude implementation. Extract the helper artifact and run its EXE. Extract the
 extension artifact, then its `mylimits-3.2.0-chrome.zip` into a permanent folder
 containing `manifest.json`. Load that folder in the browser. Built packages do
@@ -34,7 +36,7 @@ In Chrome/Brave/Edge, open Extensions → Developer mode → Load unpacked and s
 rebuild. Keep its existing folder/ID to preserve extension storage. The packaged
 `mylimits-3.2.0-chrome.zip` can instead be extracted into a permanent install folder.
 
-## Windows: helper, once
+## Windows x64: helper, once
 
 Use the **3.2** `mylimits-companion-windows-unsigned.exe` from this branch's build
 artifacts. Older 3.0 helpers cannot perform the new connection protocol. This is
@@ -103,7 +105,7 @@ continues website tracking; its native host registration is not supplied.
 - [ ] Ordinary website logout tested separately from global revocation.
 - [ ] Actual token expiry/renewal tested over time.
 - [ ] Clean Windows user installation, upgrade and uninstall tested interactively.
-- [ ] Equivalent Claude checks after its sign-in/monitoring blockers are resolved.
+- [ ] Repeat account, other-device, logout and renewal checks for Claude Code.
 
 Keep credentials, auth URLs, CLI/browser folders and raw provider output private.
 Share only safe errors or a reviewed diagnostic report. See

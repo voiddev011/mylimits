@@ -1,97 +1,80 @@
 # MyLimits 3.2 — Independent accounts preview
 
 Current branch: **`feature/independent-accounts`**.
-[Install/test](MULTI-ACCOUNT-INSTALL.md) · [Code checklist](MULTI-ACCOUNT-CODE-CHECKLIST.md) ·
-[Status](IMPLEMENTATION-STATUS.md) · [Handoff](MULTI-ACCOUNT-HANDOFF.md).
+[Install](MULTI-ACCOUNT-INSTALL.md) · [Code checklist](MULTI-ACCOUNT-CODE-CHECKLIST.md) ·
+[Status](IMPLEMENTATION-STATUS.md) · [Handoff and downloads](MULTI-ACCOUNT-HANDOFF.md).
 
-Independent OpenAI and Claude Code connectors are implemented. Claude uses the
-user-installed official CLI; Windows helper setup includes its install action.
-Real-account acceptance is a separate manual checklist. Website tracking remains
-optional and works without the helper. No universal all-provider quota claim.
+Track available OpenAI Codex/Work and Claude Code subscription quotas from
+multiple independently connected accounts in one browser dashboard. Real-account
+acceptance is a separate manual checklist; this is an unpublished preview.
 
-## Previous 3.0 release record
+## Connections
 
-# MyLimits 3.0 — Clean dashboard preview
+- **Website tracking:** reads the account signed into this browser. No helper
+  required. Other saved website accounts keep clearly dated readings.
+- **Independent accounts:** optional local helper, one official CLI profile per
+  account, and separate browser sign-in windows. Add B while keeping your normal
+  website session on A. The extension operates subsequent connection actions.
+- **History:** retained values keep their actual successful fetch timestamp.
+  Missing quotas remain unknown; stale data does not become fresh on restart.
 
-Current development: [independent-account proof tool](ACCOUNT-PROOF.md) on
-`v3/account-proof`. It is separate from the extension and does not enable a
-released independent Claude connection. [Current handoff](ACCOUNT-PROOF-HANDOFF.md).
+Open + → choose OpenAI or Claude → Connect an independent account. Install the
+3.2 helper once, authorize its optional browser connection, then complete official
+sign-in. Give each connection its own nickname. Claude requires the official
+Claude Code CLI and may need one-time onboarding in its own setup window.
 
-Your AI limits, named accounts and resets in one place. Development branch:
-**`v3/redesign`**. [Install/update](INSTALL.md) · [Implementation plan](V3-IMPLEMENTATION-PLAN.md)
-· [Current status](IMPLEMENTATION-STATUS.md) · [Handoff](V3-HANDOFF.md).
-All maintained Markdown lives directly in `docs/`; commands run from the repo root.
+The official CLIs own credentials and renewal. MyLimits does not request passwords,
+copy browser cookies, extract CLI tokens or put credentials into extension storage.
 
-Download the [3.0 extension packages](https://github.com/voiddev011/mylimits/actions/runs/38932629756/artifacts/12059023187),
-then follow [INSTALL.md](INSTALL.md). These are built artifacts; the source ZIP
-requires Node/npm and a build first.
+## Scope and behavior
 
-## What changed
+OpenAI reports returned **Codex/Work** windows, not all ordinary ChatGPT chat,
+image, upload or voice allowances. Claude reports supported **subscription /usage**
+percentages; unknown reset timestamps stay unknown. Other providers retain their
+existing website adapters and are not independently connected by this update.
 
-- Essential 440px popup: larger names/readings, refresh, + and Full dashboard.
-  Normal-size six-account fixtures fit; larger collections or Large text scroll.
-- Four readable dashboard sections: Overview, Accounts, History, Settings.
-  Guide/prompt tools removed. Standard/Large text size is saved.
-- Genuine bundled provider icons; no remote logo requests.
-- Needs attention filter, local reset clock in details, privacy mode masking names
-  and notifications, version/help and safe diagnostics.
-- Optional floating button on selected AI sites. Clicking shows **Coming soon**.
-  Off by default, no account needed, no account/prompt/conversation reading.
-- Website detection and independent connections are clearly separated. Saved
-  website accounts retain dated readings when a different account is signed in.
-- Updated optional OpenAI helper uses isolated sign-in browser profiles. Windows
-  x64 installer bundles its Node/Codex prerequisites. Live acceptance is pending.
-- Existing account names, pins, history and alerts are preserved. Optional snapshot
-  sync remains advanced and does not keep AI provider accounts logged in.
+Eligible refreshes respect provider waits and error backoff: at least two minutes
+for OpenAI, five minutes for Claude. These intervals do not guarantee immediate
+provider data. Other-device changes, website logout and actual credential renewal
+are pending manual acceptance. Global session revocation may require reconnecting.
 
-## Provider boundaries
+The helper is optional for website tracking and required for independent accounts.
+Windows x64 provides a guided current-user installer. Linux needs official components
+and xterm for first-party Claude onboarding. Firefox remains website-only.
 
-All quota readers are source/fixture-tested **live-unverified prototypes**.
+## Interface
 
-| Source | Implemented scope | Limitation |
-| --- | --- | --- |
-| Claude | Account/workspace returned subscription windows | Plan/model windows depend on the returned response |
-| ChatGPT | Returned Work/Codex and code-review windows | Ordinary chat, images, uploads and other limits remain unknown |
-| Grok | Returned Grok 4 default-mode request allowance | Other modes/reset time unknown; optional activity-only mode |
-| Perplexity | Returned Pro/research/Labs/agentic remaining counts | No fabricated total, percentage or reset; activity-only mode available |
-| Cursor | Included/model coding-plan pools and reported on-demand spend | Separate from a subscription fee or local cost estimate |
-| Gemini | Recognized requests in this browser | Local activity only, not a remote quota |
-| Optional companion | Returned Codex App Server buckets | Real authorization/logout/renewal/native launch pending |
+Compact popup: provider logos, aliases, quota bars/reset times, dated status,
+refresh, + account and Full dashboard. The dashboard contains account management,
+history, settings, privacy controls and diagnostics. Guide/prompt features remain
+removed. The optional floating button still displays Coming soon.
 
-Website logout or session expiry can stop that website source. Remembered data
-stays dated. Other-device usage appears only through a later successful
-provider-reported reading. There is **no universal real-time/logout-independent
-tracking guarantee**. Snapshot sync copies readings; it does not collect new ones.
-Production independent cloud collectors are disabled by the
-[feasibility gate](HOSTED-FEASIBILITY.md).
+Existing account IDs, nicknames, pins, alerts and history are preserved. Optional
+snapshot sync copies readings; it does not maintain remote AI login sessions.
+No backend is required for local independent connections.
 
-One browser profile usually has one current website login per provider. Switching
-accounts retains earlier names/readings, without giving those accounts separate
-credentials. Optional companion profiles have separate local authorization.
+## Develop
 
-## Develop and test
-
-Node **24+**, committed lockfile:
+Run commands from the repository root with Node **24+**:
 
 ```sh
-npm ci
-npm run dev                 # fast rebuilds while developing
-npm run check               # types, core/native tests, production Chrome build
-npm run test:browser         # needs Playwright Chromium and a built extension
-npm run zip                 # .output/mylimits-2.2.0-chrome.zip
+npm ci --include=optional
+npm run dev
+npm run check
+npm run test:account-proof
+npm run test:browser
+npm run zip
 npm run build:firefox
 npm run zip:firefox
 ```
 
-Load `.output/chrome-mv3` from the repository root after building. Windows File
-Explorer accepts `.output\chrome-mv3` in its address bar inside the project folder.
-After rebuilding, Reload the existing extension. `npx playwright install chromium`
-installs test Chromium; `CHROMIUM_PATH` selects a compatible executable.
-Browser tests isolate fictional profiles and block live provider traffic.
+Load `.output/chrome-mv3` in Chrome/Brave/Edge after building. The packaged ZIP is
+`.output/mylimits-3.2.0-chrome.zip`. Browser tests need Playwright Chromium and use
+isolated fictional profiles; they do not prove real provider behavior.
 
-The optional backend is a separate package: [SERVER-SETUP](SERVER-SETUP.md).
-No sync server is configured in default release builds. Phone Chrome cannot load
-this desktop extension; use the phone dashboard only after configuring sync.
+Built packages do not require Node/npm. Follow the current install guide for the
+matching 3.2 extension and helper, not historical 3.0/3.1 artifacts. All maintained
+project Markdown belongs directly in `docs/`.
 
 [Privacy](PRIVACY.md) · [Architecture](ARCHITECTURE.md) ·
-[Provider evidence](PROVIDER-CAPABILITIES.md) · [Support/manual checks](SUPPORT.md)
+[Provider evidence](PROVIDER-CAPABILITIES.md) · [Support](SUPPORT.md).

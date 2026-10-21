@@ -38,9 +38,15 @@ Branch `feature/independent-accounts`, 21 October 2026.
 
 ## Code verification
 
-- TypeScript, 102 core, 20 legacy native, 16 connection and 28 proof tests pass.
+- TypeScript, 102 core, 20 legacy native and 18 connection tests pass on Linux and
+  Windows. Proof suite: 30 passed on Linux; 29 passed and one symlink-privilege
+  check explicitly skipped on Windows. Zero failed or cancelled tests.
   Connection tests include actual fictional CLI processes/PTYs for mixed accounts,
   successful Claude login, cancellation, organization isolation, restart and logout.
+- Final regressions cover the actual shared Claude browser-launch boundary,
+  Windows terminal disposal after natural CLI exit, and acknowledged shutdown of
+  cancelled metadata commands. CLI-owned credential writers cannot overlap a new
+  operation just because kill was requested. Unconfirmed shutdown fails closed.
 - Full Chromium suite: 29 passed, including provider-specific connection setup,
   transient identity privacy, nickname preservation and missing dependency state.
 - Unmodified official Claude Code 2.1.301, downloaded with its published integrity,
@@ -50,6 +56,10 @@ Branch `feature/independent-accounts`, 21 October 2026.
 - Windows repeats that exact interface check on CI with the pinned official native
   binary and compiled router. This is distinct from a fictional CLI test and still
   does not prove real account authentication.
+- The pinned OS-ConPTY dependency can emit an AttachConsole cleanup warning for
+  an already exited provider process. Its public terminal cleanup is still called;
+  the native tests must finish without retained workers. No warnings are suppressed
+  or raw provider output copied into MyLimits logs.
 - Final variant/archive/installer/Windows CI results and downloadable artifacts are
   recorded in IMPLEMENTATION-STATUS.md and the publication note below.
 
@@ -69,3 +79,44 @@ release work, separate from the implemented first-party local adapters.
 
 No main merge, backend deployment, credential upload, store submission or external
 provider message was performed. Use 3.2 packages; 3.1 helper lacks the Claude code.
+
+## Final code delivery
+
+Code source [d3e821ad](https://github.com/voiddev011/mylimits/commit/d3e821ad1d200c16bc6c0b6d6efc4de8315ae7dc)
+on `feature/independent-accounts`. The documentation follow-up does not change
+production source. [CI 39587512847](https://github.com/voiddev011/mylimits/actions/runs/39587512847):
+**verify, windows-logic and connected-services all passed**. This includes the
+official Windows browser-routing capability check, actual fictional CLI/PTY
+regressions, setup GUI construction, installer compilation and extension archives.
+
+| Download | Contents |
+| --- | --- |
+| [3.2 extension packages](https://github.com/voiddev011/mylimits/actions/runs/39587512847/artifacts/12340496910) | Chrome/Brave/Edge ZIP, Firefox website-only ZIP, SHA256SUMS |
+| [3.2 Windows x64 helper](https://github.com/voiddev011/mylimits/actions/runs/39587512847/artifacts/12339618052) | Unsigned development installer EXE and its SHA-256 file |
+
+Download the two artifacts while signed into GitHub with repository access.
+Extract both artifact ZIPs. Run the helper EXE as your normal Windows user.
+Extract the inner `mylimits-3.2.0-chrome.zip` into a permanent folder; open
+`chrome://extensions` or `brave://extensions`, enable Developer mode and load
+that extracted folder containing `manifest.json`. Keep an existing extension's
+folder/ID when updating; register its ID in the helper setup. Then open MyLimits
+→ + → provider → Connect an independent account. Repeat with a different account
+and nickname. See [installation](MULTI-ACCOUNT-INSTALL.md) for all setup steps.
+
+GitHub artifact envelopes (not the files inside): extension SHA-256
+`d99bc8dc9cbef5549a5487733b341017c0b6d59c8231000ef4a26af26d256f13`;
+helper SHA-256 `d6d2a0d664482f0070e057730ac7f7d5aa60b7494e69dd750f66ba6a65fc5bd3`.
+Use the checksum files inside each download to verify the actual ZIPs/EXE.
+CI artifacts expire 19 January 2027; these are not published releases.
+
+**Implemented:** complete OpenAI/Codex and Claude Code adapters, integration,
+account UI, package/installer and automated regressions. No remaining coding stub
+or known code blocker on this checklist.
+
+**Live verified:** official unauthenticated CLI browser-routing interface on
+Linux/Windows. No real-account connection, quota, cross-device, logout or renewal
+acceptance was performed; the user will run those separately.
+
+**Still blocked:** release readiness awaits that manual acceptance, interactive
+clean-user installation/uninstall checks and separate signing/publication review.
+No main merge or release was performed.
