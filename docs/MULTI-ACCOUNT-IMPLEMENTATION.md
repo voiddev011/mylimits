@@ -74,3 +74,14 @@ inspection found no exposed no-browser flag. No real accounts are available.
 Decision: service advertises Claude `available:false`, rejects start before profile
 allocation and does not invoke the experimental PTY from production. Keep its
 existing diagnostic and website reader. No external clarification was sent.
+
+## 3.2 code completion supersedes the earlier Claude decision
+
+The previously unresolved browser mechanism is now documented and confirmed with
+an unmodified first-party CLI in an empty profile. See CODE-CHECKLIST for evidence.
+Implemented per-config Claude signup, cancellation, identity/org fencing, fresh
+PTY /usage reads, scoped logout, guided first-party onboarding and Windows router.
+No custom OAuth client, token forwarding or Claude binary redistribution is used.
+Provider conditions are handled by the first-party installation/sign-in flow;
+publication/trademark/product review is still separate from this development branch.
+Real account freshness/logout/renewal acceptance remains manual, not a coding item.

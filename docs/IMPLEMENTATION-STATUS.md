@@ -1,34 +1,20 @@
 # MyLimits implementation status
 
-Updated: **21 October 2026**. **3.1 independent OpenAI integration implemented;
-real-provider verification pending; independent Claude unavailable.**
-No cloud deployment, credential upload, main merge or store publication performed.
+Updated: **21 October 2026**. **3.2 code completion in progress**.
+User will perform real-account acceptance separately. No main merge/public release.
 
 ## Active checkpoint
 
-Current authorization: independent multi-account extension integration on
-`feature/independent-accounts`, following MULTI-ACCOUNT-IMPLEMENTATION.md. This
-supersedes the older Gate 1 tooling-only stop; it does not waive live acceptance.
+Branch `feature/independent-accounts`. See MULTI-ACCOUNT-CODE-CHECKLIST.md.
+Implemented independent OpenAI and Claude adapters, per-profile first-party auth,
+shared state/refresh/identity fencing, mixed account UI, Claude onboarding and
+Windows runtime/router setup. Earlier unavailable-only Claude state is superseded.
 
-- OpenAI isolated official login, scoped cancel/reconnect, identity/generation
-  fencing, persisted retry/backoff and per-account reads integrated into extension.
-- + separates current-browser tracking from independent connections; dashboard
-  shows readiness, progress, local verified identity, duplicate hints and management.
-- Claude capability explicitly unavailable. Its candidate diagnostic is preserved;
-  automated isolated signup/fresh monitoring/conditions are unresolved.
-- Existing IDs, account aliases, history, website readers and optional-helper mode
-  preserved. Windows installer updated; public release remains blocked by live
-  accounts, interactive installation and actual renewal/revocation checks.
-- Evidence: 101 core, 20 legacy native, 13 integrated connection, 28 account-proof
-  tests passed. Full Chromium suite 28/28 passed; a follow-up focused run during
-  concurrent packaging lost an extension file and is being rerun sequentially.
-- Chrome/Edge/Firefox manifests and clean ZIP contracts passed. Final Windows
-  installer rebuilt; branch pushed. All three jobs in CI **39579243525 passed**.
-  Source `e29a7d2571211bac4f82fc733fe531451749d340` has the exact local source tree.
-
-See [MULTI-ACCOUNT-INSTALL.md](MULTI-ACCOUNT-INSTALL.md) for laptop steps and
-[MULTI-ACCOUNT-HANDOFF.md](MULTI-ACCOUNT-HANDOFF.md) for delivery evidence.
-The historical records below are not claims of real-provider verification.
+Actual evidence so far: 102 core, 20 legacy native, 16 integrated connection,
+28 proof and 29 Chromium tests passed; official unmodified Linux Claude 2.1.301
+BROWSER + loopback callback capability passed without an account. Windows code
+compilation/native routing and final packaging/CI are next. User account tests
+remain separately pending, not a reason to omit source implementation.
 
 ### Historical release checkpoint
 
@@ -836,3 +822,60 @@ No AGENTS.md applies; one workstream, no parallel agents.
   interactive Windows acceptance. Claude automatic isolated browser login, reliable
   fresh monitoring and applicable product route remain blocked. No credential
   collection, provider login, model requests or external provider messages occurred.
+
+## MULTI-COMPLETE / code checklist start — 21 October 2026
+
+- User authorizes completing remaining code and keeping live account acceptance
+  separate. Added MULTI-ACCOUNT-CODE-CHECKLIST.md. Existing worktree clean at
+  local 010f7bb, published 791d82b6, same tree.
+- Re-inspected service, diagnostic, shared contracts, account merge and packaging.
+  Current missing code is Claude sign-in/adapter/UI/runtime packaging.
+- New narrow evidence: official troubleshoot-install documentation explicitly
+  describes BROWSER for browser routing, while a historical issue reports it was
+  absent. Will capability-test the unmodified official binary in an empty profile;
+  no account/credential/model interaction, no auth URLs in output.
+- Next: resolve browser launch, then implement remaining code sequentially.
+
+### MULTI-COMPLETE / Claude code integration checkpoint
+
+- Narrow official-interface investigation found documented BROWSER routing in
+  troubleshoot-install. Ran unmodified Claude Code 2.1.301, integrity checked from
+  official npm, in a fresh unauthenticated profile: BROWSER marker invoked, actual
+  authorization callback was loopback, terminal shutdown confirmed. No credentials,
+  authorization URL, code or account were entered/exported. This resolves the
+  prior lack of a known browser-routing implementation; account tests stay manual.
+- Implemented claude-adapter/browser-route/first-party-setup modules and a Windows
+  C# BROWSER launcher compiled during helper setup. Official CLI owns OAuth/code
+  exchange/storage; router launches only allowlisted provider URLs in fresh browser
+  folders and records a URL-free acknowledgment. No silent ordinary-tab fallback.
+- Service now supports provider-scoped Claude profiles, organization-aware identity
+  fencing, CLI /usage reads, five-minute cooldown, cancellation, acknowledged logout,
+  first-party onboarding action and CLI dependency readiness. Model prompts forbidden.
+- Shared schemas/merge/UI support mixed Claude/OpenAI accounts and preserve OpenAI
+  namespaces/aliases/history. Provider setup uses official prompts; trust/terms are
+  not auto-accepted. A one-time setup window may need the user's choices and closure.
+- Windows package includes terminal libraries and launcher source; setup provides
+  official Claude installer action. Updated version to 3.2.0 preview. No Claude
+  binary redistribution or custom third-party OAuth was added.
+- Actual checks: TypeScript, 102 core, 20 legacy helper and 16 integrated connection
+  tests passed in `npm run check`, including actual isolated fictional Claude PTYs.
+  Browser/proof and Windows official-interface checks are underway. Manual account
+  freshness/logout/renewal remains a separate checklist, not unfinished code.
+- Next: finish regressions, validate Windows routing on CI, package and push.
+
+### MULTI-COMPLETE / source ready for Windows CI
+
+- Full browser suite **29/29 passed**, plus final rebuilt setup-focused **4/4**.
+  All 16 integrated service tests pass, now also exercising production Claude login
+  completion and cancellation with actual fictional CLI terminals; retained quota
+  survives cancellation. Existing 28 proof/PTTY tests pass.
+- Official Linux 2.1.301 routing smoke script passes (no account sign-in). Added the
+  same Windows check with pinned official binary integrity and owned compiled router.
+  Windows native service tests compile the launcher before loading the adapter.
+- Added explicit dependency/version/router error help, per-user WinGet discovery,
+  startup-safe mixed metadata, first-party setup retry/cancel controls and bundled
+  terminal dependencies. No real-account test is marked as an unfinished code stub.
+- Updated checklist/install/privacy/README/handoff to 3.2; older unavailable-only
+  Claude statements are historical. Final variants/installer packaging in progress.
+- Next: commit/push coherent source, inspect actual Windows browser routing and
+  all CI results, then publish exact artifact links and check off code delivery.

@@ -37,25 +37,25 @@ const test = base.extend<{ context: BrowserContext; worker: Worker; extensionId:
 });
 
 // Protocol-2 fixture: first-party processes are fictional; no provider is contacted.
-function nativeProfile(id: string, alias = '', authState = 'connected', meters = demoState().accounts[1]!.meters) {
- return {id,provider:'openai',alias,status:authState==='connected'?'active':'unavailable',authState,plan:'plus',updatedAt:authState==='connected'?Date.now():0,meters,
-  displayIdentity:authState==='connected'?`${id}@example.test`:null,identityConfidence:authState==='connected'?'email-only':'unverified',providerSubject:null,workspaceIdentity:null,capability:'work-codex',lastAttemptAt:null,providerObservedAt:null,nextRetryAt:null,failures:0,errorCode:null as string|null,possibleDuplicate:false};
+function nativeProfile(id: string, alias = '', authState = 'connected', meters = demoState().accounts[1]!.meters, provider: 'openai'|'claude' = 'openai') {
+ return {id,provider,alias,status:authState==='connected'?'active':'unavailable',authState,plan:'plus',updatedAt:authState==='connected'?Date.now():0,meters,
+  displayIdentity:authState==='connected'?`${id}@example.test`:null,identityConfidence:authState==='connected'?'email-only':'unverified',providerSubject:null,workspaceIdentity:null,capability:provider==='claude'?'subscription':'work-codex',lastAttemptAt:null,providerObservedAt:null,nextRetryAt:null,failures:0,errorCode:null as string|null,possibleDuplicate:false};
 }
-async function installNativeFixture(worker: Worker, profiles: ReturnType<typeof nativeProfile>[], addedProfile?: string) {
- await worker.evaluate(({profiles,addedProfile})=>{
+async function installNativeFixture(worker: Worker, profiles: ReturnType<typeof nativeProfile>[], addedProfile?: string, claudeAvailable = false) {
+ await worker.evaluate(({profiles,addedProfile,claudeAvailable})=>{
   const contains=chrome.permissions.contains.bind(chrome.permissions);chrome.permissions.contains=async p=>p.permissions?.includes('nativeMessaging')?true:contains(p);
-  const capabilities={protocol:2,version:'fixture',providers:[{provider:'openai',available:true,scope:'work-codex',isolatedLogin:true,activeRefresh:true,liveVerified:false,reason:null},{provider:'claude',available:false,scope:'subscription',isolatedLogin:false,activeRefresh:false,liveVerified:false,reason:'Not validated'}]};
+  const capabilities={protocol:2,version:'fixture',providers:[{provider:'openai',available:true,scope:'work-codex',isolatedLogin:true,activeRefresh:true,liveVerified:false,reason:null},{provider:'claude',available:claudeAvailable,scope:'subscription',isolatedLogin:claudeAvailable,activeRefresh:claudeAvailable,liveVerified:false,reason:'Install official Claude Code and update the helper.'}]};
   let deliver:(v:unknown)=>void=()=>{};
   const scope=globalThis as typeof globalThis & {completeFixtureLogin:()=>void;fixtureProfiles:typeof profiles};
   scope.fixtureProfiles=profiles;
   scope.completeFixtureLogin=()=>{const p=profiles.find(p=>p.id===addedProfile)!;Object.assign(p,{authState:'connected',status:'active',updatedAt:Date.now(),displayIdentity:'work@example.test',identityConfidence:'email-only'});deliver({type:'snapshot',protocol:2,profiles});};
   Object.defineProperty(chrome.runtime,'connectNative',{configurable:true,value:()=>({
    onMessage:{addListener:(f:(value:unknown)=>void)=>{deliver=f}},onDisconnect:{addListener:()=>{}},disconnect:()=>{},
-   postMessage:(request:{id:string;method:string;profile?:string;alias?:string})=>{
+   postMessage:(request:{id:string;method:string;profile?:string;alias?:string;provider?:'openai'|'claude'})=>{
     let data:unknown={type:'snapshot',protocol:2,profiles};
     if(request.method==='capabilities')data=capabilities;
     if(request.method==='start'){
-     const p={...profiles[0]!,id:addedProfile!,alias:request.alias??'',authState:'signing-in',status:'unavailable',updatedAt:0,displayIdentity:null,identityConfidence:'unverified',meters:[]};profiles.push(p);data={profile:addedProfile,started:true};
+     const p={...profiles[0]!,id:addedProfile!,provider:request.provider??'openai',capability:request.provider==='claude'?'subscription':'work-codex',alias:request.alias??'',authState:'signing-in',status:'unavailable',updatedAt:0,displayIdentity:null,identityConfidence:'unverified',meters:[]};profiles.push(p);data={profile:addedProfile,started:true};
     }
     if(request.method==='rename'){profiles.find(p=>p.id===request.profile)!.alias=request.alias!;data={};}
     if(request.method==='disconnect'){const p=profiles.find(p=>p.id===request.profile)!;p.authState='disconnected';p.status='signed-out';data={};}
@@ -64,7 +64,7 @@ async function installNativeFixture(worker: Worker, profiles: ReturnType<typeof 
     setTimeout(()=>deliver({id:request.id,ok:true,data}),0);
    }
   })});
- },{profiles,addedProfile});
+ },{profiles,addedProfile,claudeAvailable});
 }
 
 test('new install starts empty and sample preview does not write fake accounts to storage', async ({ context, worker, extensionId }) => {
@@ -171,7 +171,7 @@ test('denied companion permission creates no account', async ({ context, worker,
   await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
   await page.getByRole('button', { name: 'Accounts', exact: true }).click();
   await page.evaluate(() => { chrome.permissions.request = async () => false; });
-  await page.getByRole('button', { name: 'Enable helper connection', exact: true }).click();
+  await page.getByRole('button', { name: 'Enable helper connection', exact: true }).first().click();
   await expect(page.getByText('Helper access was not granted.')).toBeVisible();
   const saved = await worker.evaluate(async () => ((await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store));
   expect(saved.accounts).toHaveLength(0);
@@ -226,7 +226,7 @@ test('unavailable native API shows reload guidance without a TypeError', async (
   await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
   await page.getByRole('button', { name: 'Accounts', exact: true }).click();
   await page.evaluate(() => { chrome.permissions.request = async () => true; });
-  await page.getByRole('button', { name: 'Enable helper connection', exact: true }).click();
+  await page.getByRole('button', { name: 'Enable helper connection', exact: true }).first().click();
   await expect(page.getByRole('alert')).toContainText('Reload MyLimits');
   await expect(page.getByRole('alert')).not.toContainText('is not a function');
 });
@@ -524,13 +524,36 @@ test('independent setup verifies the new account, keeps the old identity and ope
  await expect(page.getByText('work@example.test',{exact:true})).toHaveCount(0);
 });
 
-test('Claude independent option is explicitly unavailable and starts no browser sign-in',async({context,worker,extensionId})=>{
+test('Claude dependency readiness is explicit and starts no misleading website tab',async({context,worker,extensionId})=>{
+ await installNativeFixture(worker,[]);
  const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html#add`);
+ await page.evaluate(()=>{chrome.permissions.request=async()=>true});
  await page.getByRole('button',{name:/Claude · Claude Code/}).click();
  await page.getByRole('button',{name:'Connect an independent account',exact:true}).click();
- await expect(page.getByRole('heading',{name:'Independent Claude · unavailable'})).toBeVisible();
- await expect(page.getByRole('button',{name:'Sign in to OpenAI'})).toHaveCount(0);
+ await page.getByRole('button',{name:'Enable helper connection',exact:true}).click();
+ await expect(page.getByText('Install official Claude Code and update the helper.',{exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Sign in to Claude',exact:true})).toBeDisabled();
  expect((await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store)).accounts).toHaveLength(0);
+});
+
+test('Claude independent setup adds a distinct provider account beside OpenAI and Claude',async({context,worker,extensionId})=>{
+ const gpt='1f30feba-2b2a-4c19-8ebc-cd35bc96ff71',a='6c7b581a-333d-4016-955e-98e84dcf22aa',b='f30c0fba-2b2a-4c19-8ebc-cd35bc96ff72';
+ await installNativeFixture(worker,[nativeProfile(gpt,'GPT Personal'),nativeProfile(a,'Claude Personal','connected',demoState().accounts[0]!.meters,'claude')],b,true);
+ const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html#add`);
+ await page.evaluate(()=>{chrome.permissions.request=async()=>true});
+ await page.getByRole('button',{name:/Claude · Claude Code/}).click();await page.getByLabel('New account nickname').fill('Claude Work');
+ await page.getByRole('button',{name:'Connect an independent account',exact:true}).click();await page.getByRole('button',{name:'Enable helper connection',exact:true}).click();
+ await page.getByRole('button',{name:'Sign in to Claude',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Cancel sign-in',exact:true})).toBeVisible();
+ await worker.evaluate(()=>{(globalThis as typeof globalThis & {completeFixtureLogin:()=>void}).completeFixtureLogin()});
+ await expect(page.getByText('work@example.test',{exact:true})).toBeVisible();
+ const saved=await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);
+ expect(saved.accounts.find(a=>a.companionProfile===gpt)!.provider).toBe('chatgpt');
+ expect(saved.accounts.find(a=>a.companionProfile===b)!.provider).toBe('claude');
+ expect(saved.accounts.find(item=>item.companionProfile===a)!.alias).toBe('Claude Personal');
+ expect(saved.accounts.find(item=>item.companionProfile===b)!.alias).toBe('Claude Work');
+ expect(JSON.stringify(saved)).not.toContain('work@example.test');
+ await page.screenshot({path:'artifacts/claude-account-preview.png',fullPage:true});
 });
 
 test('larger account collections scroll inside the popup and search stays available',async({context,worker,extensionId})=>{

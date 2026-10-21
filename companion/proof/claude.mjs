@@ -19,7 +19,7 @@ export function claudeIdentity(value, expectedDirectory, platform = process.plat
   // These are optional official metadata, not IDs inferred from an email.
   const org = typeof value.orgId === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(value.orgId) ? value.orgId : null;
   const plan = ['pro', 'max', 'team', 'enterprise'].includes(value.subscriptionType) ? value.subscriptionType : null;
-  return { binding: JSON.stringify([email, org]), display: email, confidence: org ? 'email-and-organization' : 'email-only', plan };
+  return { binding: JSON.stringify([email, org]), display: email, organizationId: org, confidence: org ? 'email-and-organization' : 'email-only', plan };
 }
 
 export async function readClaudeIdentity({ executable, home, workspace, env, signal }) {
@@ -33,6 +33,7 @@ export async function readClaudeIdentity({ executable, home, workspace, env, sig
 const windows = [
   { heading: /^Current session$/i, id: 'session', label: 'Current session', windowMinutes: 300 },
   { heading: /^Current week \(all models\)$/i, id: 'week-all', label: 'Current week · all models', windowMinutes: 10080 },
+  { heading: /^Current week \(Opus only\)$/i, id: 'week-opus', label: 'Current week · Opus', windowMinutes: 10080 },
   { heading: /^Current week \(Sonnet only\)$/i, id: 'week-sonnet', label: 'Current week · Sonnet', windowMinutes: 10080 },
 ];
 
@@ -138,7 +139,7 @@ export async function probeClaudeUsage({ executable, workspace, env, timeout = 3
       terminal.write(data, () => {
         if (done) return;
         const text = screen();
-        if (/trust this folder|trust the files|select.*login|choose.*theme|sign in to (?:Claude|your account)/i.test(text)) {
+        if (/trust this folder|trust the files|select.*login|choose.*theme|choose the text style|select.*text style|sign in to (?:Claude|your account)/i.test(text)) {
           finish(new ProbeError('needs-setup', 'Complete official Claude Code onboarding in this isolated probe workspace first.')); return;
         }
         if (!sent && /(?:^|\n)\s*[❯>]\s*(?:\n|$)/u.test(text)) {

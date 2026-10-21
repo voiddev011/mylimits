@@ -13,7 +13,7 @@ async function fixture(t) {
   const directory = await mkdtemp(path.join(tmpdir(), 'mylimits-connect-'));
   const accounts = new Map(), clients = [], browsers = [];
   let now = 1800000000000;
-  const service = new Connections({ directory, now: () => now, launchAuth: async value => { browsers.push(value); },
+  const service = new Connections({ directory, claudeAdapter:{readiness:async()=>({available:false,reason:'Fictional missing dependency'})}, now: () => now, launchAuth: async value => { browsers.push(value); },
     makeClient: options => {
       const id = path.basename(options.home);
       if (!accounts.has(id)) accounts.set(id, { email: `${id}@example.test`, n: accounts.size * 30, signedIn: false });
@@ -122,7 +122,7 @@ test('legacy index migrates IDs without touching profile credentials', async t =
   assert.equal(upgraded.get(id).id, id); assert.equal(upgraded.get(id).status, 'unavailable');
   assert.equal(await readFile(path.join(directory, 'profiles.json'), 'utf8'), JSON.stringify([id])); await upgraded.close();
 });
-test('Claude is explicitly unavailable and allocates no misleading profile', async t => {
+test('missing Claude dependency is explicit and allocates no misleading profile', async t => {
   const { service } = await fixture(t);
   await assert.rejects(service.add('claude', 'Work'), e => e.code === 'provider-unavailable');
   assert.equal(service.profiles.size, 0);
@@ -171,4 +171,77 @@ test('integrated service uses real fictional CLI subprocesses and confirms their
   assert.equal(service.get(ids[0]).meters[0]?.usedPercent,0);assert.equal(service.get(ids[1]).meters[0]?.usedPercent,35);
   assert.equal(service.clients.size,0);assert.ok(!service.requiresRecovery);
   assert.ok(!JSON.stringify(service.snapshot()).includes('NEVER_EXPORT'));
+});
+
+test('two Claude accounts and an OpenAI account keep identity, usage and logout independent', async t => {
+ const f=await fixture(t), {service,idle,advance,directory}=f;
+ const states=new Map();
+ service.claudeAdapter={
+  readiness:async()=>({available:true}),
+  context:async(root,generation,signal)=>{
+   const id=path.basename(root);if(!states.has(id))states.set(id,{email:`${id}@claude.test`,used:states.size*40});
+   return {root,id,generation,signal,home:path.join(root,'claude')};
+  },
+  login:async c=>{states.get(c.id).signedIn=true;},
+  identity:async c=>{const v=states.get(c.id);if(!v.signedIn)throw Object.assign(Error(),{code:'needs-sign-in'});return {binding:JSON.stringify([v.email,'org-'+c.id]),display:v.email,plan:'pro',confidence:'email-and-organization',organizationId:'org-'+c.id};},
+  usage:async c=>{const v=states.get(c.id);if(v.fail)throw Object.assign(Error(),{code:'needs-setup'});return {meters:[{id:'session',label:'Current session',usedPercent:v.used,resetsAt:null}]};},
+  logout:async c=>{states.get(c.id).signedIn=false;},
+  onboarding:async c=>{states.get(c.id).fail=false;},
+ };
+ const gpt=await service.add('openai','GPT');await idle();
+ const a=await service.add('claude','Claude Personal');await idle();const b=await service.add('claude','Claude Work');await idle();
+ assert.equal(service.get(a.profile).meters[0].usedPercent,0);assert.equal(service.get(b.profile).meters[0].usedPercent,40);
+ assert.equal(service.get(a.profile).meters[0].scope,'subscription');
+ assert.equal(service.snapshot().profiles.find(p=>p.id===a.profile).identityConfidence,'email-and-organization');
+ const prior=service.get(a.profile).updatedAt;states.get(a.profile).fail=true;advance(300001);await service.refresh(a.profile);
+ assert.equal(service.get(a.profile).authState,'needs-setup');assert.equal(service.get(a.profile).updatedAt,prior);
+ await service.setup(a.profile);await idle();advance(300001);await service.refresh(a.profile);
+ assert.equal(service.get(a.profile).authState,'connected');
+ await service.disconnect(a.profile);assert.equal(service.get(a.profile).authState,'disconnected');
+ assert.equal(service.get(b.profile).authState,'connected');assert.equal(service.get(gpt.profile).authState,'connected');
+ const restored=new Connections({directory,claudeAdapter:service.claudeAdapter});await restored.load();
+ assert.equal(restored.get(b.profile).provider,'claude');assert.equal(restored.get(b.profile).meters[0].usedPercent,40);await restored.close();
+});
+test('Claude browser URL validation requires first-party authorize and local first-party callback', async()=>{
+ const {safeAuthUrl}=await import('./protocol.mjs');
+ const valid='https://claude.com/cai/oauth/authorize?response_type=code&state=fixture&code_challenge=fixture&redirect_uri='+encodeURIComponent('http://localhost:42345/callback');
+ assert.equal(safeAuthUrl(valid,'claude'),true);
+ for(const url of [valid.replace('claude.com','claude.com.evil.test'),valid.replace('localhost','evil.test'),valid.replace('response_type=code','response_type=token'),'https://claude.ai/settings'])assert.equal(safeAuthUrl(url,'claude'),false);
+ const {routeClaudeBrowser}=await import('./claude-browser-route.mjs');
+ const directory=await mkdtemp(path.join(tmpdir(),'mylimits-route-test-'));let called;
+ try{await routeClaudeBrowser(valid,{MYLIMITS_AUTH_BROWSER_DIRECTORY:directory},async options=>{called=options;});
+ assert.equal(called.provider,'claude');assert.deepEqual(JSON.parse(await readFile(path.join(directory,'route-result.json'),'utf8')),{opened:true});
+ assert.ok(!(await readFile(path.join(directory,'route-result.json'),'utf8')).includes('fixture'));}
+ finally{await rm(directory,{recursive:true,force:true});}
+});
+
+test('production Claude adapter reads two isolated fictional CLI profiles through actual PTYs',async t=>{
+ const {mkdir}=await import('node:fs/promises');
+ const {createClaudeAdapter}=await import('./claude-adapter.mjs');
+ const directory=await mkdtemp(path.join(tmpdir(),'mylimits-real-claude-'));
+ const ids=['1f30feba-2b2a-4c19-8ebc-cd35bc96ff71','6c7b581a-333d-4016-955e-98e84dcf22aa'];
+ const initial=[];
+ for(const [i,id]of ids.entries()){
+  const home=path.join(directory,'accounts',id,'claude');await mkdir(home,{recursive:true});
+  await writeFile(path.join(home,'fixture.json'),JSON.stringify({email:`claude-${i}@example.test`,org:`org-${i}`,used:i*37}));
+  initial.push({id,provider:'claude',alias:`Claude ${i}`,generation:1,binding:null,authState:'unavailable',plan:null,updatedAt:0,meters:[],lastAttemptAt:null,nextRetryAt:null,failures:0});
+ }
+ await writeFile(path.join(directory,'connections-v2.json'),JSON.stringify({version:2,salt:ids[0],profiles:initial}));
+ const adapter=createClaudeAdapter({locate:async()=>path.resolve('tests/fixtures/claude-connection-cli.mjs')});
+ const service=new Connections({directory,claudeAdapter:adapter});
+ t.after(async()=>{await service.close();await rm(directory,{recursive:true,force:true,maxRetries:10,retryDelay:100});});
+ await service.load();await service.refreshAll();
+ assert.equal(service.get(ids[0]).meters[0]?.usedPercent,0);assert.equal(service.get(ids[1]).meters[0]?.usedPercent,37);
+ assert.equal(service.get(ids[0]).meters[0]?.resetsAt,null);
+ assert.equal(service.get(ids[0]).authState,'connected');assert.ok(!JSON.stringify(service.snapshot()).includes('PRIVATE'));
+ // Exercise the production login terminal and scoped cancellation too.
+ service.get(ids[0]).nextRetryAt=null;service.beginLogin(ids[0]);await Promise.allSettled([...service.operations.values()]);
+ assert.equal(service.get(ids[0]).authState,'connected');
+ const home=path.join(directory,'accounts',ids[1],'claude');
+ await writeFile(path.join(home,'fixture.json'),JSON.stringify({email:'claude-1@example.test',org:'org-1',used:37,delayLogin:true}));
+ service.get(ids[1]).nextRetryAt=null;service.beginLogin(ids[1]);
+ let started=false;for(let i=0;i<100;i++){try{await readFile(path.join(home,'login-started'));started=true;break;}catch{}await new Promise(resolve=>setTimeout(resolve,20));}
+ assert.ok(started);await service.cancel(ids[1]);assert.equal(service.get(ids[1]).authState,'needs-sign-in');
+ assert.equal(service.get(ids[1]).meters[0].usedPercent,37);
+
 });
