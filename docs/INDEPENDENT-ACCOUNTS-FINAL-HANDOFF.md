@@ -128,3 +128,15 @@ Once a supported contract/access is supplied, implement the actual
 login → immutable identity → quota retrieval first. Then finish A/B acceptance
 and server runtime packaging using the existing foundation. Do not repeat a UI/
 infrastructure cycle or call the product complete before these gates pass.
+
+## Published checkpoint
+
+Published source: `6ac9ae6b3582f666d8d52c23f7a7eb41e48480f8` on
+`feature/independent-provider-proof`; tree `68c60057ea29ff60865062201cacc28359f81484`.
+Matching local checkpoint: `95eb7e8`. GitHub connector publication preserves the
+remote parent; local/remote commit IDs differ but source trees match. Do not
+force-push/reset to reconcile them. Main and the prior branch are unchanged.
+
+[CI run39665803268](https://github.com/voiddev011/mylimits/actions/runs/39665803268)
+was in progress when checked; no CI success is claimed. This documentation
+follow-up changes no executable code or extension package.
