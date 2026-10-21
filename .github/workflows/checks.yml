@@ -71,8 +71,10 @@ jobs:
         shell: powershell
         run: |
           New-Item -ItemType Directory -Force artifacts | Out-Null
-          npm run check 2>&1 | Tee-Object -FilePath artifacts/windows-check.log
-          exit $LASTEXITCODE
+          cmd /d /c "npm run check > artifacts\windows-check.log 2>&1"
+          $checkExit = $LASTEXITCODE
+          Get-Content artifacts/windows-check.log
+          exit $checkExit
       - name: Retain Windows check diagnostics
         if: always()
         uses: actions/upload-artifact@v4
