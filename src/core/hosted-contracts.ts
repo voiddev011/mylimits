@@ -30,7 +30,8 @@ export const HostedAttemptSchema=z.object({
   id:z.string().uuid(),provider:HostedProviderSchema,
   state:z.enum(['pending','connected','duplicate','cancelled','expired','failed']),
   expiresAt:time, connectionId:z.string().uuid().nullable(),
+  identity:z.object({subject:z.string().min(1).max(240),workspace:z.string().max(240).nullable()}).strict().nullable(),
   // Provider credentials and codes are never part of this public contract.
   authorizationUrl:z.string().url().nullable(),
-}).strict();
+}).strict().superRefine((a,ctx)=>{if(a.state==='connected'&&(!a.connectionId||!a.identity))ctx.addIssue({code:'custom',message:'Connected attempt requires verified identity.'});});
 export const HostedRenameSchema=z.object({alias:z.string().trim().max(60)}).strict();

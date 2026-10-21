@@ -37,17 +37,18 @@ export class HostedJobs {
    await db.query("SELECT pg_advisory_xact_lock(64923018)");
    await db.query('UPDATE hosted_jobs SET lease_token=NULL,lease_until=NULL WHERE lease_until<=$1',[now]);
    const running=(await db.query('SELECT count(*)::int n FROM hosted_jobs WHERE lease_token IS NOT NULL')).rows[0].n;if(running>=4)return null;
-   const rows=(await db.query(`SELECT j.*,c.provider,c.subject,c.workspace FROM hosted_jobs j JOIN hosted_connections c ON c.owner_id=j.owner_id AND c.id=j.connection_id
+   const rows=(await db.query(`SELECT j.*,c.provider,c.subject,c.workspace,c.failures FROM hosted_jobs j JOIN hosted_connections c ON c.owner_id=j.owner_id AND c.id=j.connection_id
     WHERE j.lease_token IS NULL AND j.available_at<=$1 AND c.generation=j.generation AND c.state IN ('active','error') ORDER BY j.available_at,j.connection_id LIMIT 100 FOR UPDATE OF j SKIP LOCKED`,[now])).rows;
    for(const r of rows){
     if(!this.service.drivers.has(r.provider))continue;
+    if(r.attempts>=6){await db.query("UPDATE hosted_connections SET state='error',error_code='network',failures=failures+1,next_eligible_at=$3 WHERE owner_id=$1 AND id=$2",[r.owner_id,r.connection_id,now+3600000]);await db.query('DELETE FROM hosted_jobs WHERE owner_id=$1 AND connection_id=$2',[r.owner_id,r.connection_id]);continue;}
     const tenant=(await db.query('SELECT count(*)::int n FROM hosted_jobs WHERE owner_id=$1 AND lease_token IS NOT NULL',[r.owner_id])).rows[0].n;if(tenant>=2)continue;
     const budgetKey=`hosted:${r.provider}`;
     await db.query('INSERT INTO provider_budgets(provider,window_start,attempts) VALUES($1,$2,0) ON CONFLICT DO NOTHING',[budgetKey,now]);
     const b=(await db.query('SELECT * FROM provider_budgets WHERE provider=$1 FOR UPDATE',[budgetKey])).rows[0];const reset=now-Number(b.window_start)>=60000;if(!reset&&b.attempts>=30)continue;
     await db.query('UPDATE provider_budgets SET window_start=$2,attempts=$3 WHERE provider=$1',[budgetKey,reset?now:Number(b.window_start),reset?1:b.attempts+1]);
     const token=uuid();await db.query('UPDATE hosted_jobs SET lease_token=$3,lease_until=$4,attempts=attempts+1 WHERE owner_id=$1 AND connection_id=$2',[r.owner_id,r.connection_id,token,now+30000]);
-    return {owner:r.owner_id,connectionId:r.connection_id,generation:r.generation,token,provider:r.provider,subject:r.subject,workspace:r.workspace,attempts:r.attempts+1};
+    return {owner:r.owner_id,connectionId:r.connection_id,generation:r.generation,token,provider:r.provider,subject:r.subject,workspace:r.workspace,attempts:r.failures+1};
    }return null;
   });
  }
@@ -65,7 +66,7 @@ export class HostedJobs {
    if(!await this.valid(db,l,now))return false;
    if(envelope)await db.query('UPDATE hosted_credentials SET envelope=$4 WHERE owner_id=$1 AND connection_id=$2 AND generation=$3',[l.owner,l.connectionId,l.generation,JSON.stringify(envelope)]);
    await db.query('INSERT INTO hosted_readings(id,owner_id,connection_id,generation,fetched_at,provider_observed_at,meters) VALUES($1,$2,$3,$4,$5,$6,$7)',[uuid(),l.owner,l.connectionId,l.generation,now,r.providerObservedAt,JSON.stringify(r.meters)]);
-   await db.query("UPDATE hosted_connections SET state='active',error_code=NULL,fetched_at=$3,provider_observed_at=$4,next_eligible_at=$5 WHERE owner_id=$1 AND id=$2",[l.owner,l.connectionId,now,r.providerObservedAt,now+interval(d)]);
+   await db.query("UPDATE hosted_connections SET state='active',failures=0,error_code=NULL,fetched_at=$3,provider_observed_at=$4,next_eligible_at=$5 WHERE owner_id=$1 AND id=$2",[l.owner,l.connectionId,now,r.providerObservedAt,now+interval(d)]);
    await db.query('DELETE FROM hosted_jobs WHERE owner_id=$1 AND connection_id=$2',[l.owner,l.connectionId]);return true;
   });
  }
@@ -74,8 +75,8 @@ export class HostedJobs {
   return transaction(this.pool,async db=>{
    if(!await this.valid(db,l,now))return false;
    const d=this.service.drivers.get(l.provider)!;
-   const retry=Math.max(now+interval(d),now+Math.min(3600000,30000*2**Math.min(l.attempts,7))+Math.floor(Math.random()*5000),e.retryAt??0);
-   await db.query("UPDATE hosted_connections SET state=$3,error_code=$4,next_eligible_at=$5 WHERE owner_id=$1 AND id=$2",[l.owner,l.connectionId,e.code==='auth'?'needs-auth':'error',e.code,retry]);
+   const retry=Math.max(now+interval(d),now+Math.min(3600000,30000*2**Math.min(l.attempts,7))+Math.floor(Math.random()*5000),Number.isFinite(e.retryAt)?e.retryAt!:0);
+   await db.query("UPDATE hosted_connections SET state=$3,error_code=$4,next_eligible_at=$5,failures=failures+1 WHERE owner_id=$1 AND id=$2",[l.owner,l.connectionId,e.code==='auth'?'needs-auth':'error',e.code,retry]);
    // Retry in a later scheduling pass after cooldown, never reset fetched_at.
    await db.query('DELETE FROM hosted_jobs WHERE owner_id=$1 AND connection_id=$2',[l.owner,l.connectionId]);return true;
   });

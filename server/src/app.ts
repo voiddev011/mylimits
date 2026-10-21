@@ -13,16 +13,16 @@ import { pairingRoutes } from './pairing';
 import { startRetention } from './retention';
 import { webRoutes } from './web';
 import { HostedJobs } from './hosted-jobs';
-import { HostedService } from './hosted';
+import { HostedService,type HostedDriver } from './hosted';
 export type RequestWithPrincipal=FastifyRequest&{principal:Principal};
 const identifier=z.string().uuid();
 const params=(request:FastifyRequest)=>z.object({id:identifier}).parse(request.params).id;
-export function createApp(options:{config:Config;pool:pg.Pool;kms?:Kms;testVerifier?:Verify}){
+export function createApp(options:{config:Config;pool:pg.Pool;kms?:Kms;testHostedDrivers?:ReadonlyMap<import('../../src/core/hosted-contracts').HostedProvider,HostedDriver>;testVerifier?:Verify}){
  const config=ConfigSchema.parse(options.config),pool=options.pool;
  if(options.testVerifier&&config.environment!=='test')throw new Error('Test authentication is forbidden outside tests.');
  const verify=options.testVerifier??oidcVerifier(config);
  const jobs=new JobRunner({pool,credentials:new CredentialStore(pool,options.kms),environment:config.environment});
- const hosted=new HostedService(pool,new CredentialStore(pool,options.kms),config.environment);
+ const hosted=new HostedService(pool,new CredentialStore(pool,options.kms),config.environment,options.testHostedDrivers);
  const app=Fastify({logger:false,bodyLimit:512*1024,requestTimeout:15000,trustProxy:false});
  app.decorateRequest('principal',null);
  const budgets=new Map<string,{at:number;count:number}>();
@@ -56,6 +56,7 @@ export function createApp(options:{config:Config;pool:pg.Pool;kms?:Kms;testVerif
  app.get('/v1/hosted/attempts/:id',async r=>hosted.attempt(p(r).owner,params(r)));
  app.delete('/v1/hosted/attempts/:id',async r=>hosted.cancel(p(r).owner,params(r)));
  app.patch('/v1/hosted/connections/:id',async r=>hosted.rename(p(r).owner,params(r),r.body));
+ app.delete('/v1/hosted/connections/:id/data',async r=>hosted.forget(p(r).owner,params(r)));
  app.delete('/v1/hosted/connections/:id',async r=>hosted.disconnect(p(r).owner,params(r)));
  authRoutes(app,pool,config);
  pairingRoutes(app,pool);

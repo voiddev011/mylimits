@@ -15,6 +15,7 @@ export interface HostedDriver {
  collect(c:{credential:string;subject:string;workspace:string|null;signal:AbortSignal}):Promise<{subject:string;workspace:string|null;meters:z.infer<typeof MeterSchema>[];providerObservedAt:number|null;credential?:string}>;
  revoke?(credential:string,signal:AbortSignal):Promise<void>;
 }
+async function deadline<T>(work:Promise<T>,ms:number):Promise<T>{let timer:ReturnType<typeof setTimeout>|undefined;try{return await Promise.race([work,new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(new Error('operation_timeout')),ms);})]);}finally{if(timer)clearTimeout(timer);}}
 export const hostedDrivers:ReadonlyMap<HostedProvider,HostedDriver>=new Map();
 export const ProofSchema=z.object({subject:z.string().min(1).max(240),workspace:z.string().max(240).nullable(),credential:z.string().min(1).max(16384)}).strict();
 export class HostedService {
@@ -26,7 +27,7 @@ export class HostedService {
  }
  capabilities(){const c=unavailableCapabilities();for(const p of c.providers){const d=this.drivers.get(p.provider);if(d){p.available=true;p.method=d.method;p.scopes=d.scopes;p.reason='available';}}return c;}
  private driver(provider:HostedProvider){const d=this.drivers.get(provider);if(!d)throw new ApiError(409,'hosted_provider_unavailable');return d;}
- private publicAttempt(row:any,authorizationUrl:string|null=null){return HostedAttemptSchema.parse({id:row.id,provider:row.provider,state:row.state,expiresAt:Number(row.expires_at),connectionId:row.connection_id,authorizationUrl});}
+ private publicAttempt(row:any,authorizationUrl:string|null=null){return HostedAttemptSchema.parse({id:row.id,provider:row.provider,state:row.state,expiresAt:Number(row.expires_at),connectionId:row.connection_id,identity:row.verified_subject?{subject:row.verified_subject,workspace:row.verified_workspace||null}:null,authorizationUrl});}
  async attempt(owner:string,id:string,now=Date.now()){
   await this.pool.query("UPDATE hosted_attempts SET state='expired' WHERE owner_id=$1 AND id=$2 AND state='pending' AND expires_at<=$3",[owner,id,now]);
   const row=(await this.pool.query('SELECT * FROM hosted_attempts WHERE owner_id=$1 AND id=$2',[owner,id])).rows[0];if(!row)throw new ApiError(404,'attempt_not_found');return this.publicAttempt(row);
@@ -51,21 +52,21 @@ export class HostedService {
   });
   if(!prepared.created)return this.attempt(owner,prepared.row.id,now);
   try{
-   const result=await driver.begin({owner,attemptId:prepared.row.id,proof,expiresAt:now+600000,signal:AbortSignal.timeout(15000)});
+   const result=await deadline(driver.begin({owner,attemptId:prepared.row.id,proof,expiresAt:now+600000,signal:AbortSignal.timeout(8000)}),8000);
    const u=new URL(result.authorizationUrl),allowed=b.provider==='openai'?['auth.openai.com']:['claude.ai','claude.com'];
    if(u.protocol!=='https:'||u.username||u.password||u.port||u.hash||!allowed.includes(u.hostname)||!['/oauth/authorize','/cai/oauth/authorize'].includes(u.pathname)||u.searchParams.get('state')!==proof)throw new ApiError(502,'invalid_authorization_response');
    const state=await this.attempt(owner,prepared.row.id);
-   if(state.state!=='pending'){await driver.cancel({owner,attemptId:state.id});return state;}
+   if(state.state!=='pending'){await deadline(driver.cancel({owner,attemptId:state.id}),1000);return state;}
    return {...state,authorizationUrl:u.href};
   }catch{
    await this.pool.query("UPDATE hosted_attempts SET state='failed' WHERE owner_id=$1 AND id=$2 AND state='pending'",[owner,prepared.row.id]);
-   await driver.cancel({owner,attemptId:prepared.row.id}).catch(()=>{});
+   await deadline(driver.cancel({owner,attemptId:prepared.row.id}),1000).catch(()=>{});
    throw new ApiError(502,'authorization_start_failed');
   }
  }
  async cancel(owner:string,id:string){
   const r=(await this.pool.query("UPDATE hosted_attempts SET state=CASE WHEN state='pending' THEN 'cancelled' ELSE state END WHERE owner_id=$1 AND id=$2 RETURNING *",[owner,id])).rows[0];if(!r)throw new ApiError(404,'attempt_not_found');
-  await this.drivers.get(r.provider)?.cancel({owner,attemptId:id}).catch(()=>{});return this.publicAttempt(r);
+  const d=this.drivers.get(r.provider);if(d)await deadline(d.cancel({owner,attemptId:id}),1000).catch(()=>{});return this.publicAttempt(r);
  }
  // Invoked only by an official, server-owned driver AFTER validating its provider response.
  async complete(owner:string,id:string,proof:string,input:unknown,now=Date.now()){
@@ -76,7 +77,7 @@ export class HostedService {
    if(!a||a.state!=='pending'||Number(a.expires_at)<=now||a.proof_hash!==hash(proof))throw new ApiError(409,'attempt_not_active');
    const d=this.driver(a.provider),workspace=verified.workspace??'';
    const prior=(await db.query('SELECT * FROM hosted_connections WHERE owner_id=$1 AND provider=$2 AND method=$3 AND subject=$4 AND workspace=$5 FOR UPDATE',[owner,a.provider,d.method,verified.subject,workspace])).rows[0];
-   if(prior&&prior.id!==a.reconnect_id){const row=(await db.query("UPDATE hosted_attempts SET state='duplicate',connection_id=$3 WHERE owner_id=$1 AND id=$2 RETURNING *",[owner,id,prior.id])).rows[0];return this.publicAttempt(row);}
+   if(prior&&prior.id!==a.reconnect_id){const row=(await db.query("UPDATE hosted_attempts SET state='duplicate',connection_id=$3,verified_subject=$4,verified_workspace=$5 WHERE owner_id=$1 AND id=$2 RETURNING *",[owner,id,prior.id,prior.subject,prior.workspace])).rows[0];return this.publicAttempt(row);}
    const connectionId=a.reconnect_id??uuid();
    if(a.reconnect_id){const c=(await db.query('SELECT * FROM hosted_connections WHERE owner_id=$1 AND id=$2 FOR UPDATE',[owner,connectionId])).rows[0];
     if(!c||c.generation!==a.generation||c.state==='disconnected'||c.subject!==verified.subject||c.workspace!==workspace)throw new ApiError(409,'wrong_account');
@@ -85,7 +86,7 @@ export class HostedService {
    if(!a.reconnect_id)await db.query('INSERT INTO hosted_connections(id,owner_id,provider,method,subject,workspace,capabilities) VALUES($1,$2,$3,$4,$5,$6,$7)',[connectionId,owner,a.provider,d.method,verified.subject,workspace,JSON.stringify(d.scopes)]);
    else await db.query("UPDATE hosted_connections SET state='active',error_code=NULL WHERE owner_id=$1 AND id=$2",[owner,connectionId]);
    await db.query('INSERT INTO hosted_credentials(owner_id,connection_id,generation,envelope) VALUES($1,$2,$3,$4) ON CONFLICT(owner_id,connection_id) DO UPDATE SET generation=$3,envelope=$4',[owner,connectionId,a.generation,JSON.stringify(envelope)]);
-   const row=(await db.query("UPDATE hosted_attempts SET state='connected',connection_id=$3 WHERE owner_id=$1 AND id=$2 RETURNING *",[owner,id,connectionId])).rows[0];return this.publicAttempt(row);
+   const row=(await db.query("UPDATE hosted_attempts SET state='connected',connection_id=$3,verified_subject=$4,verified_workspace=$5 WHERE owner_id=$1 AND id=$2 RETURNING *",[owner,id,connectionId,verified.subject,workspace])).rows[0];return this.publicAttempt(row);
   });
  }
  async list(owner:string){
@@ -93,12 +94,33 @@ export class HostedService {
   return {version:1 as const,connections:rows.map(c=>HostedConnectionSchema.parse({id:c.id,provider:c.provider,alias:c.alias,identity:{subject:c.subject,workspace:c.workspace||null},method:c.method,capabilities:c.capabilities,state:c.state,generation:c.generation,meters:c.meters??[],fetchedAt:c.fetched_at===null?null:Number(c.fetched_at),providerObservedAt:c.provider_observed_at===null?null:Number(c.provider_observed_at),nextEligibleAt:c.next_eligible_at===null?null:Number(c.next_eligible_at),staleReason:c.state==='disconnected'?'disconnected':c.state==='needs-auth'?'reconnect-required':c.error_code?'fetch-failed':c.fetched_at===null?'never-fetched':null,error:c.error_code}))};
  }
  async rename(owner:string,id:string,input:unknown){const b=HostedRenameSchema.parse(input);const r=await this.pool.query('UPDATE hosted_connections SET alias=$3 WHERE owner_id=$1 AND id=$2 RETURNING id',[owner,id,b.alias]);if(!r.rows.length)throw new ApiError(404,'connection_not_found');return {renamed:true};}
- async disconnect(owner:string,id:string){
+ async forget(owner:string,id:string){
+  await this.disconnect(owner,id);
   await transaction(this.pool,async db=>{
-   const c=(await db.query("UPDATE hosted_connections SET state='disconnected',generation=generation+1 WHERE owner_id=$1 AND id=$2 RETURNING id",[owner,id])).rows[0];if(!c)throw new ApiError(404,'connection_not_found');
-   await db.query("UPDATE hosted_attempts SET state='cancelled' WHERE owner_id=$1 AND reconnect_id=$2 AND state='pending'",[owner,id]);
+   await db.query('SELECT id FROM owners WHERE id=$1 FOR UPDATE',[owner]);
+   for(const table of ['hosted_attempts','hosted_jobs','hosted_readings','hosted_credentials']){
+    if(table==='hosted_attempts')await db.query('DELETE FROM hosted_attempts WHERE owner_id=$1 AND (connection_id=$2 OR reconnect_id=$2)',[owner,id]);
+    else await db.query(`DELETE FROM ${table} WHERE owner_id=$1 AND connection_id=$2`,[owner,id]);
+   }
+   await db.query('DELETE FROM hosted_connections WHERE owner_id=$1 AND id=$2',[owner,id]);
+  });return {deleted:true,providerRevocation:'unconfirmed'};
+ }
+ async disconnect(owner:string,id:string){
+  const captured=await transaction(this.pool,async db=>{
+   const c=(await db.query("UPDATE hosted_connections SET state='disconnected',generation=generation+1 WHERE owner_id=$1 AND id=$2 RETURNING id,provider",[owner,id])).rows[0];if(!c)throw new ApiError(404,'connection_not_found');
+   const pending=(await db.query("UPDATE hosted_attempts SET state='cancelled' WHERE owner_id=$1 AND reconnect_id=$2 AND state='pending' RETURNING id",[owner,id])).rows;
+   const credential=(await db.query('SELECT generation,envelope FROM hosted_credentials WHERE owner_id=$1 AND connection_id=$2',[owner,id])).rows[0];
    await db.query('DELETE FROM hosted_jobs WHERE owner_id=$1 AND connection_id=$2',[owner,id]);
    await db.query('DELETE FROM hosted_credentials WHERE owner_id=$1 AND connection_id=$2',[owner,id]);
-  });return {disconnected:true,providerRevocation:'unconfirmed'};
+   return {provider:c.provider,credential,pending};
+  });
+  const d=this.drivers.get(captured.provider);
+  if(d)for(const a of captured.pending)await deadline(d.cancel({owner,attemptId:a.id}),1000).catch(()=>{});
+  let revoked=false;
+  if(captured.credential&&d?.revoke){try{
+   const credential=await this.credentials.open({owner,connectionId:id,generation:captured.credential.generation},captured.credential.envelope);
+   await deadline(d.revoke(credential,AbortSignal.timeout(5000)),5000);revoked=true;
+  }catch{/* No provider secrets or upstream error text are logged. */}}
+  return {disconnected:true,providerRevocation:revoked?'confirmed':'unconfirmed'};
  }
 }

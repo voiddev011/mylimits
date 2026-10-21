@@ -1,8 +1,8 @@
 # Current implementation status — hosted independent accounts
 
-Updated 21 October 2026. **Requested installer-free multi-account product NOT complete.**
+Updated 22 October 2026. **Requested installer-free multi-account product NOT complete.**
 Active plan: [H01–H10](HOSTED-ACCOUNTS-IMPLEMENTATION-PLAN.md).
-Documentation branch: `docs/hosted-accounts-execution-plan`.
+Implementation branch: `feature/hosted-connections` (from `docs/hosted-accounts-execution-plan`).
 
 ## Current facts
 
@@ -11,7 +11,9 @@ Documentation branch: `docs/hosted-accounts-execution-plan`.
   loopback callback; no real authentication or quota read occurred.
 - Production hosted collector map is empty. Hosted provider eligibility,
   account-selection/remote callback and actual A/B login behavior remain unresolved.
-- No toggle removal or installer-free independent login is delivered by this docs work.
+- Provider switches are removed; + offers current website tracking or capability-gated hosted sign-in.
+- Hosted UI/API/jobs are integrated and fixture-tested; no production OpenAI/Claude
+  driver or installer-free real-account login is delivered yet.
 - Historical “code complete” statements below concern earlier local implementations;
   they are not proof of this requested end-user experience.
 
@@ -27,7 +29,7 @@ Documentation branch: `docs/hosted-accounts-execution-plan`.
 | H06 | blocked | Continue H07 decision and H08 independent code; external hosted route and real A/B proof required. |
 | H07 | blocked | Implement H08 bounded jobs and H09 extension integration without enabling unsupported providers. |
 | H08 | implemented | Implement H09 background client, account projection and management UI; then integrated verification. |
-| H09 | not_started | Integrate extension/API and maintain manual evidence matrix |
+| H09 | implemented | Perform H10 packaging, final private image smoke, installation docs, handoff and push. |
 | H10 | not_started | Package, verify and deliver accurate handoff |
 
 ## H01 checkpoint — 21 October 2026
@@ -101,6 +103,24 @@ State: **implemented**. Branch: `feature/hosted-connections`.
 - Checks: Server typecheck and 42 PostgreSQL tests passed; new coalescing/cooldown, last-success retention, crashed lease, wrong identity, late disconnect, auth expiry and owner concurrency tests passed. Earlier operator image build passed; final worker image rebuild follows delivery.
 - Decision/blockers: Durable per-account jobs, global4/owner2 concurrency, provider30/min budget, min60s plus adapter interval, Retry-After/backoff/jitter, lease fencing, bounded reads, separate timestamps and history retention. No active providers: no real hosted refresh runs.
 - Next action: Implement H09 background client, account projection and management UI; then integrated verification.
+
+## H09 checkpoint — 21 October 2026
+
+State: **in_progress**. Branch: `feature/hosted-connections`.
+
+- Files: Hosted projection/client/controller/UI; additive failure and verified-identity attempt migrations; browser/API transport and consent tests.
+- Checks: 108 core tests, 42 PostgreSQL tests, 30/31 Chromium checks plus corrected layout rerun passed; 2 real Chromium/API/PostgreSQL transport checks passed using fictional hosted provider. System Chromium lacked extension loading; installed Playwright Chromium resolved it. New safe pending-attempt persistence and verified-ID confirmation are now under final recheck.
+- Decision/blockers: No production provider activated. Hosted-only pairing keeps website snapshot uploads off; projection preserves aliases/history/timestamps and marks missing/offline readings. Sign-in windows are driven by server capability, not ordinary provider tabs. Both provider live matrices remain PENDING.
+- Next action: Finish rechecks for pending-attempt/identity changes; commit H09, then package/document H10.
+
+## H09 checkpoint — 21 October 2026
+
+State: **implemented**. Branch: `feature/hosted-connections`.
+
+- Files: src/core/hosted.ts/tests, hosted contracts, sync consent/auth handling, platform hosted client/messages/controller, account UI/management/popup, additive migrations007/008, backend revocation and transport/browser tests.
+- Checks: 109 core tests; 43 PostgreSQL backend tests; 31 Chromium browser tests; 2 actual extension/API/PostgreSQL transport tests with fictional providers passed. Root and server typechecks passed. Pending-attempt state contains IDs only, never authorization URLs; verified server identity required before success.
+- Decision/blockers: Hosted-only pairing does not upload website snapshots. Accounts share the compact popup/dashboard projection, preserve old IDs/history/preferences, and retain dated readings on failure. Cancellation/reconnect/disconnect fenced; optional adapter revocation handled. All real-provider A/B and logout/renewal tests remain PENDING, production drivers empty.
+- Next action: Perform H10 packaging, final private image smoke, installation docs, handoff and push.
 
 ## Documentation consolidation checkpoint
 

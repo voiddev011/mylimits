@@ -99,3 +99,10 @@ test('hosted auth expiry pauses collection without leaking upstream text',async(
  const id=(await complete(s,(await start(s)).id)).connectionId!;await jobs.enqueue('alice',id,now);const l=(await jobs.lease(now))!;await jobs.fail(l,new CollectorError('auth'),now+1);
  await assert.rejects(jobs.enqueue('alice',id,now+999999),/reconnect_required/);assert.equal((await s.list('alice')).connections[0]!.fetchedAt,null);
 });
+test('hosted disconnect uses adapter revocation when available and deletion preserves other accounts',async()=>{
+ let revoked=0;const d={...driver,async revoke(secret:string){assert.equal(secret,'FICTIONAL-PRIVATE-SECRET');revoked++;}};
+ const s=new HostedService(pool,new CredentialStore(pool,kms),'test',new Map([['openai',d]]));
+ const a=await complete(s,(await start(s)).id),b=await complete(s,(await start(s)).id,'subject-b');
+ assert.equal((await s.disconnect('alice',a.connectionId!)).providerRevocation,'confirmed');assert.equal(revoked,1);
+ await s.forget('alice',a.connectionId!);assert.equal((await s.list('alice')).connections.length,1);assert.equal((await s.list('alice')).connections[0]!.id,b.connectionId);
+});
