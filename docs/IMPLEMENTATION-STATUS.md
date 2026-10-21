@@ -1,8 +1,27 @@
 # Current implementation status — hosted independent accounts
 
 Updated 22 October 2026. **Requested installer-free multi-account product NOT complete.**
-Active plan: [H01–H10](HOSTED-ACCOUNTS-IMPLEMENTATION-PLAN.md).
-Implementation branch: `feature/hosted-connections` (from `docs/hosted-accounts-execution-plan`).
+Active plan: [Real-provider-first execution](INDEPENDENT-ACCOUNTS-FINAL-PLAN.md).
+Implementation branch: `feature/independent-provider-proof` (from `feature/hosted-connections`).
+
+## Current execution — provider proof before more infrastructure
+
+**Step 1: implemented. Steps 2–4: investigation in progress. Steps 5–9: gated.**
+
+- Changed: active plan, START-HERE.md and the status heading; older H01–H10 marked
+  historical. No existing user changes were present; no AGENTS.md found in the
+  repository or ancestors. Reviewed required docs, hosted service/contracts,
+  extension flow, proof runtimes and operator configuration.
+- Checks: clean initial git status; branch created. Environment is ready with
+  enforced network policy and no configured provider registration, accounts,
+  deployment identity or KMS secret. These are observations, not assumed access.
+- Decision: no more UI/jobs/encryption expansion while real-provider login is
+  absent. Production `hostedDrivers` remains empty. Old checklist completion does
+  not complete the product. User data/aliases/history remain untouched.
+- Next: establish supported hosted OpenAI mechanism; verify actual managed-browser
+  callback separately from prior device-code issuance, then resolve Claude route.
+
+The H01–H10 ledger below records **previous supporting work**, not current delivery.
 
 ## Current facts
 
