@@ -879,3 +879,14 @@ No AGENTS.md applies; one workstream, no parallel agents.
   Claude statements are historical. Final variants/installer packaging in progress.
 - Next: commit/push coherent source, inspect actual Windows browser routing and
   all CI results, then publish exact artifact links and check off code delivery.
+
+### MULTI-COMPLETE / Windows native-check investigation
+
+- Source pushed as 87a1879b390bae3fb11a6aa98e0d8a494a620377, exact local
+  c846f33 tree 5e4a0609a02b794b80639a7adaf2a847b5e9eb56.
+- CI 39583747381: Linux verify and connected-services passed. Windows compiled its
+  launcher but the integrated check has stalled; no Windows/overall success claimed.
+- Added a 45-second native test deadline, four-minute Windows check-step deadline
+  and retained diagnostic artifact. Moved official Windows BROWSER capability
+  before integration so its independent result is visible even if a fixture stalls.
+- Next: publish bounded diagnostics, inspect exact failure, fix the cause and rerun.
