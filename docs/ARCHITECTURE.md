@@ -18,7 +18,7 @@ accounts by email or nickname. Existing local IDs/preferences/IndexedDB history
 are preserved. History mirrors are bounded; immutable server/IndexedDB records
 retain their original successful fetch/observation timestamps.
 
-See [current plan](HOSTED-ACCOUNTS-IMPLEMENTATION-PLAN.md),
+See [current plan](INDEPENDENT-ACCOUNTS-FINAL-PLAN.md),
 [handoff](HOSTED-ACCOUNTS-HANDOFF.md) and [operator setup](SERVER-SETUP.md).
 The older architecture below records the earlier Phase2 baseline; Guide was
 removed in3.0 and is not restored by this work.

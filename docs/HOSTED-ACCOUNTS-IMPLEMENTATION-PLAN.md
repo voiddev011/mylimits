@@ -1,7 +1,8 @@
 # MyLimits: simple independent accounts — execution plan
 
-Updated 21 October 2026. This is the only active implementation plan. It is a
-requested outcome, not a claim that hosted provider access has been established.
+Historical foundation plan, updated 21 October 2026. Superseded by the
+[real-provider-first execution plan](INDEPENDENT-ACCOUNTS-FINAL-PLAN.md).
+Retained for contracts and earlier acceptance criteria, not as the current work order.
 
 ## 1. Exact product contract
 
