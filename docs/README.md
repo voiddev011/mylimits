@@ -1,4 +1,13 @@
-# MyLimits 3.2 — Independent accounts preview
+# Current experiment: installer-free hosted accounts
+
+See [trial plan and actual results](HOSTED-ACCOUNTS-TRIAL-PLAN.md) on
+`feature/hosted-account-proof`. Official OpenAI device-code initiation/cancellation
+was observed on a server; Claude returned a loopback callback. No real account was
+authenticated and no quota fetched. The user reports the existing GPT sign-in
+journey still opens the ordinary browser session; it remains unresolved. This
+experiment is not a shipped cloud connector or a new extension release.
+
+# Previous checkpoint: MyLimits 3.2 — Independent accounts preview
 
 Current branch: **`feature/independent-accounts`**.
 [Install](MULTI-ACCOUNT-INSTALL.md) · [Code checklist](MULTI-ACCOUNT-CODE-CHECKLIST.md) ·

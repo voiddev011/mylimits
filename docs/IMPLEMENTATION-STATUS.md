@@ -993,3 +993,64 @@ No AGENTS.md applies; one workstream, no parallel agents.
   upload or external provider message was performed.
 - Next action: user installs matching 3.2 artifacts and performs manual acceptance.
   Implementation phase complete; no further code task queued by this instruction.
+
+### HOSTED-TRIAL / in progress — installer-free request supersedes delivery claim
+
+- User reports the actual GPT account-adding journey still opens the normal
+  session; earlier code/test completion does not establish a working user flow.
+  User now authorizes proposing a plan and trying a hosted/no-local-installer route.
+- Created sequential HOSTED-ACCOUNTS-TRIAL-PLAN.md on feature/hosted-account-proof.
+  Keep production collectors disabled; no UI-only update labeled a solved login.
+- Runtime readiness: enforced HTTP, no provider accounts/OAuth client/production
+  KMS or hosted service credentials. Existing Fastify/PostgreSQL credential/jobs
+  infrastructure is reusable after the real connector gate, not functional today.
+- Narrow official docs reveal App Server chatgptDeviceCode, including first-party
+  cancellation and CLI-owned credentials. Beta requires a user/admin setting and
+  entering a one-time code; this differs from one-click browser OAuth. Claude
+  documents remote manual-code fallback; unmodified 2.1.301 public login help
+  advertises no custom callback URL option.
+- Added developer-only redacted official transport probes in companion/proof and
+  scripts/probe-hosted-login.mjs, with six passing redaction/lifecycle tests. Not
+  imported by the extension/server. Official binary experiment now running in fresh
+  temporary homes with no account authentication, quota fetch or model request.
+- Next: record actual official results, finish bounded checks, commit and push the
+  experiment/plan. Real hosted sign-in eligibility and A/B proof remain gated.
+
+### HOSTED-TRIAL / official transport attempt completed — product gate still pending
+
+- Ran new probe with checksum-verified official Codex 0.163.0 Linux native binary
+  and unmodified Claude Code 2.1.301, in private temporary profiles. Both official
+  processes stopped and temporary profiles were removed. No accounts authenticated,
+  quotas fetched, model prompts sent or auth URL/code/credential output exported.
+- **Observed:** OpenAI initial account absent; App Server chatgptDeviceCode issued a
+  valid ticket; official cancel acknowledged; process exit confirmed. This provides
+  a real headless transport candidate, not proof of two accounts or quota access.
+  Beta device login needs code entry and may require a security/admin setting.
+- **Observed:** Claude BROWSER invoked with first-party authorize URL and loopback
+  callback; no custom callback option in public login help; shutdown confirmed.
+  Laptop-to-server automatic completion and account isolation remain unresolved.
+- Six hosted probe regression tests passed (redaction, strict verification URL,
+  callback classification, unexpected-account refusal, cancellation, error privacy).
+  Added a CI step for these tests; the experiment is not imported by production
+  collectors or the extension. Existing production collector map stays empty.
+- Plan/results/reproduction and the exact pending gates are recorded in
+  HOSTED-ACCOUNTS-TRIAL-PLAN.md. START-HERE now directs the next agent to this trial.
+- Next: finish narrow regressions and publish the research branch. Subsequent
+  account proof requires an allowed hosted integration, secure private test host
+  and user provider sign-in; none is configured here. UI replacement follows that
+  proof, with site switches replaced by + and current-account/other-account actions.
+
+### HOSTED-TRIAL / experiment ready for publication
+
+- Final narrow checks passed: 7 hosted diagnostic tests, existing 30 account-proof
+  tests, JavaScript syntax and git diff whitespace checks. Additional failure-path
+  test confirms an unacknowledged metadata process retains its private profile.
+- Added npm probe/test scripts and a CI step. README and START-HERE point at the
+  new plan/results and explicitly preserve the unresolved real user sign-in issue.
+- This checkpoint changes developer experiments/documentation, not product UI,
+  provider OAuth registration, production collectors or deployed infrastructure.
+  No real-account tests have passed and no updated extension installer is claimed.
+- Next external prerequisite: allowed hosted authorization and a secure private
+  test service/account sign-in. Next implementation milestone after that: A/B
+  identity plus quota proof, followed by + menu and hosted collection. Continue
+  only within established provider conditions; no fabricated one-click substitute.

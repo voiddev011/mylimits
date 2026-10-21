@@ -1,4 +1,14 @@
-# Current work: independent-account extension integration
+# Current work: hosted accounts feasibility trial
+
+Latest authorization: propose a plan and actually try the installer-free, hosted
+multi-account route on `feature/hosted-account-proof`. Read
+[HOSTED-ACCOUNTS-TRIAL-PLAN.md](HOSTED-ACCOUNTS-TRIAL-PLAN.md) and the latest status.
+Try documented official remote transports first. Do not replace the UI or enable
+production collectors before a permitted real-account connection is established.
+User reports the ordinary GPT browser-session problem remains unresolved. The
+prior code-complete checklist is not proof that the user's sign-in journey works.
+
+# Previous work: independent-account extension integration
 
 Latest authorization: implement on `feature/independent-accounts`. Read
 [MULTI-ACCOUNT-IMPLEMENTATION.md](MULTI-ACCOUNT-IMPLEMENTATION.md) and current status.
