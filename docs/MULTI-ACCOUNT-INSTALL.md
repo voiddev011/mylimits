@@ -4,7 +4,20 @@ Branch: `feature/independent-accounts`. This integrates the account helper into
 MyLimits. Independent Claude is **unavailable**; website tracking remains available.
 No real-provider signup, logout survival or renewal has been verified here.
 
-## Windows: extension
+## Download built packages (fastest)
+
+- [3.1 extension packages](https://github.com/voiddev011/mylimits/actions/runs/39579243525/artifacts/12335143318)
+- [3.1 Windows helper installer](https://github.com/voiddev011/mylimits/actions/runs/39579243525/artifacts/12336221223)
+- [Successful checks](https://github.com/voiddev011/mylimits/actions/runs/39579243525)
+
+Sign into GitHub with repository access. Extract the downloaded extension artifact,
+then extract its `mylimits-3.1.0-chrome.zip` into a permanent folder containing
+`manifest.json`. Load that folder in the browser. Extract the helper artifact and
+run its EXE. A built package does not need npm or a terminal.
+Use the checksum accompanying the particular artifact; local and CI installer
+compilers produce different binary hashes from the same source.
+
+## Windows: extension from source
 
 From an existing clean Git clone in PowerShell:
 

@@ -5,6 +5,8 @@ Current branch: **`feature/independent-accounts`**.
 [Status](IMPLEMENTATION-STATUS.md) · [Handoff](MULTI-ACCOUNT-HANDOFF.md).
 Independent OpenAI service/UI is implemented; real accounts remain unverified.
 Independent Claude remains unavailable. The older diagnostic remains available.
+[Download extension](https://github.com/voiddev011/mylimits/actions/runs/39579243525/artifacts/12335143318) ·
+[Download Windows helper](https://github.com/voiddev011/mylimits/actions/runs/39579243525/artifacts/12336221223).
 
 ## Previous 3.0 release record
 
