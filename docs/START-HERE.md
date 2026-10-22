@@ -3,8 +3,10 @@
 The active direction is a one-time Windows desktop installation plus the existing
 extension. Separate official provider profiles should track multiple accounts
 without changing the ordinary Chrome/Brave website session.
-**Both providers still need real two-account acceptance.** This documentation
-update does not implement or certify the new experience.
+Version 3.4 on `feature/desktop-independent-accounts` now routes independent +
+connections through Desktop, with a guided bootstrapper and identity confirmation.
+**Both providers still need real two-account acceptance.** Code/fixture checks do
+not certify login, quota freshness or preservation of a real website account.
 
 Read in this order:
 
@@ -22,4 +24,4 @@ Website tracking stays available without Desktop. Independent connections requir
 Desktop in this plan; a normal new tab does not isolate a login. Codex quota is not
 every ChatGPT allowance. Source/fixture checks are not live account proof.
 
-[Install current preview](INSTALL.md) · [Documentation index](README.md)
+[Install current preview](INSTALL.md) · [Delivery/handoff](DESKTOP-ACCOUNTS-HANDOFF.md) · [Documentation index](README.md)

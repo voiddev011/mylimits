@@ -66,9 +66,10 @@ hosted route is deferred. It was not completed by earlier infrastructure work.
 
 ## Next action
 
-Finish D10: inspect Windows CI, package both extension variants and Desktop from
-the final source, update installation/handoff, then run the real-account matrix
-on a Windows laptop. Both providers remain experimental until that matrix passes.
+On a Windows laptop, install the delivered matching extension/Desktop artifacts
+and run the real-account matrix in DESKTOP-ACCOUNTS-HANDOFF.md for both providers.
+Automated code/package delivery is recorded below. Both providers remain
+experimental; the requested feature is not fully accepted or release-ready.
 
 After each task record changed files, commands/results and skips, evidence level,
 decisions, blockers and next action. Final reporting separates implementation,
@@ -291,3 +292,36 @@ automated tests, live verification and blocked/unverified work.
   PostgreSQL disconnected generation; provider behavior is still simulated.
   No hosted production path was added or substituted for Desktop. Rerunning CI
   checks this stronger boundary before final delivery.
+
+## D10 — delivery checkpoint
+
+- Pushed final code checkpoint `8f43c21c0934774cbcea810667579d162346961f`.
+  [CI run 39756974345](https://github.com/voiddev011/mylimits/actions/runs/39756974345)
+  passed all three jobs: verify, windows-logic and connected-services. This includes
+  109 core tests, 20 legacy native, 24 connections, 4 runtime/native transport,
+  30 proof, 10 hosted diagnostic, 1 payload and 31 Chromium tests; Windows setup
+  parser/GUI/rollback/owned-process checks, official unauthenticated router check,
+  NSIS build and existing 43-test PostgreSQL/API suite plus web/transport checks.
+- Downloaded the actual CI artifacts through the GitHub connector and verified
+  their own hashes locally. Windows EXE: 1500185 bytes, SHA-256
+  `8c4651c2bd21801b7ed9ec0927d7480fe9409317ac1b3c74d8abd5321d8d2e74`.
+  Chrome ZIP: 307211 bytes; Firefox ZIP: 305119 bytes. Exact ZIP hashes and all
+  download links are in DESKTOP-ACCOUNTS-HANDOFF and artifact SHA256SUMS.
+- Bootstrapper payload 3110365 bytes; first Node/Codex archives add 205352424 bytes.
+  Actual clean installed footprint/time and Claude downloads remain unmeasured;
+  extracted Node/Codex components alone are 559572171 bytes. A small initial EXE
+  is not a tiny total install. Setup now records actual per-machine byte totals.
+- Added DESKTOP-ACCOUNTS-HANDOFF with complete pending live matrix and short
+  installation/testing steps. Updated INSTALL, START-HERE, README, architecture,
+  privacy, platform/provider references, active plan and starter follow-up note.
+  Documentation validation: 19 project Markdown files all directly in docs, zero
+  missing relative links; git diff whitespace check passed.
+- IMPLEMENTED: actual local provider/extension integration, confirmation/migration,
+  refresh/ownership/recovery, guided installer and packaged artifacts. AUTOMATED
+  TESTED: results above. LIVE VERIFIED: no authenticated real provider pair.
+  BLOCKED/UNVERIFIED: both actual A/B identities/quota/freshness/logout/renewal,
+  clean interactive Windows install/update/uninstall, signing/store publication,
+  provider product eligibility and same-email OpenAI workspace discrimination.
+- No main merge, release or hosted deployment. Next: user-run real account tests
+  from INSTALL/HANDOFF. Report provider errors as integration failures to resolve;
+  never turn these PENDING rows into passed rows from fictional CI evidence.

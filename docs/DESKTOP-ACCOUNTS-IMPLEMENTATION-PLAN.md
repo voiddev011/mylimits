@@ -2,7 +2,10 @@
 
 Active execution plan, 22 October 2026. Prepared on
 `docs/desktop-accounts-execution-plan`, based on `feature/independent-provider-proof`.
-**Status: planned upgrade; real two-account acceptance is still pending for both providers.**
+**Status: 3.4 code, automated integration and packages delivered on
+`feature/desktop-independent-accounts`; real two-account acceptance is still pending
+for both providers. The feature is not release-ready.** See
+[delivery and exact evidence](DESKTOP-ACCOUNTS-HANDOFF.md).
 
 ## 1. Agreed product and honest boundary
 

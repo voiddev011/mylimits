@@ -1,94 +1,137 @@
-# Install or test the hosted foundation preview (3.3)
+# Install and test MyLimits 3.4 Desktop preview
 
-This preview adds provider + choices and the hosted account infrastructure.
-**Real independent OpenAI/Claude sign-in is not enabled.** Both providers show
-“Not available yet”. Website tracking works without the local helper. This
-documentation branch adds no new Desktop installer. The older large helper
-is not required to test website tracking.
+The extension's **+ → Connect another account** now uses MyLimits Desktop.
+OpenAI uses official Codex App Server; Claude uses unmodified Claude Code.
+Both are **experimental: real two-account acceptance is pending**. Codex quotas
+are not every ChatGPT message/image/model allowance. Website tracking works without
+Desktop. No hosted service or MyLimits sign-in is required for Desktop tracking.
 
-## Windows: update an existing clone
+## Windows: packaged setup, no npm
 
-Run in your repository folder (for example
-`C:\Users\Jainam\Desktop\MyLimits\mylimits`). Preserve local edits before switching
-branches; if Git refuses, commit or stash those edits first, never force a reset.
+1. Open [branch Checks artifacts](https://github.com/voiddev011/mylimits/actions?query=branch%3Afeature%2Fdesktop-independent-accounts).
+   Choose a successful run of this branch, not an older 3.2/3.3 build.
+   Download `mylimits-extension-packages` and
+   `mylimits-desktop-windows-x64-unsigned`. GitHub requires repository access and
+   wraps Actions downloads in ZIPs; extract those download containers.
+2. Extract `mylimits-3.4.0-chrome.zip`. Chrome: `chrome://extensions`, Brave:
+   `brave://extensions` → Developer mode → Load unpacked → select the extracted
+   folder containing **manifest.json**. Keep that folder/ID for later updates;
+   do not uninstall your existing extension merely to update it.
+3. Run `mylimits-desktop-windows-x64-unsigned.exe` as your normal Windows user.
+   This development EXE is unsigned; public signing/store distribution is pending.
+   In guided setup select OpenAI and/or Claude, then **Set up Desktop**.
+   The extension is detected automatically; no extension-ID entry is required.
+   If absent, load it first and choose **Retry detection**. Standard Chrome/Brave/
+   Edge/Chromium Default and Profile folders are supported; nonstandard/managed
+   locations remain a limitation, without a manual-ID public workaround.
+4. Allow the displayed official downloads and Windows/provider setup prompts.
+   Choose **Open MyLimits** when Desktop reports ready.
+5. Extension → **+** → choose provider → **Connect another account** →
+   **Connect Desktop** (approve native access) → **Sign in to OpenAI/Claude**.
+   Official authorization opens in a fresh separate browser profile. Explicitly
+   choose account B. Inspect its reported identity, enter an alias such as Personal
+   and choose **Confirm account**. Privacy mode must be off to inspect/confirm
+   identity; it can be enabled again afterward.
+6. Repeat for account A or another account. A pending attempt resumes through
+   **Continue sign-in** if the popup/dashboard was closed. A duplicate, unverified
+   identity, missing dependency or failed quota check is not a fresh connection.
+   If Claude requests onboarding, use **Finish Claude setup**, complete its official
+   trust/terms choices, close it, then refresh.
+
+Provider software manages separate `CODEX_HOME` / `CLAUDE_CONFIG_DIR` credentials.
+MyLimits does not collect passwords, copy cookies or extract CLI tokens. The normal
+website session must remain A; verifying this is part of manual acceptance.
+Some OpenAI metadata is email-only: same-email workspaces cannot be independently
+verified and are conservatively flagged as possible duplicates instead of merged.
+
+## Download size and requirements
+
+The Windows-built setup EXE is about **1.50 MB**; exact hash/bytes are in its adjacent `.sha256`
+and `.json`. First OpenAI setup additionally downloads Node **37,733,703 bytes**
+and Codex **167,618,721 bytes** from pinned official sources: **205,352,424 additional
+bytes**, before any Claude download. Compatible private runtimes are reused.
+Installed Codex is much larger than its archive; a small bootstrapper does not
+mean a small installation.
+
+Claude uses official WinGet when absent. Its additional bytes vary and are not
+claimed to be measured here. It needs an eligible subscription, Claude Code
+2.1.301+ and current official Windows prerequisites, including Git for Windows
+where required by that installer. MyLimits reuses an installed Chromium browser.
+Setup removes verified archive cache after success. Local `desktop-install-sizes.json`
+records actual setup/service file bytes and successful archive downloads. Partial
+failed transfers and Claude's separate downloads are excluded from that archive count.
+
+This is guided setup with provider prompts, not a literal one-click published
+product. The packaged path requires no end-user Node/npm installation, recurring
+terminal commands, tokens or configuration editing. Clean laptop acceptance is pending.
+
+## Update an existing source checkout
+
+Run in the **inner repository** containing package.json. Commit or stash local
+edits if Git asks; never force-reset them. For example:
 
 ```powershell
+cd C:\Users\Jainam\Desktop\MyLimits\mylimits
+git status
 git fetch origin
-git switch docs/desktop-accounts-execution-plan
-git pull --ff-only origin docs/desktop-accounts-execution-plan
+git switch feature/desktop-independent-accounts
+git pull --ff-only origin feature/desktop-independent-accounts
 node -v
 npm ci --include=optional
 npm run build
 ```
 
-Node24+ is required only for building from source. An extracted source ZIP can
-start at `node -v` from its package.json folder, without Git commands.
-
-## Load or reload
-
-Chrome: `chrome://extensions`; Brave: `brave://extensions`; Edge:
-`edge://extensions`. Enable Developer mode → Load unpacked → select:
+Use Node 24+ for source builds. If the branch exists only remotely, `git switch`
+normally creates its tracking branch; otherwise use
+`git switch --track origin/feature/desktop-independent-accounts`.
+A source ZIP starts at `node -v` in its package.json directory, without Git commands.
+Chrome/Brave → Load unpacked or Reload the existing extension from:
 
 ```text
 C:\Users\Jainam\Desktop\MyLimits\mylimits\.output\chrome-mv3
 ```
 
-Use your actual checkout path if different. The selected folder must contain
-`manifest.json`. For an existing installation from that same folder, click Reload.
-Keep the folder/extension ID to preserve local accounts, aliases and history.
-Uninstalling an extension deletes its local data; do not uninstall just to update.
-Refresh existing provider tabs after updating.
+Use your actual checkout path if different. Hidden `.output` appears only after a
+successful build. Update Desktop with the matching branch's guided EXE too;
+rebuilding the extension does not update Desktop. Older helpers lacking identity
+confirmation are rejected. Source packaging uses `npm run zip`; Windows setup uses
+`npm run package:desktop` with NSIS installed (this is a developer build command).
 
-To build a shareable extension ZIP: `npm run zip`; extract
-`.output/mylimits-3.3.0-chrome.zip`, then load its manifest folder. A packaged
-extension needs no Node/npm on the end user's machine. A GitHub source archive
-is source code, not the extension ZIP. CI packages appear under the working
-branch's Checks → mylimits-extension-packages artifact after a successful run.
+## Short manual two-account test
 
-Firefox: `npm run zip:firefox`; load the extracted manifest from
-`about:debugging#/runtime/this-firefox` as a temporary add-on. Persistent Firefox
-installation requires Mozilla signing. Windows Chrome/Brave manual testing remains
-pending; Linux Chromium results do not certify Windows behavior.
+1. Keep ChatGPT/Claude in your ordinary browser signed into **A**. Note its identity.
+2. Add **B** through **Connect another account**, sign into B in the separate
+   browser and confirm its identity. Ordinary tab must still be A. Add A
+   independently too, with a different alias.
+3. Compare each quota with the corresponding official display. Missing quotas and
+   reset dates stay unknown. Use only the scope actually shown.
+4. Use B on your phone/another laptop. Close provider tabs here. With the browser
+   and Desktop connected, wait for the next eligible refresh, then refresh.
+   B should reflect provider usage changes; A must stay correctly bound. Minimum
+   intervals: OpenAI 2 minutes, Claude 5 minutes, longer after throttling/failures.
+   This is periodic checking, not instant push.
+5. Restart browser and Desktop/Windows, then disconnect B and verify A still works.
+   Test ordinary website logout separately from provider-wide revocation. Record
+   actual credential renewal when it occurs.
 
-## What to test now
+Record results separately for **both providers and Windows Chrome/Brave** in
+[the handoff matrix](DESKTOP-ACCOUNTS-HANDOFF.md). Fixtures do not pass these steps.
 
-1. Accounts → **+** beside a service → **Use current account**. Grant site access;
-   an existing website tab is focused, or one is opened. Confirm the detected
-   account before saving. Rename it from account details if needed.
-2. **Connect another account** shows an explicit unavailable state for OpenAI/
-   Claude. It must not open your existing login and claim another account connected.
-3. Verify site on/off switches are gone; Settings → Website access offers explicit
-   Disconnect. Other notification/privacy switches remain.
-4. Verify old nicknames, readings, alerts and history remain. Popup stays compact;
-   management stays in Full dashboard. Guide remains removed.
+## Recovery and uninstall
 
-The legacy helper remains under Settings → Legacy local helper · advanced for
-existing experimental users. Its [experimental setup guide](OPENAI-COMPANION.md)
-preserves the older installation steps.
-It is not the installer-free hosted experience or a workaround that passes its
-acceptance. Do not infer all ChatGPT limits from Codex/Work readings.
+- Missing Desktop: reopen Start menu → MyLimits Companion → Setup, run detection
+  and retry. Incompatible helper: install the matching 3.4 setup before sign-in.
+- Failed/interrupted update: retry guided setup. It stops owned current-user
+  processes, repairs staged program files and preserves account profiles/history.
+  Unconfirmed shutdown blocks reuse rather than overlapping credential writers.
+- Expired login: reconnect that account. Closing authorization is not success.
+  Wrong account: discard it and retry.
+- Refresh runs while an authenticated browser client is attached and the computer
+  is awake/online. Browser closure may pause tracking; reopening triggers eligible
+  checks. Stale/cached dates never become fresh server readings.
+- Disconnect before uninstalling to request scoped official logout. Uninstall
+  offers keeping/deleting local profiles; deleting them does not confirm remote
+  revocation. Separately installed official Claude Code is not uninstalled.
 
-Hosted developer/operator setup is in [SERVER-SETUP.md](SERVER-SETUP.md).
-No production hosted service URL is configured in the default package. Replacing
-it requires an operator build, secure deployed service and supported provider
-adapters; no end-user command can enable a missing provider route.
-
-This documentation branch consolidates references and prepares the Desktop
-implementation plan. The earlier developer-only hosted-login transport check remains available. It does **not** add working independent
-account login to the extension. The user interface and version remain 3.3 preview.
-
-## Update and recovery
-
-Export important local history before changing installations. For source rollback,
-use a separate checkout/build; do not overwrite uncommitted changes. Keep backups
-outside the source repository and never publish provider credentials. Database
-migrations are additive and forward-only; rollback the operator image, not applied
-migration SQL. See [handoff](IMPLEMENTATION-HISTORY.md) for verification and blockers.
-
-## Planned Desktop upgrade
-
-The user now accepts one Desktop installation. The [active plan](DESKTOP-ACCOUNTS-IMPLEMENTATION-PLAN.md)
-will connect independent accounts locally instead of the current default hosted
-path. It has not been implemented by this documentation branch. Use
-[STARTER-PROMPT.md](STARTER-PROMPT.md) to begin implementation; pulling this branch
-alone will not enable a new provider sign-in or reduce the old installer size.
+Firefox can build/temporarily install its ZIP, but Desktop native setup for Firefox
+is not implemented. Use Windows Chrome/Brave for this Desktop preview.

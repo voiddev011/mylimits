@@ -1,10 +1,10 @@
 # Existing experimental local service — developer reference
 
-Updated 22 October 2026. The current code has both OpenAI/Codex and Claude CLI
-adapters, but no real A/B account acceptance has been recorded. This guide preserves
-experimental setup; it is not the new small/guided Desktop installer.
-The 3.3 default + journey is hosted-first and unavailable; use advanced local setup
-only when intentionally testing that existing path.
+Updated 22 October 2026. **Use [3.4 guided installation](INSTALL.md) for the current
+Desktop preview.** Independent + now uses the local service with explicit account
+confirmation. No real A/B account acceptance has been recorded. The older 3.2
+installation instructions below are historical developer references, not current
+public setup. Do not install an old helper to test the 3.4 confirmation protocol.
 
 Follow [the active desktop plan](DESKTOP-ACCOUNTS-IMPLEMENTATION-PLAN.md) for the
 upgrade and [current extension install](INSTALL.md) for the current branch.

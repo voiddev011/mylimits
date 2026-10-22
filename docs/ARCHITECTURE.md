@@ -1,6 +1,20 @@
-# Current hosted foundation extension
+# Current Desktop accounts extension (3.4)
 
-> Existing implementation reference. The active [desktop plan](DESKTOP-ACCOUNTS-IMPLEMENTATION-PLAN.md) describes the proposed next changes; no new Desktop runtime is delivered by the documentation update.
+The + independent path now uses `OpenAICompanion` / `platform/companion.ts` and
+the allowlisted Native Messaging host, not the empty hosted registry. The local
+daemon manages per-connection official profiles, generation-bound confirmation,
+bounded refresh and owned-process recovery. Official Codex App Server RPC owns
+OpenAI authorization; unmodified Claude Code owns Claude authorization and /usage.
+Separate external browser profiles handle sign-in without borrowing website cookies.
+Pending confirmation survives restart. Readings retain their successful fetch time
+through failures; provider observation time remains unknown unless supplied.
+
+Windows setup downloads pinned official dependencies, registers discovered extension
+origins, activates program directories with rollback and confirms local bridge health.
+Provider credentials live outside runtime update directories. Detailed acceptance
+and remaining gaps are in [the handoff](DESKTOP-ACCOUNTS-HANDOFF.md).
+
+## Earlier hosted foundation (3.3, deferred)
 
 Version3.3 adds `src/core/hosted-contracts.ts` (strict public metadata),
 `src/core/hosted.ts` (additive local projection), `src/platform/hosted.ts`

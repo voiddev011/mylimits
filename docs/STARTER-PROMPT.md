@@ -1,5 +1,11 @@
 # Starter prompt for Sol 6.1
 
+The initial implementation below has now been executed on
+`feature/desktop-independent-accounts`. For follow-up work read
+[the handoff](DESKTOP-ACCOUNTS-HANDOFF.md) and current status first; preserve the
+implemented branch and address pending real-account/Windows acceptance rather
+than recreating it or rerunning the old baseline audit.
+
 Select Sol 6.1 and paste this on the branch containing this document:
 
 ```text

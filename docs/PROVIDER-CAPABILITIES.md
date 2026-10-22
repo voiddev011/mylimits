@@ -1,6 +1,10 @@
 # Provider capabilities — Phase 1
 
-> Historical scope/evidence reference. The active [desktop plan](DESKTOP-ACCOUNTS-IMPLEMENTATION-PLAN.md) adds no new live-verified capability yet; earlier Phase labels below are historical.
+> Historical scope/evidence reference. 3.4 adds Desktop + integration and explicit
+> confirmation for the existing official adapters, with no newly live-verified
+> provider capability. See [the current handoff](DESKTOP-ACCOUNTS-HANDOFF.md).
+> OpenAI remains Codex-scoped; Claude /usage is experimental and its freshness,
+> logout/renewal and Windows A/B isolation still require real account acceptance.
 
 Checked: 15 October 2026. Evidence is code/documentation plus fictional fixtures;
 no real signed-in provider account is available in this environment. A successful
