@@ -40,7 +40,7 @@ hosted route is deferred. It was not completed by earlier infrastructure work.
 | D06 Desktop/native bridge | IMPLEMENTED; native transport test passes | Windows PENDING |
 | D07 Extension + connection journey | IMPLEMENTED; Chromium fixtures pass | Windows PENDING |
 | D08 Guided installer/bootstrapper | IMPLEMENTED; actual EXE compiled | Clean Windows PENDING |
-| D09 Update/uninstall/packages | PENDING | Clean Windows PENDING |
+| D09 Update/uninstall/packages | IMPLEMENTED; local lifecycle/payload checks pass | Clean Windows PENDING |
 | D10 Acceptance and handoff | PENDING | Both providers PENDING |
 
 ## Documentation checkpoint — this task
@@ -66,9 +66,9 @@ hosted route is deferred. It was not completed by earlier infrastructure work.
 
 ## Next action
 
-Execute D02: preserve the real managed OpenAI path and add explicit identity
-confirmation before accepting the connection, then D03's Claude equivalent.
-Do not spend another cycle on hosted scaffolding or a new desktop framework.
+Finish D10: inspect Windows CI, package both extension variants and Desktop from
+the final source, update installation/handoff, then run the real-account matrix
+on a Windows laptop. Both providers remain experimental until that matrix passes.
 
 After each task record changed files, commands/results and skips, evidence level,
 decisions, blockers and next action. Final reporting separates implementation,
@@ -229,3 +229,34 @@ automated tests, live verification and blocked/unverified work.
 - Windows PowerShell parser/GUI/download/install execution is pending Windows CI
   and interactive acceptance. Compiling an EXE is not proof of a clean Windows install.
 - Next: D09 staged upgrade/rollback and owned process-tree shutdown/uninstall.
+
+## D09 — owned shutdown and staged upgrade/recovery
+
+- Added credential-free process ownership records for real Codex/Claude processes,
+  including metadata commands and setup. Confirmed exit clears records; an
+  unconfirmed writer blocks service restart until guided repair checks its PID,
+  executable, creation time and current-user ownership. No all-node/browser kill.
+- Program files stage separately and activate by directory rename with rollback.
+  Guided setup stops owned tasks/process trees, verifies replacement runtimes,
+  restores executable backups on failure and repairs interrupted script updates.
+  Account profiles, aliases and readings are outside the runtime transaction.
+  Uninstall uses the same bounded owned shutdown and explicit keep/delete data.
+- Tasks now include the current user's SID; owned legacy tasks are retired after
+  successful setup. A per-user setup mutex prevents concurrent setup operations.
+  Successful setup deletes archive cache and writes local installed-byte/download
+  measurements without credential contents. Official Claude download bytes stay
+  unknown; failed partial-transfer traffic is not counted as a verified archive.
+- Changed connections/adapters/proof runtime, Windows setup/runtime/uninstall/tasks,
+  install.mjs, new owned-processes/runtime-update modules and tests, actual native
+  health transport coverage and Windows parser/rollback/process tests.
+- `npm run check`: passed (109 core, 20 legacy native, 24 connections, 3 native/
+  runtime lifecycle tests, typecheck/build). `npm run test:account-proof`: 30 passed;
+  `npm run test:hosted-probe`: 10 passed; `npm run test:desktop-package`: 1 passed.
+- First pushed CI at 84a3d87 passed Windows integrated/ConPTY and unauthenticated
+  official browser checks, but found a PowerShell 5 UTF-8 decoding bug and two old
+  UI selectors. Fixed setup scripts to ASCII, scoped the duplicate Add button, and
+  retained hosted API transport regression through commands instead of restoring
+  hosted login to +. Final CI and full browser rerun are in progress for D10.
+- All provider fixtures are simulated. No live account, clean laptop installation,
+  publication eligibility or real quota freshness has been established.
+- Next: D10 final CI, artifacts/checksums, install instructions and live-test handoff.

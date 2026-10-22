@@ -4,9 +4,9 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 $root=Split-Path $PSScriptRoot -Parent
 . (Join-Path $PSScriptRoot 'desktop-runtime.ps1')
-$script:installing=$false;$script:cancelSetup=$false;$script:readyToOpen=$false
+$script:installing=$false;$script:cancelSetup=$false;$script:readyToOpen=$false;$script:runtimeChanges=@();$script:verifiedDownloadBytes=[long]0
 $form=New-Object Windows.Forms.Form
-$form.Text='MyLimits Desktop — unsigned preview'
+$form.Text='MyLimits Desktop - unsigned preview'
 $form.Size=New-Object Drawing.Size(660,530);$form.StartPosition='CenterScreen'
 $form.Font=New-Object Drawing.Font('Segoe UI',10)
 function Label($text,$y){$l=New-Object Windows.Forms.Label;$l.Text=$text;$l.Location=New-Object Drawing.Point(20,$y);$l.Size=New-Object Drawing.Size(605,44);$form.Controls.Add($l)}
@@ -24,7 +24,7 @@ $install=New-Object Windows.Forms.Button;$install.Text='Set up Desktop';$install
 $retry=New-Object Windows.Forms.Button;$retry.Text='Retry detection';$retry.Location=New-Object Drawing.Point(215,344);$retry.Size=New-Object Drawing.Size(180,36);$form.Controls.Add($retry)
 $close=New-Object Windows.Forms.Button;$close.Text='Close';$close.Location=New-Object Drawing.Point(410,344);$close.Size=New-Object Drawing.Size(180,36);$form.Controls.Add($close)
 $retry.Add_Click({$script:candidates=@(Get-DesktopExtensions);$status.Text=if($candidates.Count){'Found '+$candidates.Count+' MyLimits browser installation(s). Ready to set up.'}else{'MyLimits was not found. Load the extension, then retry. No extension ID copying is needed.'}})
-$close.Add_Click({if($script:installing){$script:cancelSetup=$true;$status.Text='Cancelling the current download…'}else{
+$close.Add_Click({if($script:installing){$script:cancelSetup=$true;$status.Text='Cancelling the current download...'}else{
  if($script:readyToOpen -and $candidates.Count){
   $candidate=$candidates[0];$parts=@{chrome='Google\Chrome\Application\chrome.exe';brave='BraveSoftware\Brave-Browser\Application\brave.exe';edge='Microsoft\Edge\Application\msedge.exe';chromium='Chromium\Application\chrome.exe'}
   foreach($prefix in @($env:PROGRAMFILES,${env:PROGRAMFILES(X86)},$env:LOCALAPPDATA)){if(!$prefix){continue};$exe=Join-Path $prefix $parts[$candidate.browser];if(Test-Path -LiteralPath $exe){Start-Process -FilePath $exe -ArgumentList @(('"--profile-directory='+$candidate.profile+'"'),('chrome-extension://'+$candidate.id+'/dashboard.html#add'));break}}
@@ -34,10 +34,13 @@ $close.Add_Click({if($script:installing){$script:cancelSetup=$true;$status.Text=
 $form.Add_FormClosing({param($sender,$eventArgs)if($script:installing){$eventArgs.Cancel=$true;$script:cancelSetup=$true}})
 $install.Add_Click({
  $script:installing=$true;$script:cancelSetup=$false;$install.Enabled=$false;$retry.Enabled=$false;$openai.Enabled=$false;$claude.Enabled=$false
+ $previousTasks=@();$stopped=$false
  try{
   $script:candidates=@(Get-DesktopExtensions)
   if(!$candidates.Count){throw 'MyLimits was not detected. Load the extension in Chrome or Brave, then retry.'}
   if(!$openai.Checked -and !$claude.Checked){throw 'Select at least one provider.'}
+  $status.Text='Stopping MyLimits processes safely; account profiles will be kept.';[Windows.Forms.Application]::DoEvents()
+  $previousTasks=@(Get-DesktopTasks);Stop-DesktopOwnedProcesses;$stopped=$true;Repair-DesktopInterruptedUpdate
   $manifest=ConvertFrom-Json -InputObject ([IO.File]::ReadAllText((Join-Path $root 'desktop-dependencies.json')))
   $node=Install-DesktopRuntime 'node' $manifest.node
   $codex=$null;if($openai.Checked){$codex=Install-DesktopRuntime 'codex' $manifest.codex}
@@ -51,7 +54,7 @@ $install.Add_Click({
    }
   }
   if($script:cancelSetup){throw 'Setup cancelled. Your existing accounts were kept.'}
-  $status.Text='Linking Desktop to your MyLimits browser installations…';[Windows.Forms.Application]::DoEvents()
+  $status.Text='Linking Desktop to your MyLimits browser installations...';[Windows.Forms.Application]::DoEvents()
   $registrationFile=Join-Path $root 'registrations.json'
   [IO.File]::WriteAllText($registrationFile,(ConvertTo-Json -InputObject @($candidates | ForEach-Object {[PSCustomObject]@{id=$_.id;browser=$_.browser}})),(New-Object Text.UTF8Encoding($false)))
   $options=@((Join-Path $root 'install.mjs'),'--registrations-file',$registrationFile)
@@ -65,11 +68,31 @@ $install.Add_Click({
    [Windows.Forms.Application]::DoEvents();Start-Sleep -Milliseconds 300
   }
   if(!$ready){throw 'Desktop startup was not confirmed. Retry setup before connecting an account.'}
-  $status.Text='Desktop is ready. Open MyLimits → + → Connect another account → Connect Desktop. Confirm the reported account after official sign-in.';$progress.Value=100;$script:readyToOpen=$true;$close.Text='Open MyLimits'
- }catch{$status.Text=$_.Exception.Message}
+  Complete-DesktopRuntimeChanges
+  foreach($oldTask in $previousTasks){if($oldTask.TaskName -eq 'MyLimitsCompanion'){Unregister-ScheduledTask -TaskName $oldTask.TaskName -Confirm:$false}}
+  $cache=Join-Path $root 'download-cache';if(Test-Path -LiteralPath $cache){Remove-Item -LiteralPath $cache -Recurse -Force}
+  $dataRoot=Join-Path $env:LOCALAPPDATA 'MyLimitsCompanion'
+  $sizes=[PSCustomObject]@{version='3.4.0';verifiedArchiveDownloadsBytes=$script:verifiedDownloadBytes;claudeAdditionalDownloadsBytes=$null;setupInstalledBytes=(Get-DesktopDirectoryBytes $root);serviceInstalledBytes=(Get-DesktopDirectoryBytes $dataRoot);cacheBytes=(Get-DesktopDirectoryBytes $cache);measuredAt=[DateTime]::UtcNow.ToString('o')}
+  [IO.File]::WriteAllText((Join-Path $dataRoot 'desktop-install-sizes.json'),(ConvertTo-Json $sizes),(New-Object Text.UTF8Encoding($false)))
+  $status.Text='Desktop is ready. Open MyLimits > + > Connect another account > Connect Desktop. Confirm the reported account after official sign-in.';$progress.Value=100;$script:readyToOpen=$true;$close.Text='Open MyLimits'
+ }catch{
+  $message=$_.Exception.Message
+  if($stopped){try{
+   Stop-DesktopOwnedProcesses;Undo-DesktopRuntimeChanges;Repair-DesktopInterruptedUpdate
+   foreach($oldTask in $previousTasks){Start-ScheduledTask -TaskName $oldTask.TaskName -ErrorAction SilentlyContinue}
+  }catch{$message+=' Repair could not finish. Account data was kept; retry Desktop setup before connecting.'}}
+  $status.Text=$message
+ }
  finally{$script:installing=$false;$install.Enabled=$true;$retry.Enabled=$true;$openai.Enabled=$true;$claude.Enabled=$true}
 })
 $help=New-Object Windows.Forms.LinkLabel;$help.Text='Setup and account testing instructions';$help.Location=New-Object Drawing.Point(20,400);$help.Size=New-Object Drawing.Size(600,26);$form.Controls.Add($help)
 $help.Add_LinkClicked({Start-Process 'https://github.com/voiddev011/mylimits/blob/feature/desktop-independent-accounts/docs/INSTALL.md'})
 Label 'No subscription is included. Credentials stay in official per-account profiles. This is an unsigned development build; signing and store publication are separate.' 436
-if(!$NoShow){[void]$form.ShowDialog()}
+if(!$NoShow){
+ $mutex=New-Object Threading.Mutex($false,('Local\MyLimitsDesktopSetup-'+[Security.Principal.WindowsIdentity]::GetCurrent().User.Value))
+ $acquired=$false
+ try{try{$acquired=$mutex.WaitOne(0)}catch [Threading.AbandonedMutexException]{$acquired=$true}
+  if(!$acquired){[void][Windows.Forms.MessageBox]::Show('MyLimits Desktop setup is already open.');return}
+  [void]$form.ShowDialog()
+ }finally{if($acquired){$mutex.ReleaseMutex()};$mutex.Dispose()}
+}

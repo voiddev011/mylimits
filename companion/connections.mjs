@@ -10,6 +10,7 @@ import { profileEnvironment, findCli } from './proof/runtime.mjs';
 import { atomicJson, privateDirectory, uuid } from './proof/store.mjs';
 import { createClaudeAdapter } from './claude-adapter.mjs';
 import { codexLoginWaiter } from './proof/codex-login.mjs';
+import {OwnedProcesses} from './owned-processes.mjs';
 
 export const capabilities = { protocol: 2, version: '3.4.0-preview', identityConfirmation: true, providers: [
   { provider: 'openai', available: true, scope: 'work-codex', isolatedLogin: true, activeRefresh: true, liveVerified: false, reason: 'Live account, cross-device, logout and renewal checks are pending.' },
@@ -53,13 +54,15 @@ function savedProfile(p) {
 }
 
 export class Connections extends EventEmitter {
-  constructor({ directory, executable = 'codex', makeClient = options => new AppServer(options), now = Date.now, launchAuth = openAuthBrowser, claudeAdapter = createClaudeAdapter() }) {
+  constructor({ directory, executable = 'codex', makeClient = async options => new AppServer({...options,executable:path.isAbsolute(options.executable)?options.executable:await findCli('openai')}), now = Date.now, launchAuth = openAuthBrowser, claudeAdapter = createClaudeAdapter() }) {
     super(); Object.assign(this, { directory, executable, makeClient, now, launchAuth, claudeAdapter });
+    this.owned=new OwnedProcesses(directory);
     this.profiles = new Map(); this.operations = new Map(); this.logins = new Map(); this.clients = new Set(); this.providerAborts = new Map();
     this.saving = Promise.resolve(); this.indexSaving = Promise.resolve(); this.slots = []; this.running = 0; this.stopping = false;
   }
   async load() {
     await privateDirectory(this.directory);
+    await this.owned.assertClean();
     const file = path.join(this.directory, 'connections-v2.json');
     try {
       const text = await readFile(file, 'utf8');
@@ -133,15 +136,18 @@ export class Connections extends EventEmitter {
     await privateDirectory(path.join(this.directory, 'accounts')); await privateDirectory(home);
     try { await writeFile(path.join(home, 'config.toml'), 'cli_auth_credentials_store = "auto"\n', { flag:'wx',mode:0o600 }); }
     catch (error) { if(error.code!=='EEXIST')throw error; }
-    const client = this.makeClient({ executable: this.executable, home, environment: profileEnvironment('openai', home) });
+    const client = await this.makeClient({ executable: this.executable, home, environment: profileEnvironment('openai', home) });
+    let release,trackingFailed=false;
+    try{release=await this.owned.track(client.child);}catch{trackingFailed=true;this.requiresRecovery=true;void client.ready.catch(()=>{});}
     this.clients.add(client);
-    try { await client.ready; return await task(client); }
+    try { if(trackingFailed)throw failure('shutdown-unconfirmed');await client.ready; return await task(client); }
     finally {
       const child = client.child; let timer;
       const stopped = child?.pid && child.exitCode === null && !child.signalCode
         ? new Promise(resolve => { child.once('exit', () => resolve(true)); timer = setTimeout(() => resolve(false), 5000); }) : Promise.resolve(true);
       client.close(); const confirmed = await stopped; clearTimeout(timer); this.clients.delete(client);
       if (!confirmed) { this.requiresRecovery = true; throw failure('shutdown-unconfirmed'); }
+      await release?.();
     }
   }
   interval(p) { return p.provider === 'claude' ? 300_000 : 120_000; }
@@ -155,7 +161,8 @@ export class Connections extends EventEmitter {
     const cancel=()=>abort.abort();signal?.addEventListener('abort',cancel,{once:true});
     if(signal?.aborted||this.stopping)abort.abort();
     try {
-      const context=await this.claudeAdapter.context(path.join(this.directory,'accounts',p.id),p.generation,abort.signal);
+      const context=await this.claudeAdapter.context(path.join(this.directory,'accounts',p.id),p.generation,abort.signal,(child,executable)=>this.owned.track(child,executable));
+      context.trackProcess=(child,executable)=>this.owned.track(child,executable);
       return await task(context);
     } finally {signal?.removeEventListener('abort',cancel);this.providerAborts.delete(p.id);}
   }

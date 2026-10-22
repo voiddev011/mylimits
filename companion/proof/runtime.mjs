@@ -39,15 +39,18 @@ export function command(executable, args) {
 }
 
 // Only auth status/version/help stdout is captured; errors never include output.
-export function runCli(executable, args, { env, cwd, timeout = 15_000, inherit = false, spawnProcess = spawn, signal } = {}) {
+export function runCli(executable, args, { env, cwd, timeout = 15_000, inherit = false, spawnProcess = spawn, signal, trackProcess } = {}) {
   const [file, argv] = command(executable, args);
   return new Promise((resolve, reject) => {
     if (signal?.aborted) { reject(new Error('CLI operation cancelled.')); return; }
     const child = spawnProcess(file, argv, { env, cwd, shell: false, windowsHide: !inherit, stdio: inherit ? 'inherit' : ['ignore', 'pipe', 'pipe'] });
+    const ownership=Promise.resolve(trackProcess?.(child,file));ownership.catch(()=>{});
     let output = '', stopReason = null, stopTimer; let settled = false;
     const finish = (error, result, code) => {
       if (settled) return; settled = true; clearTimeout(timer); clearTimeout(stopTimer); signal?.removeEventListener('abort', abort);
-      error ? reject(Object.assign(new Error(error), code ? { code } : {})) : resolve(result);
+      void ownership.then(async release=>{if(code!=='terminal-stop-unconfirmed')await release?.();
+        error ? reject(Object.assign(new Error(error), code ? { code } : {})) : resolve(result);
+      }).catch(()=>reject(Object.assign(new Error('Desktop process recovery requires setup repair.'),{code:'terminal-stop-unconfirmed'})));
     };
     // Cancellation is not complete until the owned process acknowledges exit.
     // A timed-out auth command must not overlap a new writer in the same profile.
@@ -66,6 +69,7 @@ export function runCli(executable, args, { env, cwd, timeout = 15_000, inherit =
     child.stderr?.on('data', () => {});
     child.once('error', () => finish('Could not start the official CLI.'));
     child.once('exit', code => finish(stopReason, { code, output }));
+    void ownership.catch(()=>stop('Desktop process recovery requires setup repair.'));
     if (signal?.aborted) abort();
   });
 }

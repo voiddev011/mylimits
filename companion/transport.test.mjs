@@ -7,6 +7,7 @@ import path from 'node:path';
 import net from 'node:net';
 import {frame,frameReader} from './protocol.mjs';
 import {answer} from './local-auth.mjs';
+import {desktopHealth} from './desktop-health.mjs';
 
 test('actual native host and daemon exchange validated credential-free frames and isolate refresh from website sessions', {timeout:15000}, async t=>{
  const directory=await mkdtemp(path.join(tmpdir(),'ml-ipc-'));
@@ -35,6 +36,9 @@ test('actual native host and daemon exchange validated credential-free frames an
  assert.ok(!JSON.stringify(received).includes('NEVER_EXPORT'));
  assert.ok(!JSON.stringify(received).includes('PRIVATE'));
  const pipe=process.platform==='win32'?`\\\\.\\pipe\\mylimits-${(await import('node:crypto')).createHash('sha256').update(directory.toLowerCase()).digest('hex').slice(0,24)}`:path.join(directory,'companion.sock');
+ const health=await desktopHealth({directory,socket:pipe});
+ assert.equal(health.ready,true);assert.equal(health.version,'3.4.0-preview');
+ assert.deepEqual(Object.keys(health).sort(),['providers','ready','version']);
  const token=await readFile(path.join(directory,'bridge-token'),'utf8');
  const unauthorized=net.connect(pipe);unauthorized.on('error',()=>{});
  const closed=new Promise(resolve=>unauthorized.once('close',resolve));

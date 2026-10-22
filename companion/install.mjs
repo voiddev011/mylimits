@@ -1,10 +1,15 @@
 import { mkdir, writeFile, chmod, readFile, cp, access } from 'node:fs/promises';
+import {randomUUID} from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { batchLauncher, registryRoots, taskScript, encodedPowerShell, psLiteral } from './windows.mjs';
 import { dataDir, hostName } from './paths.mjs';
+import {activateRuntime} from './runtime-update.mjs';
+import {desktopHealth} from './desktop-health.mjs';
+import {connect} from 'node:net';
+import {socketPath} from './paths.mjs';
 
 // Install only for the current OS user. No browser cookies or passwords are read.
 const windows = process.platform === 'win32';
@@ -39,9 +44,10 @@ if (windows) {
   // Protect credential directories and the bridge token through inherited ACLs.
   execFileSync('icacls.exe', [dataDir, '/inheritance:r', '/grant:r', `*${sid}:(OI)(CI)F`], { stdio: 'ignore' });
 } else await chmod(dataDir, 0o700);
-const runtime = path.join(dataDir, 'runtime'); await mkdir(runtime, { recursive: true, mode: 0o700 });
+const activeRuntime=path.join(dataDir,'runtime');
+const runtime=path.join(dataDir,'runtime-next-'+randomUUID());await mkdir(runtime,{recursive:true,mode:0o700});
 // Copy the runtime so downloading a new ZIP or moving the checkout cannot break the host.
-for (const name of ['paths.mjs', 'local-auth.mjs', 'protocol.mjs', 'limits.mjs', 'app-server.mjs', 'service.mjs', 'connections.mjs', 'claude-adapter.mjs', 'claude-browser-route.mjs', 'claude-setup.mjs', 'windows.mjs', 'auth-browser.mjs', 'daemon.mjs', 'host.mjs']) {
+for (const name of ['paths.mjs', 'local-auth.mjs', 'protocol.mjs', 'limits.mjs', 'app-server.mjs', 'service.mjs', 'connections.mjs', 'owned-processes.mjs', 'runtime-update.mjs', 'desktop-health.mjs', 'claude-adapter.mjs', 'claude-browser-route.mjs', 'claude-setup.mjs', 'windows.mjs', 'auth-browser.mjs', 'daemon.mjs', 'host.mjs']) {
   await writeFile(path.join(runtime, name), await readFile(path.join(source, name)), { mode: 0o600 });
 }
 await mkdir(path.join(runtime, 'proof'), { recursive: true, mode: 0o700 });
@@ -62,8 +68,13 @@ if(windows){
   execFileSync('powershell.exe',['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',path.join(runtime,'windows','compile-claude-browser.ps1'),'-Source',path.join(runtime,'windows','claude-browser.cs'),'-Output',path.join(runtime,'windows','claude-browser.exe')],{stdio:'pipe'});
 }
 const quote = value => "'" + value.replaceAll("'", "'\\''") + "'";
+// Direct developer installs must stop their service before replacing its files.
+const running=await new Promise(resolve=>{const socket=connect(socketPath);socket.on('connect',()=>{socket.destroy();resolve(true);});socket.on('error',()=>resolve(false));socket.setTimeout(1500,()=>{socket.destroy();resolve(true);});});
+if(running)throw new Error('Desktop is running. Close it or use guided Desktop setup before updating.');
+const deployment=await activateRuntime(runtime,activeRuntime);
+try {
 const launcher = path.join(dataDir, windows ? 'native-host.cmd' : 'native-host');
-await writeFile(launcher, windows ? batchLauncher(process.execPath, path.join(runtime, 'host.mjs')) : `#!/bin/sh\nexec ${quote(process.execPath)} ${quote(path.join(runtime, 'host.mjs'))} "$@"\n`, { mode: 0o700 });
+await writeFile(launcher, windows ? batchLauncher(process.execPath, path.join(activeRuntime, 'host.mjs')) : `#!/bin/sh\nexec ${quote(process.execPath)} ${quote(path.join(activeRuntime, 'host.mjs'))} "$@"\n`, { mode: 0o700 });
 if (!windows) await chmod(launcher, 0o700);
 for(const {id:targetId,browser:targetBrowser} of targets){
 const manifestDir = windows ? path.join(dataDir, 'manifests', targetBrowser) : path.join(homedir(), '.config', browserDirs[targetBrowser], 'NativeMessagingHosts');
@@ -79,9 +90,12 @@ if (windows) {
 }
 if(windows){
   try {
-    execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encodedPowerShell(taskScript(process.execPath, path.join(runtime, 'daemon.mjs'), executable, dataDir))], { stdio: 'pipe' });
+    execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encodedPowerShell(taskScript(process.execPath, path.join(activeRuntime, 'daemon.mjs'), executable, dataDir))], { stdio: 'pipe' });
+    let ready=false;for(let i=0;i<5;i++){try{await desktopHealth();ready=true;break;}catch{await new Promise(r=>setTimeout(r,300));}}
+    if(!ready)throw Error('Desktop readiness was not confirmed.');
+    await deployment.commit();
     console.log('Windows companion registered and startup task requested. Reload MyLimits and connect an independent OpenAI or Claude account.');
-    console.log('Check Task Scheduler > MyLimitsCompanion if the bridge is unavailable.');
+    console.log('Check the current-user MyLimitsCompanion task if the bridge is unavailable.');
   } catch {
     throw new Error('Browser registration succeeded, but Windows startup failed. Reopen helper setup and retry as the same Windows user.');
   }
@@ -90,7 +104,7 @@ if(windows){
 }
 const unitDir = path.join(homedir(), '.config', 'systemd', 'user'); await mkdir(unitDir, { recursive: true });
 const unitArg = value => '"' + value.replaceAll('\\', '\\\\').replaceAll('"', '\\"').replaceAll('%', '%%').replaceAll('$', '$$') + '"';
-const unit = `[Unit]\nDescription=MyLimits independent account helper\nAfter=network.target\n\n[Service]\nType=simple\nExecStart=${[process.execPath, path.join(runtime, 'daemon.mjs'), executable].map(unitArg).join(' ')}\nRestart=on-failure\nRestartSec=5\nUMask=0077\n\n[Install]\nWantedBy=default.target\n`;
+const unit = `[Unit]\nDescription=MyLimits independent account helper\nAfter=network.target\n\n[Service]\nType=simple\nExecStart=${[process.execPath, path.join(activeRuntime, 'daemon.mjs'), executable].map(unitArg).join(' ')}\nRestart=on-failure\nRestartSec=5\nUMask=0077\n\n[Install]\nWantedBy=default.target\n`;
 await writeFile(path.join(unitDir, 'mylimits-companion.service'), unit, { mode: 0o600 });
 try {
   execFileSync('systemctl', ['--user', 'daemon-reload'], { stdio: 'pipe' });
@@ -99,6 +113,8 @@ try {
   console.log('Companion installed and started. Reload MyLimits, open Websites, then connect an independent OpenAI or Claude account.');
 } catch {
   console.log('Native host installed. Automatic service startup was unavailable. Keep this command running in a terminal:');
-  console.log([process.execPath, path.join(runtime, 'daemon.mjs'), executable].map(quote).join(' '));
+  console.log([process.execPath, path.join(activeRuntime, 'daemon.mjs'), executable].map(quote).join(' '));
 }
-console.log('The service can refresh while the browser is closed; your computer must remain awake and online.');
+await deployment.commit();
+console.log('Eligible accounts refresh while the browser is connected and this computer is awake and online.');
+}catch(error){await deployment.rollback();throw error;}

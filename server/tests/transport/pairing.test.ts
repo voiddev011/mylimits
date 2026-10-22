@@ -47,13 +47,16 @@ test('hosted fictional provider crosses real extension/API/PostgreSQL transport 
   const state=applySnapshot(emptyStore('FICTIONAL-HOSTED-SALT'),'chatgpt','website-A',{kind:'account',displayName:'Website Work',plan:null,meters:[]},Date.now()-1000);
   state.providers.chatgpt.enabled=false;state.connections=state.connections.map(c=>({...c,enabled:false,status:'disabled'}));
   await worker.evaluate(async({state,origin,device})=>{await chrome.storage.local.set({'mylimits:state:v2':state,'mylimits:sync:private:v1':{version:1,origin,enabled:false,deviceId:device.id,token:device.token,pair:null,acknowledged:[],excluded:[],pendingDeletes:[],mappings:{},failures:0,nextAttemptAt:null,lastAttemptAt:null,lastSyncedAt:null,preferenceRevision:0,error:null}});},{state,origin,device});
-  await page.getByRole('button',{name:'Accounts',exact:true}).click();await page.getByRole('button',{name:'Add ChatGPT account',exact:true}).click();await page.getByRole('button',{name:'Connect another account',exact:true}).click();
-  await page.getByRole('button',{name:'Sign in to OpenAI',exact:true}).waitFor();
-  const opening=context.waitForEvent('page');await page.getByRole('button',{name:'Sign in to OpenAI',exact:true}).click();const auth=await opening;await auth.waitForLoadState();assert.equal(new URL(auth.url()).hostname,'auth.openai.com');
-  await page.getByText('Complete official sign-in in the window, then confirm the account here.',{exact:true}).waitFor();
+  // Hosted transport remains a legacy regression, not the default Desktop + UI.
+  // Exercise its actual extension command/HTTP boundary without restoring an
+  // unimplemented public hosted provider flow to the account picker.
+  const opening=context.waitForEvent('page');
+  const started=await page.evaluate(()=>chrome.runtime.sendMessage({type:'hosted-start',provider:'openai'}));assert.equal(started.ok,true);
+  const auth=await opening;await auth.waitForLoadState();assert.equal(new URL(auth.url()).hostname,'auth.openai.com');
   const [attemptId,proof]=[...attempts.entries()][0]!;const completed=await hosted.complete(owner,attemptId,proof.proof,{subject:'fictional-personal-B',workspace:null,credential:'FICTIONAL-PROVIDER-SECRET'});
   const jobs=new HostedJobs(hosted);await jobs.enqueue(owner,completed.connectionId!);await jobs.runOne();
-  await page.getByRole('button',{name:'Check sign-in',exact:true}).click();await page.getByText('Account verified',{exact:true}).waitFor();await page.getByLabel('Nickname (optional)').fill('Hosted Personal');await page.getByRole('button',{name:'Save account',exact:true}).click();
+  const checked=await page.evaluate(id=>chrome.runtime.sendMessage({type:'hosted-attempt',id}),attemptId);assert.equal(checked.ok,true);assert.equal(checked.data.state,'connected');
+  const renamed=await page.evaluate(id=>chrome.runtime.sendMessage({type:'hosted-action',id,action:'rename',alias:'Hosted Personal'}),completed.connectionId!);assert.equal(renamed.ok,true);
   await page.getByRole('button',{name:'Overview',exact:true}).click();await page.getByRole('button',{name:'Details for Hosted Personal',exact:true}).waitFor();await page.getByRole('button',{name:'Details for Website Work',exact:true}).waitFor();
   const publicData=await page.evaluate(()=>chrome.runtime.sendMessage({type:'state'}));assert.ok(!JSON.stringify(publicData).includes('FICTIONAL-PROVIDER-SECRET'));assert.equal(publicData.data.accounts.length,2);
   const privateData=await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:sync:private:v1'))['mylimits:sync:private:v1'] as {enabled:boolean});assert.equal(privateData.enabled,false);

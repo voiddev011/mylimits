@@ -526,7 +526,7 @@ test('independent setup verifies the new account, keeps the old identity and ope
  expect(JSON.stringify(saved)).not.toContain('auth.openai.com');
  // Setup progress survives view closure; privacy hides transient identity as well.
  await worker.evaluate(async()=>{const data=(await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store;data.settings.privacyMode=true;await chrome.storage.local.set({'mylimits:state:v2':data});});
- await page.reload();await page.getByRole('button',{name:'Add account',exact:true}).click();
+ await page.reload();await page.getByRole('contentinfo').getByRole('button',{name:'Add account',exact:true}).click();
  await page.getByRole('button',{name:/OpenAI · ChatGPT/}).click();
  await page.getByRole('button',{name:'Connect another account',exact:true}).click();
  await expect(page.getByText('work@example.test',{exact:true})).toHaveCount(0);

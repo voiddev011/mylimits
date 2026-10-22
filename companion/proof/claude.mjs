@@ -22,8 +22,8 @@ export function claudeIdentity(value, expectedDirectory, platform = process.plat
   return { binding: JSON.stringify([email, org]), display: email, organizationId: org, confidence: org ? 'email-and-organization' : 'email-only', plan };
 }
 
-export async function readClaudeIdentity({ executable, home, workspace, env, signal }) {
-  const { code, output } = await runCli(executable, ['auth', 'status'], { env, cwd: workspace, signal });
+export async function readClaudeIdentity({ executable, home, workspace, env, signal, trackProcess }) {
+  const { code, output } = await runCli(executable, ['auth', 'status'], { env, cwd: workspace, signal,trackProcess });
   if (code !== 0) throw new ProbeError('needs-sign-in', 'Claude Code is not signed into this proof profile.');
   let value;
   try { value = JSON.parse(output); } catch { throw new ProbeError('unsupported-format', 'Claude auth status returned an unsupported format.'); }
@@ -114,7 +114,7 @@ export function stopProbeTerminal(child, alreadyExited = false, timeout = 7000, 
 }
 
 /** A fresh process per explicit check. Only /usage and terminal replies are sent. */
-export async function probeClaudeUsage({ executable, workspace, env, timeout = 30_000, settleMs = 800, dependencies, signal }) {
+export async function probeClaudeUsage({ executable, workspace, env, timeout = 30_000, settleMs = 800, dependencies, signal, trackProcess }) {
   const { spawnPty, Terminal } = dependencies ?? await loadTerminalDependencies();
   if (signal?.aborted) throw new ProbeError('cancelled', 'Check cancelled.');
   const [file, args] = command(executable, claudeProbeArguments());
@@ -122,6 +122,8 @@ export async function probeClaudeUsage({ executable, workspace, env, timeout = 3
   let child;
   try { child = spawnPty(file, args, { name: 'xterm-256color', cols: 120, rows: 50, cwd: workspace, env, useConpty: true }); }
   catch { terminal.dispose(); throw new ProbeError('terminal-unavailable', 'Could not start the Claude terminal. See diagnostic setup instructions.'); }
+  const ownership=Promise.resolve(trackProcess?.(child,file));
+  ownership.catch(()=>{});
   return new Promise((resolve, reject) => {
     let done = false, sent = false, size = 0, settling, exited = false;
     const subscriptions = [];
@@ -132,9 +134,9 @@ export async function probeClaudeUsage({ executable, workspace, env, timeout = 3
       terminal.dispose();
       // kill() is asynchronous on Windows. Do not hand a result to the caller
       // or release its ownership lock while the profile process still runs.
-      void stopProbeTerminal(child, exited).then(stopped => {
+      void stopProbeTerminal(child, exited).then(async stopped => {
         if (!stopped) reject(new ProbeError('terminal-stop-unconfirmed', 'Could not confirm the probe terminal stopped. Close the diagnostic and check its owned processes before restarting.'));
-        else error ? reject(error) : resolve(result);
+        else {try{const release=await ownership;await release?.();}catch{reject(new ProbeError('terminal-stop-unconfirmed','Desktop process recovery requires setup repair.'));return;}error ? reject(error) : resolve(result);}
       });
     };
     const abort = () => finish(new ProbeError('cancelled', 'Check cancelled.'));
@@ -172,5 +174,6 @@ export async function probeClaudeUsage({ executable, workspace, env, timeout = 3
       });
     }));
     subscriptions.push(child.onExit(() => { exited = true; finish(new ProbeError('cli-stopped', 'Claude stopped before a supported usage panel could be read.')); }));
+    void ownership.catch(()=>finish(new ProbeError('terminal-stop-unconfirmed','Desktop process recovery requires setup repair.')));
   });
 }
