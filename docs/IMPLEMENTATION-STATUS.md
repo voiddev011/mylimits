@@ -11,7 +11,7 @@ The user accepts a desktop app alongside the extension. Execute
 isolated official provider profiles and combined account quotas. The installer-free
 hosted route is deferred. It was not completed by earlier infrastructure work.
 
-## Actual implementation baseline
+## Baseline before this feature branch (historical)
 
 - Existing: website tracking, compact popup/dashboard/logos, aliases/history,
   local independent account service, official Codex and experimental Claude CLI
@@ -37,11 +37,11 @@ hosted route is deferred. It was not completed by earlier infrastructure work.
 | D03 Claude isolated-account integration/proof | IMPLEMENTED experimental path | PENDING |
 | D04 Identity/contracts/migration | IMPLEMENTED + automated checks pass | PENDING where relevant |
 | D05 Refresh/process ownership | IMPLEMENTED + automated checks pass | PENDING |
-| D06 Desktop/native bridge | IMPLEMENTED; native transport test passes | Windows PENDING |
-| D07 Extension + connection journey | IMPLEMENTED; Chromium fixtures pass | Windows PENDING |
+| D06 Desktop/native bridge | IMPLEMENTED; Linux and Windows transport tests pass | Real Windows browser PENDING |
+| D07 Extension + connection journey | IMPLEMENTED; 31 Chromium fixtures pass | Real Windows browser PENDING |
 | D08 Guided installer/bootstrapper | IMPLEMENTED; actual EXE compiled | Clean Windows PENDING |
 | D09 Update/uninstall/packages | IMPLEMENTED; local lifecycle/payload checks pass | Clean Windows PENDING |
-| D10 Acceptance and handoff | PENDING | Both providers PENDING |
+| D10 Acceptance and handoff | Packages/checks delivered; handoff recorded below | Both providers PENDING; feature incomplete |
 
 ## Documentation checkpoint — this task
 
@@ -260,3 +260,26 @@ automated tests, live verification and blocked/unverified work.
 - All provider fixtures are simulated. No live account, clean laptop installation,
   publication eligibility or real quota freshness has been established.
 - Next: D10 final CI, artifacts/checksums, install instructions and live-test handoff.
+
+## D10 — final validation and recovery follow-up
+
+- Full Chromium suite: 31 passed. Linux check/typecheck/core/native/build and
+  Chrome/Edge/Firefox package contracts passed; clean Chrome/Firefox archives and
+  checksum files generated. Windows CI run 39732012852 at b260d3c passed all three
+  jobs, including real Windows parser/GUI construction, executable rollback and
+  owned/unrelated-process shutdown assertions, NSIS packaging and existing server
+  transport regressions. No interactive account sign-in was performed.
+- Retrieved and hash-verified that run's actual Windows EXE (1499970 bytes).
+  Guided setup itself, official runtime acquisition on a clean laptop, account
+  login, A/B browser isolation and independent provider freshness remain PENDING.
+- Final inspection found crash/reboot markers could unnecessarily require repair
+  after their process had exited. Startup now clears only records whose process is
+  confirmed absent by the OS. Live, reused or inaccessible PIDs stay fenced until
+  guided ownership repair; no process is killed by the daemon's recovery check.
+  Added actual subprocess-exit/restart coverage, plus clearer UI repair instructions.
+- Latest `npm run check`: passed (109 core, 20 legacy native, 24 connections,
+  4 native/runtime tests, typecheck/build). Desktop payload test passed. This
+  recovery fix changes the Desktop artifact; final CI/artifact hashes will be
+  recorded at the delivery checkpoint rather than reusing b260d3c's EXE hash.
+- Next: push this final code checkpoint, inspect its Windows CI, then finish
+  installation/privacy/architecture/handoff documentation with matching artifacts.

@@ -5,8 +5,13 @@ import {atomicJson} from './proof/store.mjs';
 export class OwnedProcesses {
  constructor(directory){this.file=path.join(directory,'owned-processes.json');this.entries=new Map();this.saving=Promise.resolve();}
  async assertClean(){
-  let value;try{value=JSON.parse(await readFile(this.file,'utf8'));}catch(error){if(error.code==='ENOENT')return;throw Error('Desktop process recovery needs setup repair.');}
-  if(value.version!==1||!Array.isArray(value.processes)||value.processes.length)throw Error('Desktop process recovery needs setup repair.');
+  let value;try{const text=await readFile(this.file,'utf8');if(Buffer.byteLength(text)>65536)throw Error();value=JSON.parse(text);}catch(error){if(error.code==='ENOENT')return;throw Error('Desktop process recovery needs setup repair.');}
+  if(value.version!==1||!Array.isArray(value.processes)||value.processes.length>100||value.processes.some(p=>!Number.isSafeInteger(p?.pid)||p.pid<1||typeof p.executable!=='string'||!path.isAbsolute(p.executable)||!Number.isSafeInteger(p.startedAt)||p.startedAt<0))throw Error('Desktop process recovery needs setup repair.');
+  // OS restart/crash may leave a record after its process has already exited.
+  // Only ESRCH proves absence. A live/reused/inaccessible PID stays fenced until
+  // guided repair can inspect its ownership/lifetime; never kill by PID here.
+  for(const p of value.processes){try{process.kill(p.pid,0);throw Error('Desktop process recovery needs setup repair.');}catch(error){if(error.code!=='ESRCH')throw Error('Desktop process recovery needs setup repair.');}}
+  if(value.processes.length)await this.save();
  }
  async track(child,executable=child?.spawnfile){
   if(!Number.isInteger(child?.pid)||child.pid<1)return async()=>{};

@@ -23,7 +23,7 @@ const errors: Record<string,string> = {
   busy: 'This account already has an operation in progress.',
   'provider-unavailable': 'Independent connections for this provider are not available yet.',
   'logout-unconfirmed': 'Sign-out was not confirmed. Credentials and dated readings were retained; retry disconnect.',
-  'service-unavailable': 'Restart the account helper before trying again.',
+  'service-unavailable': 'Reopen MyLimits Desktop setup to repair or update it before trying again.',
   'stale-confirmation': 'This sign-in changed or expired. Check the account again before confirming.',
 };
 export function listenCompanion(listener: typeof onSnapshot) { onSnapshot = listener; }
