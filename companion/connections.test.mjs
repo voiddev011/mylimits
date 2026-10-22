@@ -154,6 +154,31 @@ test('legacy index migrates IDs without touching profile credentials', async t =
   assert.equal(upgraded.get(id).id, id); assert.equal(upgraded.get(id).status, 'unavailable');
   assert.equal(await readFile(path.join(directory, 'profiles.json'), 'utf8'), JSON.stringify([id])); await upgraded.close();
 });
+test('desktop metadata migration backs up once and preserves account history, aliases and config',async t=>{
+ const {service,idle,directory}=await fixture(t);const {profile}=await service.add('openai','Existing name');await idle();
+ const home=path.join(directory,'accounts',profile);await writeFile(path.join(home,'config.toml'),'# user-owned options\n');
+ await service.withClient(service.get(profile),async()=>{});
+ assert.equal(await readFile(path.join(home,'config.toml'),'utf8'),'# user-owned options\n');
+ await service.close();const file=path.join(directory,'connections-v2.json');const state=JSON.parse(await readFile(file,'utf8'));
+ delete state.revision;for(const p of state.profiles){delete p.confirmed;delete p.displayIdentity;}
+ const before=JSON.stringify(state);await writeFile(file,before);
+ const restored=new Connections({directory});await restored.load();
+ assert.equal(restored.get(profile).alias,'Existing name');assert.equal(restored.get(profile).confirmed,true);
+ assert.equal(restored.get(profile).updatedAt,state.profiles[0].updatedAt);
+ assert.deepEqual(restored.get(profile).meters,state.profiles[0].meters);
+ assert.equal(await readFile(path.join(directory,'connections-pre-desktop.json'),'utf8'),before);
+ await restored.close();const again=new Connections({directory});await again.load();await again.close();
+ assert.equal(await readFile(path.join(directory,'connections-pre-desktop.json'),'utf8'),before);
+});
+test('pending account confirmation resumes after service restart without publishing a fresh quota',async t=>{
+ const {service,idle,directory}=await fixture(t);const {profile}=await service.add();await idle(false);
+ const generation=service.get(profile).generation;await service.close();
+ const restored=new Connections({directory,makeClient:service.makeClient});await restored.load();
+ assert.equal(restored.get(profile).authState,'awaiting-confirmation');assert.equal(restored.get(profile).generation,generation);
+ assert.equal(restored.get(profile).updatedAt,0);assert.ok(restored.get(profile).displayIdentity);
+ await restored.refreshAll();assert.equal(restored.get(profile).updatedAt,0);
+ await restored.confirm(profile,generation);assert.equal(restored.get(profile).authState,'connected');await restored.close();
+});
 test('missing Claude dependency is explicit and allocates no misleading profile', async t => {
   const { service } = await fixture(t);
   await assert.rejects(service.add('claude', 'Work'), e => e.code === 'provider-unavailable');

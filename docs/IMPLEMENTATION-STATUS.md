@@ -35,7 +35,7 @@ hosted route is deferred. It was not completed by earlier infrastructure work.
 | D01 Existing local path audit/reproduction | COMPLETE | Not provider proof |
 | D02 OpenAI isolated-account integration/proof | IMPLEMENTED; user-run proof pending | PENDING |
 | D03 Claude isolated-account integration/proof | IMPLEMENTED experimental path | PENDING |
-| D04 Identity/contracts/migration | PENDING audit and changes | PENDING where relevant |
+| D04 Identity/contracts/migration | IMPLEMENTED + automated checks pass | PENDING where relevant |
 | D05 Refresh/process ownership | PENDING audit and changes | PENDING |
 | D06 Desktop/native bridge | PENDING audit and changes | Windows PENDING |
 | D07 Extension + connection journey | PENDING | Windows PENDING |
@@ -135,3 +135,17 @@ automated tests, live verification and blocked/unverified work.
   unmodified end-user CLI sign-in from third-party credential collection. No Claude
   binary is modified/redistributed; public product/distribution review remains open.
 - Next: D04 additive metadata backup/migration and pending confirmation recovery.
+
+## D04 — additive migration and restart recovery
+
+- Retained version-2 file/connection/account IDs; added metadata revision 1 with
+  one-time owner-only metadata backup before upgrading old files. Provider credential
+  directories are neither copied nor parsed. Existing aliases/readings/history remain.
+- Pending confirmation now survives service restart with its reported identity and
+  generation. Restarts do not publish fresh readings. Existing official Codex config
+  is no longer overwritten on every check. Invalid new fields fail validation.
+- Changed companion/connections.mjs and connections.test.mjs.
+- `npm run test:connections`: 23 passed; `npm run typecheck`: passed;
+  `npm test`: 109 passed. Migration, existing config, old IDs and confirmation
+  recovery are simulated local tests, not real provider behavior.
+- Next: D05 refresh scheduling, serialized sign-in and process ownership.

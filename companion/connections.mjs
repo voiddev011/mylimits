@@ -31,7 +31,9 @@ function savedProfile(p) {
   if (!uuid(p?.id) || !['openai','claude'].includes(p.provider) || !aliases(p.alias) || !Number.isSafeInteger(p.generation) || p.generation < 0 ||
     p.binding !== null && !/^[a-f0-9]{64}$/.test(p.binding) || !time(p.updatedAt) ||
     p.lastAttemptAt !== null && !time(p.lastAttemptAt) || p.nextRetryAt !== null && !time(p.nextRetryAt) ||
-    !Number.isSafeInteger(p.failures) || p.failures < 0 || !Array.isArray(p.meters) || p.meters.length > 30) throw failure('invalid-cache');
+    !Number.isSafeInteger(p.failures) || p.failures < 0 || !Array.isArray(p.meters) || p.meters.length > 30 ||
+    p.confirmed !== undefined && typeof p.confirmed !== 'boolean' ||
+    p.displayIdentity != null && (typeof p.displayIdentity !== 'string' || p.displayIdentity.length > 254 || /[\x00-\x1f\x7f]/.test(p.displayIdentity))) throw failure('invalid-cache');
   // Re-normalize persisted meters with the same allowlist as upstream responses.
   const meters = p.meters.map(m => {
     if (!m || !(p.provider === 'openai' ? /^[a-zA-Z0-9_-]{1,70}-(primary|secondary)$/.test(m.id) : ['session','week-all','week-sonnet','week-opus'].includes(m.id)) || typeof m.label !== 'string' || m.label.length > 120 ||
@@ -43,7 +45,7 @@ function savedProfile(p) {
   return { ...empty(p.id,p.provider), alias: p.alias, generation: p.generation, binding: p.binding, plan: typeof p.plan === 'string' && /^[\w-]{1,80}$/.test(p.plan) ? p.plan : null,
     updatedAt: p.updatedAt, meters, lastAttemptAt: p.lastAttemptAt, nextRetryAt: p.nextRetryAt, failures: p.failures,
     // Restart never makes old readings current. Explicit logout stays signed out.
-    authState: p.authState === 'disconnected' ? 'disconnected' : p.authState === 'needs-sign-in' ? 'needs-sign-in' : 'unavailable',
+    authState: p.authState === 'awaiting-confirmation' && p.confirmed === false ? 'awaiting-confirmation' : p.authState === 'disconnected' ? 'disconnected' : p.authState === 'needs-sign-in' ? 'needs-sign-in' : 'unavailable',
     confirmed: typeof p.confirmed === 'boolean' ? p.confirmed : true,
     displayIdentity: typeof p.displayIdentity === 'string' && p.displayIdentity.length <= 254 ? p.displayIdentity : null,
     identityConfidence: p.identityConfidence==='email-and-organization'?'email-and-organization':'email-only', workspaceIdentity: typeof p.workspaceIdentity==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(p.workspaceIdentity)?p.workspaceIdentity:null,
@@ -63,9 +65,15 @@ export class Connections extends EventEmitter {
       const text = await readFile(file, 'utf8');
       if (Buffer.byteLength(text) > 512 * 1024) throw failure('invalid-cache');
       const state = JSON.parse(text);
-      if (state.version !== 2 || !uuid(state.salt) || !Array.isArray(state.profiles) || state.profiles.length > 20) throw failure('invalid-cache');
+      if (state.version !== 2 || state.revision !== undefined && state.revision !== 1 || !uuid(state.salt) || !Array.isArray(state.profiles) || state.profiles.length > 20) throw failure('invalid-cache');
       this.salt = state.salt;
       for (const p of state.profiles) { const profile = savedProfile(p); if (this.profiles.has(profile.id)) throw failure('invalid-cache'); this.profiles.set(profile.id, profile); }
+      if (state.revision === undefined) {
+        // Metadata-only backup; never copy/open first-party credential stores.
+        try { await writeFile(path.join(this.directory,'connections-pre-desktop.json'),text,{flag:'wx',mode:0o600}); }
+        catch (error) { if(error.code!=='EEXIST')throw error; }
+        await this.save();
+      }
     } catch (error) {
       if (error.code !== 'ENOENT') throw failure('invalid-cache');
       let ids = [];
@@ -78,7 +86,7 @@ export class Connections extends EventEmitter {
     }
   }
   save() {
-    const payload = { version: 2, salt: this.salt, profiles: [...this.profiles.values()].map(p => ({
+    const payload = { version: 2, revision: 1, salt: this.salt, profiles: [...this.profiles.values()].map(p => ({
       id: p.id, provider: p.provider, alias: p.alias, generation: p.generation, binding: p.binding,
       confirmed: p.confirmed, displayIdentity: p.displayIdentity ?? null,
       authState: p.authState, plan: p.plan, updatedAt: p.updatedAt, meters: p.meters,
@@ -123,7 +131,8 @@ export class Connections extends EventEmitter {
   async withClient(p, task) {
     const home = path.join(this.directory, 'accounts', p.id);
     await privateDirectory(path.join(this.directory, 'accounts')); await privateDirectory(home);
-    await writeFile(path.join(home, 'config.toml'), 'cli_auth_credentials_store = "auto"\n', { mode: 0o600 });
+    try { await writeFile(path.join(home, 'config.toml'), 'cli_auth_credentials_store = "auto"\n', { flag:'wx',mode:0o600 }); }
+    catch (error) { if(error.code!=='EEXIST')throw error; }
     const client = this.makeClient({ executable: this.executable, home, environment: profileEnvironment('openai', home) });
     this.clients.add(client);
     try { await client.ready; return await task(client); }
