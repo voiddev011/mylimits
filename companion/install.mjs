@@ -12,17 +12,24 @@ if (!windows && process.platform !== 'linux') throw new Error('This installer su
 const args = process.argv.slice(2);
 const option = name => { const index = args.indexOf(name); return index < 0 ? undefined : args[index + 1]; };
 const extensionId = option('--extension-id');
-if (!extensionId || !/^[a-p]{32}$/.test(extensionId)) throw new Error('Provide --extension-id with the ID shown in chrome://extensions.');
 const browserName = option('--browser') ?? 'chrome';
 const browserDirs = { chrome: 'google-chrome', chromium: 'chromium', brave: 'BraveSoftware/Brave-Browser',edge:'microsoft-edge' };
-if (!Object.hasOwn(browserDirs, browserName)) throw new Error('--browser must be chrome, chromium, brave or edge.');
+let targets=[{id:extensionId,browser:browserName}];
+if(option('--registrations-file')){
+ const file=option('--registrations-file');if(!path.isAbsolute(file))throw new Error('Desktop registration file must be absolute.');
+ const text=await readFile(file,'utf8');if(Buffer.byteLength(text)>16384)throw new Error('Too many Desktop registrations.');
+ targets=JSON.parse(text);
+}
+if(!Array.isArray(targets)||!targets.length||targets.length>100||targets.some(t=>!t||!/^[a-p]{32}$/.test(t.id)||!Object.hasOwn(browserDirs,t.browser)))throw new Error('Desktop registration needs detected MyLimits extension IDs and supported browsers.');
 let executable = option('--codex');
-if (!executable) { try { executable = execFileSync(windows ? 'where.exe' : 'which', [windows ? 'codex.cmd' : 'codex'], { encoding: 'utf8' }).trim().split(/\r?\n/)[0]; } catch { throw new Error('Install Codex first: npm install -g @openai/codex'); } }
+const withoutOpenAI=args.includes('--without-openai');
+if (!executable && !withoutOpenAI) { try { executable = execFileSync(windows ? 'where.exe' : 'which', [windows ? 'codex.cmd' : 'codex'], { encoding: 'utf8' }).trim().split(/\r?\n/)[0]; } catch { throw new Error('Install OpenAI support through MyLimits Desktop setup.'); } }
+if(!executable&&withoutOpenAI)executable='codex';
 if (windows && /\.(cmd|bat)$/i.test(executable)) {
   executable = path.join(path.dirname(executable), 'node_modules', '@openai', 'codex', 'bin', 'codex.js');
 }
-if (!path.isAbsolute(executable)) throw new Error('--codex must be an absolute path.');
-execFileSync(/\.m?js$/i.test(executable) ? process.execPath : executable, [...(/\.m?js$/i.test(executable) ? [executable] : []), '--version'], { stdio: 'ignore' });
+if (!withoutOpenAI && !path.isAbsolute(executable)) throw new Error('--codex must be an absolute path.');
+if(!withoutOpenAI)execFileSync(/\.m?js$/i.test(executable) ? process.execPath : executable, [...(/\.m?js$/i.test(executable) ? [executable] : []), '--version'], { stdio: 'ignore' });
 const source = path.dirname(fileURLToPath(import.meta.url));
 await mkdir(dataDir, { recursive: true, mode: 0o700 });
 if (windows) {
@@ -58,15 +65,19 @@ const quote = value => "'" + value.replaceAll("'", "'\\''") + "'";
 const launcher = path.join(dataDir, windows ? 'native-host.cmd' : 'native-host');
 await writeFile(launcher, windows ? batchLauncher(process.execPath, path.join(runtime, 'host.mjs')) : `#!/bin/sh\nexec ${quote(process.execPath)} ${quote(path.join(runtime, 'host.mjs'))} "$@"\n`, { mode: 0o700 });
 if (!windows) await chmod(launcher, 0o700);
-const manifestDir = windows ? path.join(dataDir, 'manifests', browserName) : path.join(homedir(), '.config', browserDirs[browserName], 'NativeMessagingHosts');
+for(const {id:targetId,browser:targetBrowser} of targets){
+const manifestDir = windows ? path.join(dataDir, 'manifests', targetBrowser) : path.join(homedir(), '.config', browserDirs[targetBrowser], 'NativeMessagingHosts');
 await mkdir(manifestDir, { recursive: true, mode: 0o700 });
 const manifestPath = path.join(manifestDir, hostName + '.json');
 let origins = [];
 try { origins = JSON.parse(await readFile(manifestPath, 'utf8')).allowed_origins ?? []; } catch (error) { if (error.code !== 'ENOENT') throw new Error('Existing native-host manifest is invalid.'); }
-origins = [...new Set([...origins.filter(origin => /^chrome-extension:\/\/[a-p]{32}\/$/.test(origin)), `chrome-extension://${extensionId}/`])];
+origins = [...new Set([...origins.filter(origin => /^chrome-extension:\/\/[a-p]{32}\/$/.test(origin)), `chrome-extension://${targetId}/`])];
 await writeFile(manifestPath, JSON.stringify({ name: hostName, description: 'MyLimits independent account helper', path: launcher, type: 'stdio', allowed_origins: origins }, null, 2), { mode: 0o600 });
 if (windows) {
-  execFileSync('reg.exe', ['ADD', `${registryRoots[browserName]}\\${hostName}`, '/ve', '/t', 'REG_SZ', '/d', manifestPath, '/f'], { stdio: 'ignore' });
+  execFileSync('reg.exe', ['ADD', `${registryRoots[targetBrowser]}\\${hostName}`, '/ve', '/t', 'REG_SZ', '/d', manifestPath, '/f'], { stdio: 'ignore' });
+}
+}
+if(windows){
   try {
     execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encodedPowerShell(taskScript(process.execPath, path.join(runtime, 'daemon.mjs'), executable, dataDir))], { stdio: 'pipe' });
     console.log('Windows companion registered and startup task requested. Reload MyLimits and connect an independent OpenAI or Claude account.');

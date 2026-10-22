@@ -24,7 +24,9 @@
     "test:account-proof": "node --test companion/proof/proof.test.mjs",
     "test:connections": "node --test --test-timeout=45000 companion/connections.test.mjs",
     "probe:hosted": "node scripts/probe-hosted-login.mjs",
-    "test:hosted-probe": "node --test companion/proof/hosted-login.test.mjs"
+    "test:hosted-probe": "node --test companion/proof/hosted-login.test.mjs",
+    "package:desktop": "node scripts/package-desktop.mjs",
+    "test:desktop-package": "node --test scripts/desktop-package.test.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

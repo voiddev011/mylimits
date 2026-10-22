@@ -39,7 +39,7 @@ hosted route is deferred. It was not completed by earlier infrastructure work.
 | D05 Refresh/process ownership | IMPLEMENTED + automated checks pass | PENDING |
 | D06 Desktop/native bridge | IMPLEMENTED; native transport test passes | Windows PENDING |
 | D07 Extension + connection journey | IMPLEMENTED; Chromium fixtures pass | Windows PENDING |
-| D08 Guided installer/bootstrapper | PENDING | Clean Windows PENDING |
+| D08 Guided installer/bootstrapper | IMPLEMENTED; actual EXE compiled | Clean Windows PENDING |
 | D09 Update/uninstall/packages | PENDING | Clean Windows PENDING |
 | D10 Acceptance and handoff | PENDING | Both providers PENDING |
 
@@ -205,3 +205,27 @@ automated tests, live verification and blocked/unverified work.
   or Windows browser acceptance is claimed. Stable signed public download/store IDs
   remain release prerequisites, not completed by a test setup link.
 - Next: D08 guided per-user bootstrapper and measured dependency downloads.
+
+## D08 — guided Windows bootstrapper built
+
+- Added a guided WinForms setup that detects MyLimits installations automatically,
+  selects providers, verifies official archive/executable integrity, displays download
+  progress, registers all detected browsers in one operation and checks daemon
+  readiness before success. No ID copying, npm or terminal commands are required.
+- Node/Codex are acquired from pinned official sources only when needed; unmodified
+  Claude uses its official WinGet installation with provider/Windows prompts. Shared
+  private runtimes are reused by pinned executable hash. No Chromium is bundled.
+- Lean Windows payload preserves executable PTY dependencies/licenses while excluding
+  debug symbols, maps, other-platform builds, source/tests and provider credentials.
+  Default packaging is online; an explicitly larger offline option remains available.
+- Changed Windows setup/runtime/NSIS, install.mjs batch registration, new
+  desktop-health.mjs, desktop package builder/test, dependency metadata, licensing,
+  npm commands and Windows CI packaging/parser tests.
+- `npm run test:desktop-package`: 1 passed; JavaScript syntax checks passed.
+  Compiled an actual unsigned setup EXE with isolated Debian NSIS 3.08 (no admin
+  install). Initial bootstrapper ~1.56 MB, payload ~3.09 MB, versus old 211.31 MB EXE.
+  Node download remains 37733703 bytes; selected Codex adds 167618721 bytes.
+  Installed official runtimes remain large. Final checksums/sizes follow D09/D10.
+- Windows PowerShell parser/GUI/download/install execution is pending Windows CI
+  and interactive acceptance. Compiling an EXE is not proof of a clean Windows install.
+- Next: D09 staged upgrade/rollback and owned process-tree shutdown/uninstall.
