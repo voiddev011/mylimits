@@ -1,5 +1,7 @@
 # Provider support and acceptance — Phase 2
 
+> Historical support/acceptance reference. Use [current status](IMPLEMENTATION-STATUS.md) and [the desktop plan](DESKTOP-ACCOUNTS-IMPLEMENTATION-PLAN.md) for the current execution scope.
+
 Code/fixture verification does not establish live provider support. All quota
 readers remain **live-unverified prototypes** until tested with the relevant
 signed-in plan. See the dated [capability matrix](PROVIDER-CAPABILITIES.md) and

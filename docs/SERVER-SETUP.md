@@ -1,8 +1,10 @@
 # Optional snapshot service — local setup
 
+> Operational reference for existing optional server features. Local independent accounts follow [the desktop plan](DESKTOP-ACCOUNTS-IMPLEMENTATION-PLAN.md) and do not require this server.
+
 Phase 2 builds a separate TypeScript/Fastify/PostgreSQL service in `server/`.
 Local extension tracking does not require it. It is **snapshot-only**; hosted
-provider collection is disabled by the [feasibility gate](HOSTED-FEASIBILITY.md).
+provider collection is disabled by the [feasibility gate](IMPLEMENTATION-HISTORY.md).
 
 ## Run
 
@@ -254,4 +256,4 @@ Private operator smoke in this workspace: image built, API+worker started as
 non-root with read-only filesystem; /health200, capabilities unavailable200 and
 unauthenticated hosted list401. Idle memory snapshot API82.68MiB/worker90.45MiB
 with zero providers/accounts; active provider runtime costs are unmeasured.
-See [handoff](HOSTED-ACCOUNTS-HANDOFF.md) for exact verification limits.
+See [handoff](IMPLEMENTATION-HISTORY.md) for exact verification limits.

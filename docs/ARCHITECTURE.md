@@ -1,5 +1,7 @@
 # Current hosted foundation extension
 
+> Existing implementation reference. The active [desktop plan](DESKTOP-ACCOUNTS-IMPLEMENTATION-PLAN.md) describes the proposed next changes; no new Desktop runtime is delivered by the documentation update.
+
 Version3.3 adds `src/core/hosted-contracts.ts` (strict public metadata),
 `src/core/hosted.ts` (additive local projection), `src/platform/hosted.ts`
 (background-only API/auth-window routing), and capability-aware + UI.
@@ -18,8 +20,8 @@ accounts by email or nickname. Existing local IDs/preferences/IndexedDB history
 are preserved. History mirrors are bounded; immutable server/IndexedDB records
 retain their original successful fetch/observation timestamps.
 
-See [current plan](INDEPENDENT-ACCOUNTS-FINAL-PLAN.md),
-[handoff](HOSTED-ACCOUNTS-HANDOFF.md) and [operator setup](SERVER-SETUP.md).
+See [current plan](DESKTOP-ACCOUNTS-IMPLEMENTATION-PLAN.md),
+[handoff](IMPLEMENTATION-HISTORY.md) and [operator setup](SERVER-SETUP.md).
 The older architecture below records the earlier Phase2 baseline; Guide was
 removed in3.0 and is not restored by this work.
 

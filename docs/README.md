@@ -1,45 +1,37 @@
-# MyLimits — hosted foundation preview (3.3)
+# MyLimits — documentation
 
-Your AI account readings in one browser dashboard. Website tracking is available;
-**installer-free independent OpenAI/Claude connections remain blocked** pending
-supported hosted authorization and actual account acceptance.
+MyLimits brings AI account readings into one compact browser dashboard.
+Website tracking exists. The active upgrade is **MyLimits Desktop + extension**:
+separate official OpenAI/Codex and Claude profiles, combined in the extension.
+Real two-account freshness/login acceptance remains pending for both providers.
 
-[Install/test](INSTALL.md) · [Status](IMPLEMENTATION-STATUS.md) ·
-[Plan](INDEPENDENT-ACCOUNTS-FINAL-PLAN.md) · [Current handoff](INDEPENDENT-ACCOUNTS-FINAL-HANDOFF.md)
+## Implementation
 
-## Current behavior
+- [Start here](START-HERE.md)
+- [Active desktop implementation plan](DESKTOP-ACCOUNTS-IMPLEMENTATION-PLAN.md)
+- [Current status](IMPLEMENTATION-STATUS.md)
+- [Sol 6.1 starter prompt](STARTER-PROMPT.md)
+- [Historical evidence and consolidated checkpoints](IMPLEMENTATION-HISTORY.md)
+- [Competitor research](COMPETITOR-RESEARCH.md)
 
-- + beside each service offers Use current account or Connect another account.
-- Current-account tracking uses the website login already in this browser.
-- Independent choices check the hosted service's capabilities. Unsupported
-  providers show Not available yet and do not open an ordinary website tab.
-- Compact popup: real provider logos, aliases, scoped quota bars, reset times,
-  freshness, refresh and Full dashboard. No Guide. No provider on/off switches.
-- Dashboard retains account management, notifications, history, accessibility,
-  permission revocation and optional snapshot sync.
-- Local helper experiments remain optional in advanced Settings. End-user
-  extension packages contain no helper/CLI/server runtimes.
+## Install and operate
 
-## Implemented foundation, not provider proof
+- [Current extension installation](INSTALL.md)
+- [Existing experimental local service](OPENAI-COMPANION.md)
+- [Developer account-proof diagnostic](ACCOUNT-PROOF.md)
+- [Platforms and packaging](PLATFORMS.md)
+- [Provider support and manual acceptance](SUPPORT.md)
 
-The backend and extension support owner-scoped account attempts, verified identity,
-duplicates, cancellation, reconnect, aliases, encrypted server credentials,
-bounded jobs and dated readings. Fictional drivers exercised the real Chromium →
-API → PostgreSQL transport. Production driver maps remain empty. No real account
-was authenticated or quota fetched in this hosted integration.
+## Contracts and reference
 
-OpenAI Codex/Work windows do not represent every ordinary ChatGPT limit. Claude
-subscription usage is distinct from API credits. Cached readings remain dated;
-website logout, provider-wide revocation and credential renewal are separate
-pending live checks. Snapshot sync does not maintain provider login sessions.
+- [Architecture](ARCHITECTURE.md)
+- [Provider capabilities and integration evidence](PROVIDER-CAPABILITIES.md)
+- [Privacy](PRIVACY.md)
+- [Provider assets](PROVIDER-ASSETS.md)
+- [Optional server operations](SERVER-SETUP.md)
+- [Deferred hosted provider-access drafts](PROVIDER-ACCESS-REQUESTS.md)
 
-## Develop
-
-Node24+, existing lockfiles, one workstream. Start with [START-HERE.md](START-HERE.md).
-Use `npm ci --include=optional`, `npm run build`, `npm test`, `npm run typecheck`
-and the focused suites described in the handoff. Backend tests need an isolated
-PostgreSQL database; browser tests need extension-capable Playwright Chromium.
-[Server operator setup](SERVER-SETUP.md) describes the private deployment package.
-
-[Privacy](PRIVACY.md) · [Architecture](ARCHITECTURE.md) ·
-[Provider scope](PROVIDER-CAPABILITIES.md) · [Research evidence](HOSTED-ACCOUNTS-TRIAL-PLAN.md)
+Project Markdown lives directly in this folder. One execution plan is active.
+Older removed plans and phase ledgers remain in Git history; their unique evidence
+is consolidated above. The current 3.3 preview still defaults to unavailable hosted
+connections; this documentation branch does not switch the product to Desktop.

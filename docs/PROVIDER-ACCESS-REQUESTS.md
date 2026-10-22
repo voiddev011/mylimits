@@ -1,5 +1,7 @@
 # Provider access — prepared requests, not submitted
 
+> Deferred hosted-access reference. The active [desktop plan](DESKTOP-ACCOUNTS-IMPLEMENTATION-PLAN.md) uses local official profiles; these unsent drafts do not block beginning that work.
+
 22 October 2026 (Asia/Calcutta). Product: MyLimits, repository
 `https://github.com/voiddev011/mylimits`.
 **No provider has approved this integration. These drafts are not credentials or
