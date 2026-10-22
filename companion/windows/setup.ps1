@@ -44,7 +44,7 @@ $install.Add_Click({
  }catch{$status.Text=$_.Exception.Message}finally{$install.Enabled=$true}
 })
 $help=New-Object Windows.Forms.Button;$help.Text='Setup help';$help.Location=New-Object Drawing.Point(215,315);$help.Size=New-Object Drawing.Size(180,36);$form.Controls.Add($help)
-$help.Add_Click({Start-Process 'https://github.com/voiddev011/mylimits/blob/feature/independent-accounts/docs/MULTI-ACCOUNT-INSTALL.md'})
+$help.Add_Click({Start-Process 'https://github.com/voiddev011/mylimits/blob/docs/desktop-accounts-execution-plan/docs/OPENAI-COMPANION.md'})
 $close=New-Object Windows.Forms.Button;$close.Text='Close';$close.Location=New-Object Drawing.Point(410,315);$close.Size=New-Object Drawing.Size(180,36);$form.Controls.Add($close);$close.Add_Click({$form.Close()})
 $claudeInstall=New-Object Windows.Forms.Button;$claudeInstall.Text='Install official Claude Code';$claudeInstall.Location=New-Object Drawing.Point(20,365);$claudeInstall.Size=New-Object Drawing.Size(280,36);$form.Controls.Add($claudeInstall)
 $claudeInstall.Add_Click({

@@ -2,8 +2,9 @@
 
 This preview adds provider + choices and the hosted account infrastructure.
 **Real independent OpenAI/Claude sign-in is not enabled.** Both providers show
-“Not available yet”. Website tracking works without the local helper. Do not
-install the old200MB helper to test this new UI.
+“Not available yet”. Website tracking works without the local helper. This
+documentation branch adds no new Desktop installer. The older large helper
+is not required to test website tracking.
 
 ## Windows: update an existing clone
 
@@ -13,8 +14,8 @@ branches; if Git refuses, commit or stash those edits first, never force a reset
 
 ```powershell
 git fetch origin
-git switch feature/independent-provider-proof
-git pull --ff-only origin feature/independent-provider-proof
+git switch docs/desktop-accounts-execution-plan
+git pull --ff-only origin docs/desktop-accounts-execution-plan
 node -v
 npm ci --include=optional
 npm run build
@@ -62,7 +63,8 @@ pending; Linux Chromium results do not certify Windows behavior.
    management stays in Full dashboard. Guide remains removed.
 
 The legacy helper remains under Settings → Legacy local helper · advanced for
-existing experimental users. Its installation guide is [MULTI-ACCOUNT-INSTALL.md](MULTI-ACCOUNT-INSTALL.md).
+existing experimental users. Its [experimental setup guide](OPENAI-COMPANION.md)
+preserves the older installation steps.
 It is not the installer-free hosted experience or a workaround that passes its
 acceptance. Do not infer all ChatGPT limits from Codex/Work readings.
 
@@ -71,8 +73,8 @@ No production hosted service URL is configured in the default package. Replacing
 it requires an operator build, secure deployed service and supported provider
 adapters; no end-user command can enable a missing provider route.
 
-This branch adds a developer-only official-login transport check and records the
-remaining provider access requirements. It does **not** add working independent
+This documentation branch consolidates references and prepares the Desktop
+implementation plan. The earlier developer-only hosted-login transport check remains available. It does **not** add working independent
 account login to the extension. The user interface and version remain 3.3 preview.
 
 ## Update and recovery
@@ -81,4 +83,12 @@ Export important local history before changing installations. For source rollbac
 use a separate checkout/build; do not overwrite uncommitted changes. Keep backups
 outside the source repository and never publish provider credentials. Database
 migrations are additive and forward-only; rollback the operator image, not applied
-migration SQL. See [handoff](HOSTED-ACCOUNTS-HANDOFF.md) for verification and blockers.
+migration SQL. See [handoff](IMPLEMENTATION-HISTORY.md) for verification and blockers.
+
+## Planned Desktop upgrade
+
+The user now accepts one Desktop installation. The [active plan](DESKTOP-ACCOUNTS-IMPLEMENTATION-PLAN.md)
+will connect independent accounts locally instead of the current default hosted
+path. It has not been implemented by this documentation branch. Use
+[STARTER-PROMPT.md](STARTER-PROMPT.md) to begin implementation; pulling this branch
+alone will not enable a new provider sign-in or reduce the old installer size.

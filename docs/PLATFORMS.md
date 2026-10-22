@@ -1,5 +1,7 @@
 # Platform and installer acceptance
 
+> Historical platform notes. Active Windows Desktop work is in [the desktop plan](DESKTOP-ACCOUNTS-IMPLEMENTATION-PLAN.md); real Windows provider acceptance remains pending. Existing packaged helpers bundle Node/Codex; source installs need prerequisites.
+
 Phase 2 builds separate Chrome/Brave, Edge and Firefox MV3 packages. This is an
 unsigned desktop preview, not a store release. Linux Chromium fixtures exercise
 the extension. Actual Windows Chrome/Brave/Edge and Firefox provider/native
