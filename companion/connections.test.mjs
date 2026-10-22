@@ -234,6 +234,29 @@ test('two Claude accounts and an OpenAI account keep identity, usage and logout 
  const restored=new Connections({directory,claudeAdapter:service.claudeAdapter});await restored.load();
  assert.equal(restored.get(b.profile).provider,'claude');assert.equal(restored.get(b.profile).meters[0].usedPercent,40);await restored.close();
 });
+test('Claude confirmation binds organization, retains consent across setup and detects identity changes',async t=>{
+ const {service,idle,advance}=await fixture(t); const states=new Map();
+ service.claudeAdapter={
+  readiness:async()=>({available:true}),
+  context:async(root,generation,signal)=>{const id=path.basename(root);if(!states.has(id))states.set(id,{org:'org-'+id,used:13,setup:true});return {id,generation,signal};},
+  login:async()=>{},
+  identity:async c=>({binding:JSON.stringify(['same@example.test',states.get(c.id).org]),display:'same@example.test',plan:'pro',confidence:'email-and-organization',organizationId:states.get(c.id).org}),
+  usage:async c=>{const s=states.get(c.id);if(s.setup)throw Object.assign(Error('PRIVATE'),{code:'needs-setup'});if(s.changed)s.org='changed';return {meters:[{id:'session',label:'Current session',usedPercent:s.used,resetsAt:null}]};},
+  onboarding:async c=>{states.get(c.id).setup=false;},logout:async()=>{},
+ };
+ const a=await service.add('claude','Work');await idle(false);const p=service.get(a.profile);
+ assert.equal(p.authState,'awaiting-confirmation');assert.equal(p.updatedAt,0);
+ await service.confirm(p.id,p.generation);assert.equal(p.authState,'needs-setup');assert.equal(p.confirmed,true);
+ service.setup(p.id);await idle(false);advance(300001);await service.refresh(p.id,true);
+ assert.equal(p.authState,'connected');assert.equal(p.meters[0].usedPercent,13);
+ states.get(p.id).used=42;advance(300001);await service.refresh(p.id);assert.equal(p.meters[0].usedPercent,42);
+ const b=await service.add('claude','Other workspace');await idle();
+ assert.notEqual(service.get(b.profile).workspaceIdentity,p.workspaceIdentity);
+ assert.equal(service.snapshot().profiles.some(p=>p.possibleDuplicate),false);
+ const before=p.updatedAt;states.get(p.id).changed=true;advance(300001);await service.refresh(p.id);
+ assert.equal(p.errorCode,'identity-changed');assert.equal(p.confirmed,false);assert.equal(p.updatedAt,before);
+ assert.ok(!JSON.stringify(service.snapshot()).includes('PRIVATE'));
+});
 test('Claude browser URL validation requires first-party authorize and local first-party callback', async()=>{
  const {safeAuthUrl}=await import('./protocol.mjs');
  const valid='https://claude.com/cai/oauth/authorize?response_type=code&state=fixture&code_challenge=fixture&redirect_uri='+encodeURIComponent('http://localhost:42345/callback');

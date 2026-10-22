@@ -264,17 +264,23 @@ export class Connections extends EventEmitter {
         // Re-read the CLI-owned identity, not the label shown by the UI.
         // This one collection belongs to the original sign-in operation; it
         // does not start a second authorization or bypass refresh cooldowns.
-        if (p.provider === 'claude') await this.withClaude(p, c => this.readClaude(p, c, generation));
-        else await this.withClient(p, c => this.read(p, c, generation));
-        if (p.authState === 'connected') p.confirmed = true;
+        if (p.provider === 'claude') await this.withClaude(p, async c => {
+          const who = await this.claudeAdapter.identity(c); this.verify(p,who,who,generation);
+          p.confirmed = true; await this.save(); await this.readClaude(p,c,generation);
+        });
+        else await this.withClient(p, async c => {
+          const who = identity(await c.request('account/read',{refreshToken:false})); this.verify(p,who,who,generation);
+          p.confirmed = true; await this.save(); await this.read(p,c,generation);
+        });
       } catch (error) { this.setFailure(p, error); }
       await this.changed(); return {};
     });
   }
   setFailure(p, error) {
-    const codes = ['needs-sign-in', 'identity-changed', 'cancelled', 'login-failed', 'shutdown-unconfirmed', 'terminal-stop-unconfirmed', 'needs-setup', 'unsupported-cli', 'missing-browser-router', 'browser-route-unconfirmed', 'setup-interrupted', 'missing-setup-terminal', 'throttled'];
+    const codes = ['needs-sign-in', 'identity-changed', 'cancelled', 'login-failed', 'shutdown-unconfirmed', 'terminal-stop-unconfirmed', 'needs-setup', 'unsupported-cli', 'unsupported-auth', 'unverified-profile', 'unverified-identity', 'unsupported-panel', 'unsupported-format', 'missing-browser-router', 'browser-route-unconfirmed', 'setup-interrupted', 'missing-setup-terminal', 'throttled'];
     p.errorCode = codes.includes(error?.code) ? error.code : 'unavailable';
     if(['terminal-stop-unconfirmed','shutdown-unconfirmed'].includes(p.errorCode)) this.requiresRecovery=true;
+    if (p.errorCode === 'identity-changed') p.confirmed = false;
     p.authState = ['needs-setup','missing-setup-terminal','setup-interrupted'].includes(p.errorCode) ? 'needs-setup' : ['needs-sign-in', 'identity-changed', 'cancelled', 'login-failed'].includes(p.errorCode) ? 'needs-sign-in' : 'unavailable';
     p.status = p.authState === 'needs-sign-in' ? 'signed-out' : 'unavailable'; p.failures++;
     const backoff = this.now() + Math.min(30 * 60_000, this.interval(p) * 2 ** Math.min(p.failures - 1, 5));

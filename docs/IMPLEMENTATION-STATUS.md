@@ -34,7 +34,7 @@ hosted route is deferred. It was not completed by earlier infrastructure work.
 | --- | --- | --- |
 | D01 Existing local path audit/reproduction | COMPLETE | Not provider proof |
 | D02 OpenAI isolated-account integration/proof | IMPLEMENTED; user-run proof pending | PENDING |
-| D03 Claude isolated-account integration/proof | Existing parts; task PENDING | PENDING |
+| D03 Claude isolated-account integration/proof | IMPLEMENTED experimental path | PENDING |
 | D04 Identity/contracts/migration | PENDING audit and changes | PENDING where relevant |
 | D05 Refresh/process ownership | PENDING audit and changes | PENDING |
 | D06 Desktop/native bridge | PENDING audit and changes | Windows PENDING |
@@ -115,3 +115,23 @@ automated tests, live verification and blocked/unverified work.
 - `npm run typecheck`: passed. No real provider sign-in/quota test was possible.
   Provider subject/workspace stay null where official metadata omits them.
 - Next: D03 Claude-specific identity/freshness/error cases; provider acceptance pending.
+
+## D03 — Claude isolated official-runtime path
+
+- Retained unmodified Claude Code login with per-account CLAUDE_CONFIG_DIR,
+  official BROWSER route, metadata checks around bounded `/usage` reads and scoped
+  official logout. New shared confirmation now applies to Claude too.
+- Consent is retained when verified identity is accepted but the first usage read
+  requires official onboarding. Finishing setup can recover without an inaccessible
+  confirmation loop. Identity change revokes local confirmation and rejects readings.
+- Expanded allowlisted errors for unsupported auth/profile/identity/panel formats;
+  no raw CLI output/token material is sent to the extension.
+- Changed companion/connections.mjs and connections.test.mjs. `npm run
+  test:connections`: 21 passed, including same-email/distinct-organization,
+  explicit confirmation, setup recovery and changed fixture quota/identity cases.
+- These are simulated providers. No real Claude login, idle upstream freshness or
+  account-B browser preservation was tested. Official authentication docs support
+  separate claude.ai config directories; official credential conditions distinguish
+  unmodified end-user CLI sign-in from third-party credential collection. No Claude
+  binary is modified/redistributed; public product/distribution review remains open.
+- Next: D04 additive metadata backup/migration and pending confirmation recovery.
