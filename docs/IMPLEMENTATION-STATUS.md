@@ -1,8 +1,8 @@
 # Current implementation status — Desktop + extension
 
-Updated 22 October 2026. Documentation branch:
-`docs/desktop-accounts-execution-plan`, based on local `745bf2a` from
-`feature/independent-provider-proof`. Working tree was clean before this task.
+Updated 22 October 2026. Working branch:
+`feature/desktop-independent-accounts`, created from clean
+`docs/desktop-accounts-execution-plan` (`3f218f6` locally).
 
 ## Current decision
 
@@ -32,7 +32,7 @@ hosted route is deferred. It was not completed by earlier infrastructure work.
 
 | Task | Code status | Live acceptance |
 | --- | --- | --- |
-| D01 Existing local path audit/reproduction | PENDING | Not provider proof |
+| D01 Existing local path audit/reproduction | COMPLETE | Not provider proof |
 | D02 OpenAI isolated-account integration/proof | Existing parts; task PENDING | PENDING |
 | D03 Claude isolated-account integration/proof | Existing parts; task PENDING | PENDING |
 | D04 Identity/contracts/migration | PENDING audit and changes | PENDING where relevant |
@@ -66,11 +66,33 @@ hosted route is deferred. It was not completed by earlier infrastructure work.
 
 ## Next action
 
-From this documentation branch, create `feature/desktop-independent-accounts`.
-Execute D01 by inspecting existing local service/Windows packaging and running
-focused connection/proof checks, then D02's smallest real OpenAI connection path.
+Execute D02: preserve the real managed OpenAI path and add explicit identity
+confirmation before accepting the connection, then D03's Claude equivalent.
 Do not spend another cycle on hosted scaffolding or a new desktop framework.
 
 After each task record changed files, commands/results and skips, evidence level,
 decisions, blockers and next action. Final reporting separates implementation,
 automated tests, live verification and blocked/unverified work.
+
+## D01 — inspected and reproduced
+
+- Inspected required documents and existing connections, App Server, Claude adapter,
+  isolated browser/router, native host, storage contracts, controller, + UI and
+  Windows installer/dependency packaging. No user edits were present.
+- Gaps: default + selects empty hosted drivers; login presently auto-accepts the
+  reported account; identity is email-only for Codex; installer requires a separate
+  registration GUI, carries all dependencies and has no bootstrapper/update staging.
+- Baseline: `npm run test:account-proof` 30/30 passed and
+  `npm run test:connections` 18/18 passed with real fictional subprocesses/PTYs.
+  Initial sandbox runs failed from EPERM on child-process execution; rerunning
+  the same commands through permitted local execution passed. No tests were weakened.
+- Measured existing unsigned installer: 211310699 bytes. Cached official Node ZIP:
+  37733703 bytes; Codex TGZ: 167618721 bytes. Installed official Codex executable
+  alone is 341270320 bytes; a bootstrapper cannot erase those runtime requirements.
+- Refreshed official App Server/login/rate-limit and Claude auth/credential-use
+  documentation. Official local-profile routes remain the selected integration;
+  public product/distribution eligibility is not claimed from code inspection.
+- Real accounts and a Windows interactive desktop are unavailable. All real-provider
+  matrix rows stay PENDING. No compiler for the Windows installer was found on PATH;
+  build access will be addressed in packaging rather than reporting an EXE prematurely.
+- Changed file: this status ledger. Next: D02 account confirmation and OpenAI tests.
