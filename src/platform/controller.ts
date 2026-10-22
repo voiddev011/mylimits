@@ -285,6 +285,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
       if (command.nickname) await updateStore(store=>({store:{...store,accounts:store.accounts.map(a=>a.companionProfile===profile?{...a,alias:command.nickname!}:a)},value:undefined}));
       break;
     }
+    case 'companion-confirm': await companionRequest('confirm', command.profile, { generation:command.generation,alias:command.alias }); await refreshCompanion(); break;
     case 'companion-action': await companionRequest(command.action, command.profile); await refreshCompanion(); break;
     case 'companion-remove': await companionRequest('remove', command.profile); await refreshCompanion(); break;
     case 'refresh': {

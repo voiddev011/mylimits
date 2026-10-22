@@ -11,7 +11,7 @@ import { atomicJson, privateDirectory, uuid } from './proof/store.mjs';
 import { createClaudeAdapter } from './claude-adapter.mjs';
 import { codexLoginWaiter } from './proof/codex-login.mjs';
 
-export const capabilities = { protocol: 2, version: '3.2.0-preview', providers: [
+export const capabilities = { protocol: 2, version: '3.4.0-preview', identityConfirmation: true, providers: [
   { provider: 'openai', available: true, scope: 'work-codex', isolatedLogin: true, activeRefresh: true, liveVerified: false, reason: 'Live account, cross-device, logout and renewal checks are pending.' },
   { provider: 'claude', available: true, scope: 'subscription', isolatedLogin: true, activeRefresh: true, liveVerified: false, reason: 'Experimental official Claude Code adapter. Account freshness/logout/renewal require manual acceptance; publication review remains separate.' },
 ] };
@@ -24,7 +24,7 @@ function identity(info) {
   return { binding: a.email.trim().toLowerCase(), display: a.email,
     plan: typeof a.planType === 'string' && /^[a-zA-Z0-9_-]{1,80}$/.test(a.planType) ? a.planType : null };
 }
-const empty = (id, provider = 'openai') => ({ id, provider, alias: '', generation: 0, binding: null,
+const empty = (id, provider = 'openai') => ({ id, provider, alias: '', generation: 0, binding: null, confirmed: false,
   authState: 'needs-sign-in', plan: null, updatedAt: 0, meters: [], lastAttemptAt: null,
   providerObservedAt: null, nextRetryAt: null, failures: 0, errorCode: null, status: 'signed-out' });
 function savedProfile(p) {
@@ -44,6 +44,8 @@ function savedProfile(p) {
     updatedAt: p.updatedAt, meters, lastAttemptAt: p.lastAttemptAt, nextRetryAt: p.nextRetryAt, failures: p.failures,
     // Restart never makes old readings current. Explicit logout stays signed out.
     authState: p.authState === 'disconnected' ? 'disconnected' : p.authState === 'needs-sign-in' ? 'needs-sign-in' : 'unavailable',
+    confirmed: typeof p.confirmed === 'boolean' ? p.confirmed : true,
+    displayIdentity: typeof p.displayIdentity === 'string' && p.displayIdentity.length <= 254 ? p.displayIdentity : null,
     identityConfidence: p.identityConfidence==='email-and-organization'?'email-and-organization':'email-only', workspaceIdentity: typeof p.workspaceIdentity==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(p.workspaceIdentity)?p.workspaceIdentity:null,
     status: ['disconnected', 'needs-sign-in'].includes(p.authState) ? 'signed-out' : 'unavailable' };
 }
@@ -71,13 +73,14 @@ export class Connections extends EventEmitter {
       catch (error) { if (error.code !== 'ENOENT') throw failure('invalid-cache'); }
       if (!Array.isArray(ids) || ids.length > 20 || ids.some(id => !uuid(id)) || new Set(ids).size !== ids.length) throw failure('invalid-cache');
       this.salt = randomUUID();
-      for (const id of ids) this.profiles.set(id, { ...empty(id), authState: 'unavailable', status: 'unavailable' });
+      for (const id of ids) this.profiles.set(id, { ...empty(id), confirmed: true, authState: 'unavailable', status: 'unavailable' });
       await this.save(); // Existing accounts/<uuid> directories and extension IDs stay untouched.
     }
   }
   save() {
     const payload = { version: 2, salt: this.salt, profiles: [...this.profiles.values()].map(p => ({
       id: p.id, provider: p.provider, alias: p.alias, generation: p.generation, binding: p.binding,
+      confirmed: p.confirmed, displayIdentity: p.displayIdentity ?? null,
       authState: p.authState, plan: p.plan, updatedAt: p.updatedAt, meters: p.meters,
       lastAttemptAt: p.lastAttemptAt, nextRetryAt: p.nextRetryAt, failures: p.failures,
       identityConfidence:p.identityConfidence??null, workspaceIdentity:p.workspaceIdentity??null,
@@ -90,6 +93,7 @@ export class Connections extends EventEmitter {
   snapshot() {
     return { type: 'snapshot', protocol: 2, profiles: [...this.profiles.values()].map(p => ({
       id: p.id, provider: p.provider, alias: p.alias, status: p.status, authState: p.authState,
+      authorizationGeneration: p.generation,
       plan: p.plan, updatedAt: p.updatedAt, meters: p.meters.map(m => ({ ...m })),
       displayIdentity: p.displayIdentity ?? null, identityConfidence: p.binding ? p.identityConfidence ?? 'email-only' : 'unverified',
       providerSubject: null, workspaceIdentity: p.workspaceIdentity ?? null, capability: p.provider === 'openai' ? 'work-codex' : 'subscription',
@@ -199,6 +203,7 @@ export class Connections extends EventEmitter {
             p.authState='verifying'; await this.changed();
             const who=await this.claudeAdapter.identity(context); this.verify(p,who,who,generation); this.captureIdentity(p,who);
             if(this.duplicate(p)){p.authState='duplicate';p.errorCode='possible-duplicate';p.status='unavailable';return;}
+            if (!p.confirmed) { p.authState='awaiting-confirmation'; return; }
             await this.readClaude(p,context,generation);
           },abort.signal);
         } else await this.withClient(p, async client => {
@@ -216,8 +221,9 @@ export class Connections extends EventEmitter {
             const who = identity(await client.request('account/read', { refreshToken: false }));
             this.verify(p, who, who, generation);
             // Bind only after first-party completion, never from a nickname.
-            p.binding = this.hash(who.binding,p.provider); p.displayIdentity = who.display; p.plan = who.plan;
+            this.captureIdentity(p, who);
             if (this.duplicate(p)) { p.authState = 'duplicate'; p.errorCode = 'possible-duplicate'; p.status = 'unavailable'; return; }
+            if (!p.confirmed) { p.authState = 'awaiting-confirmation'; return; }
             await this.read(p, client, generation, abort.signal);
           } catch (error) {
             if (loginId) await client.request('account/login/cancel', { loginId }).catch(() => {});
@@ -240,7 +246,30 @@ export class Connections extends EventEmitter {
     const p = this.get(id), login = this.logins.get(id);
     if (login) { login.abort.abort(); await login.task; }
     else if(this.providerAborts.has(id)){this.providerAborts.get(id).abort();await this.operations.get(id);}
+    else if (p.authState === 'awaiting-confirmation') {
+      p.generation++; p.authState = 'needs-sign-in'; p.displayIdentity = null;
+      p.errorCode = 'cancelled'; await this.changed();
+    }
     return { profile: p.id, cancelled: true };
+  }
+  async confirm(id, generation, alias) {
+    const p = this.get(id);
+    if (!Number.isSafeInteger(generation) || generation !== p.generation ||
+        p.authState !== 'awaiting-confirmation' || this.operations.has(id)) throw failure('stale-confirmation');
+    if (alias !== undefined && !aliases(alias)) throw failure('invalid-request');
+    return this.serial(id, async () => {
+      if (p.generation !== generation || p.authState !== 'awaiting-confirmation') throw failure('stale-confirmation');
+      if (alias !== undefined) p.alias = alias;
+      try {
+        // Re-read the CLI-owned identity, not the label shown by the UI.
+        // This one collection belongs to the original sign-in operation; it
+        // does not start a second authorization or bypass refresh cooldowns.
+        if (p.provider === 'claude') await this.withClaude(p, c => this.readClaude(p, c, generation));
+        else await this.withClient(p, c => this.read(p, c, generation));
+        if (p.authState === 'connected') p.confirmed = true;
+      } catch (error) { this.setFailure(p, error); }
+      await this.changed(); return {};
+    });
   }
   setFailure(p, error) {
     const codes = ['needs-sign-in', 'identity-changed', 'cancelled', 'login-failed', 'shutdown-unconfirmed', 'terminal-stop-unconfirmed', 'needs-setup', 'unsupported-cli', 'missing-browser-router', 'browser-route-unconfirmed', 'setup-interrupted', 'missing-setup-terminal', 'throttled'];
@@ -271,7 +300,7 @@ export class Connections extends EventEmitter {
   }
   refresh(id, manual = false) {
     const p = this.get(id);
-    if (this.operations.has(id) || this.logins.has(id) || p.authState === 'disconnected' || p.authState === 'needs-sign-in' || p.authState === 'needs-setup' && !manual || p.authState === 'duplicate' || (p.nextRetryAt ?? 0) > this.now()) return Promise.resolve();
+    if (this.operations.has(id) || this.logins.has(id) || !p.confirmed || p.authState === 'awaiting-confirmation' || p.authState === 'disconnected' || p.authState === 'needs-sign-in' || p.authState === 'needs-setup' && !manual || p.authState === 'duplicate' || (p.nextRetryAt ?? 0) > this.now()) return Promise.resolve();
     return this.serial(id, async () => {
       if ((p.nextRetryAt ?? 0) > this.now() || p.authState === 'disconnected') return;
       try { if(p.provider==='claude') await this.withClaude(p,context=>this.readClaude(p,context,p.generation));
@@ -312,6 +341,7 @@ export class Connections extends EventEmitter {
       case 'status': case 'list': return this.snapshot();
       case 'add': case 'start': return this.add(request.provider ?? 'openai', request.alias ?? '');
       case 'cancel': return this.cancel(request.profile);
+      case 'confirm': return this.confirm(request.profile, request.generation, request.alias);
       case 'setup': return this.setup(request.profile);
       case 'reconnect': return this.beginLogin(request.profile);
       case 'rename': return this.rename(request.profile, request.alias);

@@ -40,7 +40,14 @@ async function fixture(t) {
     } });
   await service.load();
   t.after(async () => { await service.close(); await rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }); });
-  const idle = async () => { for (let i = 0; i < 20; i++) { await Promise.allSettled([...service.operations.values()]); if (!service.operations.size) break; } };
+  // Most old lifecycle cases explicitly approve their fictional account; the
+  // confirmation-specific cases below inspect the default unapproved state.
+  const idle = async (confirm = true) => { for (let i = 0; i < 20; i++) {
+    await Promise.allSettled([...service.operations.values()]);
+    const waiting = confirm ? [...service.profiles.values()].filter(p=>p.authState==='awaiting-confirmation') : [];
+    for (const p of waiting) await service.confirm(p.id,p.generation);
+    if (!service.operations.size && !waiting.length) break;
+  } };
   return { service, accounts, clients, browsers, directory, idle, advance: (ms = 120001) => { now += ms; } };
 }
 test('strict native contract rejects token fields, invalid profiles and control text', () => {
@@ -57,7 +64,7 @@ test('two account sign-ins use distinct homes/browsers and only verified identit
   assert.equal(profiles.find(p => p.id === a.profile).meters[0].usedPercent, 0);
   assert.equal(profiles.find(p => p.id === b.profile).meters[0].usedPercent, 30);
   assert.ok(profiles.every(p => p.authState === 'connected' && p.identityConfidence === 'email-only' && p.providerSubject === null));
-  assert.notEqual(clients[0].options.home, clients[1].options.home);
+  assert.equal(new Set(clients.map(c=>c.options.home)).size,2);
   assert.notEqual(browsers[0].directory, browsers[1].directory);
   assert.ok(!JSON.stringify(service.snapshot()).includes('PRIVATE'));
   assert.ok(clients.every(c => c.calls.every(v => /^account\/(login\/(start|cancel)|read|rateLimits\/read)$/.test(v.method))));
@@ -72,6 +79,31 @@ test('same identity is surfaced as duplicate without merging or claiming connect
   assert.equal(service.get(b.profile).updatedAt, 0);
   assert.equal(service.snapshot().profiles.length, 2);
   assert.ok(service.snapshot().profiles.every(p => p.possibleDuplicate));
+});
+test('official completion stages reported OpenAI identity until an explicit generation-bound confirmation', async t => {
+  const {service,idle,clients}=await fixture(t);
+  const {profile}=await service.add('openai','Personal'); await idle(false);
+  const pending=service.get(profile);
+  assert.equal(pending.authState,'awaiting-confirmation');assert.equal(pending.confirmed,false);
+  assert.equal(pending.updatedAt,0);assert.equal(pending.meters.length,0);
+  assert.ok(pending.displayIdentity.endsWith('@example.test'));
+  assert.ok(clients.every(c=>!c.calls.some(v=>v.method==='account/rateLimits/read')));
+  await service.refresh(profile,true);assert.equal(pending.updatedAt,0);
+  await assert.rejects(service.confirm(profile,pending.generation-1),e=>e.code==='stale-confirmation');
+  await service.confirm(profile,pending.generation,'My personal account');
+  assert.equal(pending.confirmed,true);assert.equal(pending.authState,'connected');
+  assert.equal(pending.alias,'My personal account');assert.equal(pending.meters[0].usedPercent,0);
+});
+test('wrong identity after confirmation and cancellation of pending identity cannot connect',async t=>{
+  const {service,idle,accounts}=await fixture(t);
+  const a=await service.add();await idle(false);const p=service.get(a.profile);
+  accounts.get(a.profile).email='wrong@example.test';await service.confirm(p.id,p.generation);
+  assert.equal(p.authState,'needs-sign-in');assert.equal(p.confirmed,false);assert.equal(p.updatedAt,0);
+  const b=await service.add();await idle(false);const q=service.get(b.profile);const generation=q.generation;
+  await service.cancel(q.id);await assert.rejects(service.confirm(q.id,generation),e=>e.code==='stale-confirmation');
+  assert.equal(q.updatedAt,0);assert.equal(q.displayIdentity,null);
+  assert.equal(validRequest({id:'confirm',method:'confirm',profile:q.id,generation:-1}),false);
+  assert.equal(validRequest({id:'confirm',method:'confirm',profile:q.id,generation,alias:'Work'}),true);
 });
 test('failed/empty checks retain exact prior timestamp, persist cooldown and recover after restart', async t => {
   const { service, idle, accounts, advance, directory } = await fixture(t);

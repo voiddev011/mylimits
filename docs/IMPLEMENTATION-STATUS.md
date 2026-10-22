@@ -33,7 +33,7 @@ hosted route is deferred. It was not completed by earlier infrastructure work.
 | Task | Code status | Live acceptance |
 | --- | --- | --- |
 | D01 Existing local path audit/reproduction | COMPLETE | Not provider proof |
-| D02 OpenAI isolated-account integration/proof | Existing parts; task PENDING | PENDING |
+| D02 OpenAI isolated-account integration/proof | IMPLEMENTED; user-run proof pending | PENDING |
 | D03 Claude isolated-account integration/proof | Existing parts; task PENDING | PENDING |
 | D04 Identity/contracts/migration | PENDING audit and changes | PENDING where relevant |
 | D05 Refresh/process ownership | PENDING audit and changes | PENDING |
@@ -96,3 +96,22 @@ automated tests, live verification and blocked/unverified work.
   matrix rows stay PENDING. No compiler for the Windows installer was found on PATH;
   build access will be addressed in packaging rather than reporting an EXE prematurely.
 - Changed file: this status ledger. Next: D02 account confirmation and OpenAI tests.
+
+## D02 — official account completion now requires confirmation
+
+- Reused actual App Server managed browser login, separate CODEX_HOME/browser
+  directories and documented account/rate-limit RPCs. Added an explicit staged
+  identity state and generation-bound confirm command before first quota acceptance.
+  A window/route marker/CLI completion alone cannot connect a new profile.
+- Shared confirmation also prepares Claude without replacing its official login.
+  Wrong identities, cancelled confirmations and late generations are rejected;
+  display identity stays in local service/connection UI, not extension account storage.
+- Changed: companion/connections.mjs, protocol.mjs, connections.test.mjs;
+  src/core/independent-contract.ts; platform/messages.ts, companion.ts, controller.ts.
+- `npm run test:connections`: 20 passed; actual fictional CLI/PTY mechanics,
+  including explicit confirmation/no-early-quota/wrong-account cases.
+  Initial regression used obsolete adjacent-client indexing after confirmation
+  added a second client; assertion now verifies the two distinct account homes.
+- `npm run typecheck`: passed. No real provider sign-in/quota test was possible.
+  Provider subject/workspace stay null where official metadata omits them.
+- Next: D03 Claude-specific identity/freshness/error cases; provider acceptance pending.

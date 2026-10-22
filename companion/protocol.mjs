@@ -25,11 +25,12 @@ export function validRequest(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value) || typeof value.id !== 'string' || !/^[a-zA-Z0-9-]{1,80}$/.test(value.id)) return false;
   const allowed = {
     status: [], capabilities: [], list: [], add: ['provider', 'alias'], start: ['provider', 'alias'],
-    setup: ['profile'], cancel: ['profile'], reconnect: ['profile'], rename: ['profile', 'alias'],
+    setup: ['profile'], cancel: ['profile'], confirm: ['profile','generation','alias'], reconnect: ['profile'], rename: ['profile', 'alias'],
     remove: ['profile'], disconnect: ['profile'], refresh: ['profile'],
   };
   if (!Object.hasOwn(allowed, value.method) || Object.keys(value).some(k => !['id', 'method', ...allowed[value.method]].includes(k))) return false;
-  if (['setup','cancel','reconnect','rename','remove','disconnect'].includes(value.method) && !value.profile) return false;
+  if (['setup','cancel','confirm','reconnect','rename','remove','disconnect'].includes(value.method) && !value.profile) return false;
+  if (value.method === 'confirm' && (!Number.isSafeInteger(value.generation) || value.generation < 0)) return false;
   if (value.profile !== undefined && (typeof value.profile !== 'string' || !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(value.profile))) return false;
   if (value.provider !== undefined && !['openai','claude'].includes(value.provider)) return false;
   if (value.method === 'rename' && value.alias === undefined) return false;
