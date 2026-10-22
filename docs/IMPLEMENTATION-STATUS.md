@@ -38,7 +38,7 @@ hosted route is deferred. It was not completed by earlier infrastructure work.
 | D04 Identity/contracts/migration | IMPLEMENTED + automated checks pass | PENDING where relevant |
 | D05 Refresh/process ownership | IMPLEMENTED + automated checks pass | PENDING |
 | D06 Desktop/native bridge | IMPLEMENTED; native transport test passes | Windows PENDING |
-| D07 Extension + connection journey | PENDING | Windows PENDING |
+| D07 Extension + connection journey | IMPLEMENTED; Chromium fixtures pass | Windows PENDING |
 | D08 Guided installer/bootstrapper | PENDING | Clean Windows PENDING |
 | D09 Update/uninstall/packages | PENDING | Clean Windows PENDING |
 | D10 Acceptance and handoff | PENDING | Both providers PENDING |
@@ -183,3 +183,25 @@ automated tests, live verification and blocked/unverified work.
   actual Windows browser handshake claim. Stable store extension IDs remain a
   publication prerequisite; setup must discover development installs automatically.
 - Next: D07 route + to Desktop and provide identity confirmation/alias in dashboard.
+
+## D07 — Desktop is the main independent + journey
+
+- + now routes OpenAI/Claude independent choices to the actual local service,
+  keeping website tracking separate. Other providers honestly remain website-only.
+  Added reported-identity confirmation, aliases, wrong-account discard, provider
+  setup/error states, and pending sign-in resume after view closure/restart.
+- Popup remains compact; detailed setup stays in the dashboard. Added a Desktop
+  connection prompt, renamed advanced local settings and retained privacy masking.
+  Optional public HTTPS setup URL is build-configured; without publication, the
+  beta button points at branch CI artifacts and is labelled test setup.
+- Version is 3.4.0 Desktop accounts preview. Changed AccountConnect,
+  OpenAICompanion, App, Popup, build/environment config, package metadata and browser
+  fixtures. No hosted backend or custom provider login was added.
+- `npm run typecheck` and `npm run build`: passed. Browser run: 30 passed and one
+  stale settings-navigation selector failed; corrected that selector and added
+  pending-sign-in resume coverage. Targeted rerun: 1 passed. Full suite will run
+  at final delivery after packaging changes.
+- Browser provider/native responses are fictional; no real OpenAI/Claude connection
+  or Windows browser acceptance is claimed. Stable signed public download/store IDs
+  remain release prerequisites, not completed by a test setup link.
+- Next: D08 guided per-user bootstrapper and measured dependency downloads.
