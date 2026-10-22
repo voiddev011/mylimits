@@ -49,8 +49,8 @@ See IMPLEMENTATION-STATUS for each D01–D10 checkpoint, files and decisions.
 
 ## Automated tested
 
-Green [CI run 39756974345](https://github.com/voiddev011/mylimits/actions/runs/39756974345)
-at code checkpoint `8f43c21c0934774cbcea810667579d162346961f`:
+Green [CI run 39775842039](https://github.com/voiddev011/mylimits/actions/runs/39775842039)
+at code checkpoint `999509d642245ceaafd36ab28c983dcb368db5a2`:
 
 | Check | Actual result / evidence |
 | --- | --- |
@@ -80,9 +80,9 @@ passing CI does not certify those warnings harmless for every laptop.
 
 Download from the run above:
 
-- [Windows Desktop artifact](https://github.com/voiddev011/mylimits/actions/runs/39756974345/artifacts/12415693128)
+- [Windows Desktop artifact](https://github.com/voiddev011/mylimits/actions/runs/39775842039/artifacts/12425040772)
   contains `mylimits-desktop-windows-x64-unsigned.exe`, `.sha256`, `.json`.
-- [Extension packages](https://github.com/voiddev011/mylimits/actions/runs/39756974345/artifacts/12415824156)
+- [Extension packages](https://github.com/voiddev011/mylimits/actions/runs/39775842039/artifacts/12425065772)
   contain Chrome/Firefox ZIPs and SHA256SUMS. Use Chrome for Desktop testing.
 - Current source builds also produce `.output/mylimits-3.4.0-chrome.zip`,
   `.output/mylimits-3.4.0-firefox.zip`, `.output/SHA256SUMS`.
@@ -95,22 +95,22 @@ hash, not a hash from another build.
 | Size | Measured bytes | Meaning |
 | --- | ---: | --- |
 | Old bundled installer | 211,310,699 | Existing baseline artifact |
-| New Windows-built initial EXE | 1,500,185 | Unsigned online bootstrapper |
-| Bootstrapper's unpacked program payload | 3,110,365 | Excludes acquired provider/Node runtimes |
+| New Windows-built initial EXE | 1,501,400 | Unsigned online bootstrapper |
+| Bootstrapper's unpacked program payload | 3,114,912 | Excludes acquired provider/Node runtimes |
 | Node official archive | 37,733,703 | Required on first setup; reused if compatible |
 | Codex official archive | 167,618,721 | Additional if OpenAI is selected |
-| EXE + first Node/Codex archives | 206,852,609 | Excludes Claude, failed transfer retries and network overhead |
+| EXE + first Node/Codex archives | 206,853,824 | Excludes Claude, failed transfer retries and network overhead |
 | Installed Node executable | 93,882,184 | Extracted official binary, not full Windows install measurement |
 | Installed Codex vendor directory | 465,689,987 | Extracted official runtime/support files |
 | Complete clean Windows installed size/time | PENDING | Requires actual clean installer execution |
 | Claude download/installed bytes | UNKNOWN | Official installer/version/system dependent |
 
 Windows EXE SHA-256:
-`8c4651c2bd21801b7ed9ec0927d7480fe9409317ac1b3c74d8abd5321d8d2e74`.
-This is the actual retrieved CI EXE; its hash was verified locally. The downloaded Chrome ZIP is 307,211 bytes, SHA-256
-`603c04c659c644acd1d38df7674ff8f3a43dba315314024890103085d73457dd`;
-Firefox ZIP is 305,119 bytes, SHA-256
-`a05881180fcaae3e5c32adf25280eb143c71883f3aaf3d77bcbf5ff0eb39b867`.
+`4dc87e522945a23f4c0e568097009f2a1965857f829f4bb96f8ffb1272e7b3de`.
+This is the actual retrieved CI EXE; its hash was verified locally. The downloaded Chrome ZIP is 307,221 bytes, SHA-256
+`7f82c907a67349fd81e0e95cb967bed84cc84ebc950c2a106c24509831f52ebe`;
+Firefox ZIP is 305,126 bytes, SHA-256
+`abd77f5b0505cfc822b233dbea4f7eebeb6fc906c31a235c3b3c0983b9da978d`.
 
 The small initial download does **not** remove the large official runtime cost.
 Successful setup deletes archive cache and records actual local setup/service bytes
@@ -183,3 +183,16 @@ observations and fictional tests are not live provider evidence.
 Next action: install the exact Windows artifact on the user's laptop and execute
 the matrix for two actual accounts per provider. Investigate any real failures
 before removing experimental labels, merging main or considering a public release.
+
+## Brave discovery follow-up
+
+The 3.4 setup linked above now includes the 22 October detection correction:
+Windows PowerShell 5 dictionary JSON parsing, path-only unpacked manifest lookup,
+and a guided browser profile folder picker. A normal Brave `User Data\Default`
+profile should be scanned automatically. Earlier 3.4 setup artifacts that required
+inline manifest metadata are superseded; close their setup window before running
+the corrected EXE. Your existing 3.4 extension needs no rebuild for this installer
+fix. Windows CI exercised Brave Default, unpacked/relative manifest paths, unusual
+JSON keys, rejected external paths and selected profile routing. The user's actual
+laptop detection remains to be retried; these are Windows regressions, not a claim
+to have inspected that private browser profile.

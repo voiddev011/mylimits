@@ -11,7 +11,8 @@ Desktop. No hosted service or MyLimits sign-in is required for Desktop tracking.
 1. Open [branch Checks artifacts](https://github.com/voiddev011/mylimits/actions?query=branch%3Afeature%2Fdesktop-independent-accounts).
    Choose a successful run of this branch, not an older 3.2/3.3 build.
    Download `mylimits-extension-packages` and
-   `mylimits-desktop-windows-x64-unsigned`. GitHub requires repository access and
+   [the corrected Desktop setup](https://github.com/voiddev011/mylimits/actions/runs/39775842039/artifacts/12425040772).
+   Close any older setup window before running this EXE. GitHub requires repository access and
    wraps Actions downloads in ZIPs; extract those download containers.
 2. Extract `mylimits-3.4.0-chrome.zip`. Chrome: `chrome://extensions`, Brave:
    `brave://extensions` → Developer mode → Load unpacked → select the extracted
@@ -126,7 +127,7 @@ Record results separately for **both providers and Windows Chrome/Brave** in
 - “MyLimits not found” in Brave: earlier 3.4 installers required an inline manifest
   in saved browser settings and used a Windows PowerShell parser that could reject
   otherwise valid Chromium dictionaries. Use the updated installer linked in the
-  handoff's discovery follow-up. It reads the unpacked extension's manifest and
+  [handoff's discovery follow-up](DESKTOP-ACCOUNTS-HANDOFF.md#brave-discovery-follow-up). It reads the unpacked extension's manifest and
   handles those dictionary keys. Your ordinary Brave `User Data\Default` profile
   should not require a custom location. Choosing its folder is a guided fallback;
   managed browser policies or an unsaved/locked settings file may still need retry.

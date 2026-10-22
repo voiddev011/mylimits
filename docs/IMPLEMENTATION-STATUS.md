@@ -347,3 +347,16 @@ automated tests, live verification and blocked/unverified work.
 - Local payload/whitespace checks and actual Windows parser/GUI/discovery results
   will be recorded after running them. Next: validate, push, inspect Windows CI,
   then deliver the corrected setup artifact; user-machine detection remains to retry.
+
+- Verification completed at `999509d642245ceaafd36ab28c983dcb368db5a2`:
+  [CI 39775842039](https://github.com/voiddev011/mylimits/actions/runs/39775842039)
+  passed all three jobs, including the real Windows PowerShell parser, setup GUI,
+  expanded Brave discovery cases, process/rollback checks and installer build.
+  Local `npm run test:desktop-package`: 1 passed; whitespace check passed.
+- Retrieved and verified corrected Windows setup: 1501400 bytes, SHA-256
+  `4dc87e522945a23f4c0e568097009f2a1965857f829f4bb96f8ffb1272e7b3de`.
+  Updated INSTALL/HANDOFF links, sizes and checksums to the matching run.
+  Extension 3.4 needs no rebuild for this setup-only fix; no ID entry or browser
+  cookie/password copying was introduced. Next: user reruns the corrected setup
+  as their normal Windows user and reports whether Brave Default is now detected.
+  Real provider account-isolation/quota acceptance remains PENDING.
