@@ -40,6 +40,9 @@ const windows = [
 /** Parse a rendered screen, never a raw ANSI transcript or a status-line cache. */
 export function parseClaudeUsage(screen) {
   const lines = screen.split(/\r?\n/).map(line => line.trim());
+  if (lines.some(line=>/(?:rate.limit|too many requests|\b429\b)/i.test(line))) {
+    throw new ProbeError('throttled','Claude asked to wait before another usage check.');
+  }
   if (lines.some(line => /(?:failed|unable) to (?:load|fetch).*usage|(?:rate.limit|too many requests|\b429\b)|usage (?:is )?(?:unavailable|not available)/i.test(line))) {
     throw new ProbeError('unavailable', 'Claude could not provide usage. Wait before checking again.');
   }

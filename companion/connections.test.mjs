@@ -348,6 +348,8 @@ test('production Claude adapter reads two isolated fictional CLI profiles throug
  assert.equal(service.get(ids[0]).authState,'connected');assert.ok(!JSON.stringify(service.snapshot()).includes('PRIVATE'));
  // Exercise the production login terminal and scoped cancellation too.
  service.get(ids[0]).nextRetryAt=null;service.beginLogin(ids[0]);await Promise.allSettled([...service.operations.values()]);
+ assert.equal(service.get(ids[0]).authState,'awaiting-confirmation');
+ await service.confirm(ids[0],service.get(ids[0]).generation);
  assert.equal(service.get(ids[0]).authState,'connected');
  const home=path.join(directory,'accounts',ids[1],'claude');
  await writeFile(path.join(home,'fixture.json'),JSON.stringify({email:'claude-1@example.test',org:'org-1',used:37,delayLogin:true}));
@@ -356,4 +358,16 @@ test('production Claude adapter reads two isolated fictional CLI profiles throug
  assert.ok(started);await service.cancel(ids[1]);assert.equal(service.get(ids[1]).authState,'needs-sign-in');
  assert.equal(service.get(ids[1]).meters[0].usedPercent,37);
 
+});
+test('only one official authorization runs at a time and reconnect requires renewed consent',async t=>{
+ const {service,idle,accounts,advance}=await fixture(t);const a=await service.add();await idle();
+ const b=await service.add();await idle();advance();
+ accounts.get(a.profile).noComplete=true;service.beginLogin(a.profile);
+ await assert.rejects(service.add('openai','Third'),e=>e.code==='busy');
+ assert.throws(()=>service.beginLogin(b.profile),e=>e.code==='busy');
+ assert.equal(service.profiles.size,2);await service.cancel(a.profile);
+ assert.equal(service.get(a.profile).confirmed,false);
+ assert.equal(service.get(b.profile).authState,'connected');
+ advance();accounts.get(a.profile).noComplete=false;service.beginLogin(a.profile);await idle(false);
+ assert.equal(service.get(a.profile).authState,'awaiting-confirmation');
 });

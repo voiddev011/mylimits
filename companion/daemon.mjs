@@ -40,7 +40,10 @@ const server = net.createServer(socket => {
   const read = frameReader(request => {
     if (!sockets.has(socket)) {
       if (!authenticated(request, token, hello.nonce)) { socket.destroy(); return; }
-      clearTimeout(authTimer); sockets.add(socket); return;
+      clearTimeout(authTimer); sockets.add(socket);
+      // Browser reopening asks for eligible checks; closing provider tabs is
+      // irrelevant. Multiple native clients share account queues/cooldowns.
+      void ready.then(()=>companion.refreshAll()).catch(()=>{}); return;
     }
     if (!validRequest(request)) { socket.destroy(); return; }
     // Profile index mutations are serialized, including simultaneous extension windows.
@@ -57,8 +60,7 @@ companion.on('snapshot', snapshot => { for (const socket of sockets) send(socket
 await new Promise((resolve, reject) => { server.once('error', reject); server.listen(socketPath, resolve); });
 if (process.platform !== 'win32') await chmod(socketPath, 0o600);
 try { await companion.load(); readyResolve(); } catch (error) { readyReject(error); throw error; }
-void companion.refreshAll();
-const timer = setInterval(() => void companion.refreshAll(), 60_000);
+const timer = setInterval(() => { if(sockets.size)void companion.refreshAll(); }, 60_000);
 async function stop() {
   clearInterval(timer); await companion.close(); for (const socket of sockets) socket.destroy();
   server.close(); if (process.platform !== 'win32') await unlink(socketPath).catch(() => {}); process.exit(0);

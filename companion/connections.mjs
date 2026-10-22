@@ -189,6 +189,7 @@ export class Connections extends EventEmitter {
   async add(provider = 'openai', alias = '') {
     if (!['openai','claude'].includes(provider)) throw failure('provider-unavailable');
     if (provider === 'claude' && !(await this.claudeAdapter.readiness()).available) throw failure('provider-unavailable');
+    if (this.logins.size) throw failure('busy');
     if (!aliases(alias) || this.profiles.size >= 20 || this.stopping) throw failure('invalid-request');
     const p = { ...empty(randomUUID(),provider), alias };
     this.profiles.set(p.id, p); await this.changed();
@@ -196,12 +197,12 @@ export class Connections extends EventEmitter {
   }
   beginLogin(id) {
     const p = this.get(id);
-    if (this.logins.has(id) || this.operations.has(id)) throw failure('busy');
+    if (this.logins.size || this.operations.has(id)) throw failure('busy');
     if (p.nextRetryAt && p.nextRetryAt > this.now()) throw failure('cooldown');
     const abort = new AbortController();
     const entry = { abort, task: null }; this.logins.set(id, entry);
     const task = this.serial(id, async () => {
-      const generation = ++p.generation; p.authState = 'signing-in'; p.status = 'unavailable'; p.errorCode = null;
+      const generation = ++p.generation; p.confirmed = false; p.authState = 'signing-in'; p.status = 'unavailable'; p.errorCode = null;
       // Auth retries cannot be used as a quota-refresh bypass.
       p.nextRetryAt = this.now() + this.interval(p); await this.changed();
       try {

@@ -36,7 +36,7 @@ hosted route is deferred. It was not completed by earlier infrastructure work.
 | D02 OpenAI isolated-account integration/proof | IMPLEMENTED; user-run proof pending | PENDING |
 | D03 Claude isolated-account integration/proof | IMPLEMENTED experimental path | PENDING |
 | D04 Identity/contracts/migration | IMPLEMENTED + automated checks pass | PENDING where relevant |
-| D05 Refresh/process ownership | PENDING audit and changes | PENDING |
+| D05 Refresh/process ownership | IMPLEMENTED + automated checks pass | PENDING |
 | D06 Desktop/native bridge | PENDING audit and changes | Windows PENDING |
 | D07 Extension + connection journey | PENDING | Windows PENDING |
 | D08 Guided installer/bootstrapper | PENDING | Clean Windows PENDING |
@@ -149,3 +149,19 @@ automated tests, live verification and blocked/unverified work.
   `npm test`: 109 passed. Migration, existing config, old IDs and confirmation
   recovery are simulated local tests, not real provider behavior.
 - Next: D05 refresh scheduling, serialized sign-in and process ownership.
+
+## D05 — serialized authorization and browser-attached refresh
+
+- Only one provider authorization starts at a time, avoiding competing callback
+  listeners or parallel login windows. Other account refreshes retain their bounded
+  per-account queues. Reconnect requires explicit renewed identity confirmation.
+- Desktop polling now starts on an authenticated native client and pauses without
+  clients. Closing provider tabs does not affect it; browser reopening triggers
+  only eligible checks. Existing persisted cooldown/backoff, dated failures and
+  confirmed owned-process shutdown remain in force.
+- Claude rendered throttling errors are classified without exposing raw panel text.
+- Changed connections.mjs/tests, daemon.mjs and proof/claude.mjs.
+- `npm run test:connections`: 24 passed; `npm run test:account-proof`: 30 passed.
+  Subprocess/PTY, coalescing, throttling, cancellation and shutdown tests use fixtures;
+  provider renewal/revocation/actual quota freshness remain unverified.
+- Next: D06 version negotiation/readiness and actual native host/daemon transport tests.
