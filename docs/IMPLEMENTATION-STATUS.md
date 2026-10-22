@@ -58,9 +58,11 @@ hosted route is deferred. It was not completed by earlier infrastructure work.
   `git diff --check` passed. The two executable-file changes only replace help URLs.
 - No application suite or live account test has been run by this documentation task.
 - No new Desktop feature, backend deployment, main merge or release is claimed.
-- Publication: Git CLI could not reach its configured proxy. Publish this docs-only
-  checkpoint through the connected GitHub tools, preserving the remote parent and
-  verifying the resulting source tree. Do not force-push older divergent commit IDs.
+- Publication: Git CLI could not reach its configured proxy; the connected GitHub
+  tools published this branch while preserving the remote parent. Source checkpoint
+  `fba0e3829f37d7da9cc3738244b786a2e73b5ef6` matches local `73df840` exactly
+  (tree `b18d76fd81ff66ff23e0bc46e20aa192a3c10080`). This documentation follow-up
+  records that publication. Do not force-push older divergent commit IDs.
 
 ## Next action
 
