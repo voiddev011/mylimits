@@ -143,24 +143,60 @@ function Install-DesktopRuntime([string]$name,$asset) {
   return $exe
  } finally {Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue}
 }
-function Get-DesktopExtensions([string]$localData=$env:LOCALAPPDATA) {
+function Read-DesktopJson([string]$file,[long]$limit=33554432) {
+ if(!(Test-Path -LiteralPath $file -PathType Leaf) -or (Get-Item -LiteralPath $file).Length -gt $limit){return $null}
+ # Chromium preferences can have case-distinct or empty dictionary keys.
+ # Windows PowerShell 5 ConvertFrom-Json rejects those and used to discard the
+ # entire profile silently. Keep dictionaries; expose extension metadata only.
+ if(!$script:desktopJsonReader){
+  Add-Type -AssemblyName System.Web.Extensions
+  $script:desktopJsonReader=New-Object System.Web.Script.Serialization.JavaScriptSerializer
+  $script:desktopJsonReader.MaxJsonLength=33554432;$script:desktopJsonReader.RecursionLimit=200
+ }
+ return $script:desktopJsonReader.DeserializeObject([IO.File]::ReadAllText($file))
+}
+function Get-DesktopProfileExtensions([string]$profile,[string]$browserName) {
+ $found=@()
+ foreach($name in @('Preferences','Secure Preferences')){try{
+  $preferences=Read-DesktopJson (Join-Path $profile $name)
+  if($preferences -isnot [System.Collections.IDictionary]){continue}
+  $extensions=$preferences['extensions'];if($extensions -isnot [System.Collections.IDictionary]){continue}
+  $settings=$extensions['settings'];if($settings -isnot [System.Collections.IDictionary]){continue}
+  foreach($id in $settings.Keys){
+   if($id -notmatch '^[a-p]{32}$'){continue}
+   $entry=$settings[$id];if($entry -isnot [System.Collections.IDictionary]){continue}
+   $extensionName=$null
+   if($entry['manifest'] -is [System.Collections.IDictionary]){$extensionName=$entry['manifest']['name']}
+   # Unpacked extensions can store only a folder path, with no inline manifest.
+   if(!$extensionName -and $entry['path'] -is [string]){try{
+    $directory=$entry['path'];$extensionRoot=Join-Path $profile 'Extensions'
+    if(![IO.Path]::IsPathRooted($directory)){
+     $directory=[IO.Path]::GetFullPath((Join-Path $extensionRoot $directory))
+     if(!$directory.StartsWith(([IO.Path]::GetFullPath($extensionRoot)+[IO.Path]::DirectorySeparatorChar),[StringComparison]::OrdinalIgnoreCase)){continue}
+    }
+    # Read only a local manifest; never trigger UNC/network credential access.
+    if($directory.StartsWith('\\') -or $directory -notmatch '^[a-zA-Z]:[\\/]'){continue}
+    $manifest=Read-DesktopJson (Join-Path $directory 'manifest.json') 524288
+    if($manifest -is [System.Collections.IDictionary]){$extensionName=$manifest['name']}
+   }catch{}}
+   if($extensionName -eq 'MyLimits'){
+    $profileName=Split-Path $profile -Leaf
+    $found += [PSCustomObject]@{id=$id;browser=$browserName;profile=$profileName;userDataDirectory=(Split-Path $profile -Parent);label=($browserName+' / '+$profileName)}
+   }
+  }
+ }catch{}}
+ return $found
+}
+function Get-DesktopExtensions([string]$localData=$env:LOCALAPPDATA,[string]$selectedProfile,[string]$selectedBrowser='brave') {
  $found=@();$locations=@{chrome='Google\Chrome\User Data';brave='BraveSoftware\Brave-Browser\User Data';edge='Microsoft\Edge\User Data';chromium='Chromium\User Data'}
  foreach($browserName in $locations.Keys){
   $directory=Join-Path $localData $locations[$browserName]
   if(!(Test-Path -LiteralPath $directory)){continue}
   foreach($profile in @(Get-ChildItem -LiteralPath $directory -Directory -ErrorAction SilentlyContinue | Where-Object {$_.Name -eq 'Default' -or $_.Name -match '^Profile \d+$'})){
-   foreach($name in @('Preferences','Secure Preferences')){try{
-    $file=Join-Path $profile.FullName $name
-    if(!(Test-Path -LiteralPath $file) -or (Get-Item -LiteralPath $file).Length -gt 32MB){continue}
-    $preferences=ConvertFrom-Json -InputObject ([IO.File]::ReadAllText($file))
-    foreach($entry in $preferences.extensions.settings.PSObject.Properties){
-     if($entry.Name -match '^[a-p]{32}$' -and $entry.Value.manifest.name -eq 'MyLimits'){
-      $found += [PSCustomObject]@{id=$entry.Name;browser=$browserName;profile=$profile.Name;label=($browserName+' / '+$profile.Name)}
-     }
-    }
-   }catch{}}
+   $found+=@(Get-DesktopProfileExtensions $profile.FullName $browserName)
   }
  }
+ if($selectedProfile -and $locations.ContainsKey($selectedBrowser) -and (Test-Path -LiteralPath $selectedProfile -PathType Container)){$found+=@(Get-DesktopProfileExtensions $selectedProfile $selectedBrowser)}
  return @($found | Sort-Object -Property browser,id -Unique)
 }
 function Get-DesktopDirectoryBytes([string]$directory) {

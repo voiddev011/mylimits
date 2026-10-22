@@ -325,3 +325,25 @@ automated tests, live verification and blocked/unverified work.
 - No main merge, release or hosted deployment. Next: user-run real account tests
   from INSTALL/HANDOFF. Report provider errors as integration failures to resolve;
   never turn these PENDING rows into passed rows from fictional CI evidence.
+
+## Brave detection follow-up — 22 October 2026
+
+- User reports the installed extension is not discovered in the normal Brave
+  `User Data\Default` location. That rules out a custom-root assumption, but no
+  browser settings file or credentials were requested/uploaded.
+- Inspected setup: it required `entry.manifest.name` and parsed the entire saved
+  profile through Windows PowerShell 5 ConvertFrom-Json. This misses unpacked
+  entries containing only `path`, and rejects valid case-distinct/empty dictionary
+  keys anywhere in Chromium preferences. The catch hid those parse failures.
+- Updated desktop-runtime.ps1 to use the built-in dictionary JSON reader and a
+  bounded local manifest fallback for known extension IDs. No cookie/session file
+  access, UNC reads or unrelated-data exports. Relative installed paths cannot
+  escape the profile's Extensions directory. Added a guided browser-profile folder
+  picker with automatic IDs and correct custom-root return-to-extension routing.
+- Changed Windows setup/runtime, Windows tests and INSTALL. Added real Windows
+  regression cases for Brave Default/path-only unpacked manifests, relative
+  installed manifests, unusual unrelated JSON keys, rejected external paths and
+  a selected custom profile. Existing GUI still operates before Node download.
+- Local payload/whitespace checks and actual Windows parser/GUI/discovery results
+  will be recorded after running them. Next: validate, push, inspect Windows CI,
+  then deliver the corrected setup artifact; user-machine detection remains to retry.

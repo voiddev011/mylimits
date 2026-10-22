@@ -19,6 +19,22 @@ try{
  $detected=@(Get-DesktopExtensions $fixtureRoot)
  if($detected.Count -ne 1 -or $detected[0].id -ne 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'){throw 'Automatic extension detection failed'}
  if((ConvertTo-Json $detected) -match 'NEVER_COPY'){throw 'Detection exposed unrelated data'}
+ # Actual Chromium profiles may omit manifest metadata for unpacked installs.
+ # PS5 ConvertFrom-Json also fails on unrelated case-distinct / empty keys.
+ $brave=Join-Path $fixtureRoot 'BraveSoftware\Brave-Browser\User Data\Default';New-Item -ItemType Directory $brave -Force | Out-Null
+ $unpacked=Join-Path $fixtureRoot 'unpacked extension';New-Item -ItemType Directory $unpacked | Out-Null
+ [IO.File]::WriteAllText((Join-Path $unpacked 'manifest.json'),'{"name":"MyLimits","manifest_version":3,"version":"3.4.0"}')
+ $relative=Join-Path $brave 'Extensions\dddddddddddddddddddddddddddddddd\3.4.0_0';New-Item -ItemType Directory $relative -Force | Out-Null
+ [IO.File]::WriteAllText((Join-Path $relative 'manifest.json'),'{"name":"MyLimits","manifest_version":3,"version":"3.4.0"}')
+ $entries='{"extensions":{"settings":{"cccccccccccccccccccccccccccccccc":{"path":'+(ConvertTo-Json $unpacked)+'},"dddddddddddddddddddddddddddddddd":{"path":"dddddddddddddddddddddddddddddddd/3.4.0_0"},"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee":{"path":"//untrusted.invalid/share"},"ffffffffffffffffffffffffffffffff":{"path":"../outside-profile"}}},"unrelated":{"Host":1,"host":2,"":"NEVER_COPY"}}'
+ [IO.File]::WriteAllText((Join-Path $brave 'Secure Preferences'),$entries)
+ $braveFound=@(Get-DesktopExtensions $fixtureRoot | Where-Object {$_.browser -eq 'brave'})
+ if($braveFound.Count -ne 2 -or $braveFound[0].profile -ne 'Default'){throw 'Brave unpacked/relative manifest discovery failed'}
+ if((ConvertTo-Json $braveFound) -match 'NEVER_COPY|untrusted'){throw 'Discovery exposed unrelated profile data'}
+ $custom=Join-Path $fixtureRoot 'custom-browser\Work';New-Item -ItemType Directory $custom -Force | Out-Null
+ [IO.File]::WriteAllText((Join-Path $custom 'Preferences'),'{"extensions":{"settings":{"gggggggggggggggggggggggggggggggg":{"manifest":{"name":"MyLimits"}}}}}')
+ $customFound=@(Get-DesktopExtensions $fixtureRoot $custom 'brave' | Where-Object {$_.id -eq 'gggggggggggggggggggggggggggggggg'})
+ if($customFound.Count -ne 1 -or $customFound[0].profile -ne 'Work' -or $customFound[0].userDataDirectory -ne (Split-Path $custom -Parent)){throw 'Chosen profile discovery lost its browser root'}
  $assetFile=Join-Path $fixtureRoot 'asset';[IO.File]::WriteAllText($assetFile,'fixture')
  $asset=[PSCustomObject]@{bytes=7;algorithm='SHA256';digest=(Get-FileHash -LiteralPath $assetFile -Algorithm SHA256).Hash.ToLowerInvariant()}
  if(!(Test-DesktopArchive $asset $assetFile)){throw 'Correct runtime integrity was rejected'}

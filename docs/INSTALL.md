@@ -21,9 +21,11 @@ Desktop. No hosted service or MyLimits sign-in is required for Desktop tracking.
    This development EXE is unsigned; public signing/store distribution is pending.
    In guided setup select OpenAI and/or Claude, then **Set up Desktop**.
    The extension is detected automatically; no extension-ID entry is required.
-   If absent, load it first and choose **Retry detection**. Standard Chrome/Brave/
-   Edge/Chromium Default and Profile folders are supported; nonstandard/managed
-   locations remain a limitation, without a manual-ID public workaround.
+   If absent, confirm it is enabled and choose **Retry detection**. The updated
+   setup reads both inline and unpacked manifests. For custom locations select
+   the browser, choose **Choose browser profile...**, and select the Profile Path
+   folder shown at `brave://version` (or the corresponding browser version page).
+   It still discovers the extension ID automatically; no ID entry is required.
 4. Allow the displayed official downloads and Windows/provider setup prompts.
    Choose **Open MyLimits** when Desktop reports ready.
 5. Extension → **+** → choose provider → **Connect another account** →
@@ -121,6 +123,13 @@ Record results separately for **both providers and Windows Chrome/Brave** in
 
 - Missing Desktop: reopen Start menu → MyLimits Companion → Setup, run detection
   and retry. Incompatible helper: install the matching 3.4 setup before sign-in.
+- “MyLimits not found” in Brave: earlier 3.4 installers required an inline manifest
+  in saved browser settings and used a Windows PowerShell parser that could reject
+  otherwise valid Chromium dictionaries. Use the updated installer linked in the
+  handoff's discovery follow-up. It reads the unpacked extension's manifest and
+  handles those dictionary keys. Your ordinary Brave `User Data\Default` profile
+  should not require a custom location. Choosing its folder is a guided fallback;
+  managed browser policies or an unsaved/locked settings file may still need retry.
 - Failed/interrupted update: retry guided setup. It stops owned current-user
   processes, repairs staged program files and preserves account profiles/history.
   Unconfirmed shutdown blocks reuse rather than overlapping credential writers.
