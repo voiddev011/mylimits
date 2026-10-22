@@ -15,7 +15,7 @@
     "postinstall": "wxt prepare",
     "companion:install": "node companion/install.mjs",
     "companion:start": "node companion/daemon.mjs",
-    "test:companion": "node companion/companion.test.mjs && node --test --test-timeout=45000 companion/connections.test.mjs",
+    "test:companion": "node companion/companion.test.mjs && node --test --test-timeout=45000 companion/connections.test.mjs && node --test --test-timeout=20000 companion/transport.test.mjs",
     "build:firefox": "wxt build -b firefox",
     "zip:firefox": "wxt zip -b firefox",
     "build:edge": "wxt build -b edge",

@@ -49,7 +49,7 @@ const server = net.createServer(socket => {
     // Profile index mutations are serialized, including simultaneous extension windows.
     const execute = async () => {
       try { await ready; send(socket, { id: request.id, ok: true, data: await companion.handle(request) }); }
-      catch (error) { send(socket, { id: request.id, ok: false, error: ['cooldown','busy','provider-unavailable','logout-unconfirmed','unknown-profile','service-unavailable'].includes(error?.code) ? error.code : 'action-failed' }); }
+      catch (error) { send(socket, { id: request.id, ok: false, error: ['cooldown','busy','stale-confirmation','provider-unavailable','logout-unconfirmed','unknown-profile','service-unavailable'].includes(error?.code) ? error.code : 'action-failed' }); }
     };
     if (['add', 'start'].includes(request.method)) { mutations = mutations.then(execute, execute); }
     else void execute();

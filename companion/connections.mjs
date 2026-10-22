@@ -1,12 +1,12 @@
 import { EventEmitter } from 'node:events';
 import { randomUUID, createHmac } from 'node:crypto';
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, writeFile, access } from 'node:fs/promises';
 import path from 'node:path';
 import { AppServer } from './app-server.mjs';
 import { parseLimits } from './limits.mjs';
 import { openAuthBrowser } from './auth-browser.mjs';
 import { safeAuthUrl } from './protocol.mjs';
-import { profileEnvironment } from './proof/runtime.mjs';
+import { profileEnvironment, findCli } from './proof/runtime.mjs';
 import { atomicJson, privateDirectory, uuid } from './proof/store.mjs';
 import { createClaudeAdapter } from './claude-adapter.mjs';
 import { codexLoginWaiter } from './proof/codex-login.mjs';
@@ -352,7 +352,10 @@ export class Connections extends EventEmitter {
   }
   async handle(request) {
     switch (request.method) {
-      case 'capabilities': { const result=structuredClone(capabilities); const ready=await this.claudeAdapter.readiness();
+      case 'capabilities': { const result=structuredClone(capabilities);
+        try { if(path.isAbsolute(this.executable))await access(this.executable);else this.executable=await findCli('openai'); }
+        catch { const openai=result.providers.find(p=>p.provider==='openai');openai.available=false;openai.reason='Install OpenAI support through MyLimits Desktop setup, then retry.'; }
+        const ready=await this.claudeAdapter.readiness();
         const claude=result.providers.find(p=>p.provider==='claude'); claude.available=ready.available; if(!ready.available)claude.reason=ready.reason; return result; }
       case 'status': case 'list': return this.snapshot();
       case 'add': case 'start': return this.add(request.provider ?? 'openai', request.alias ?? '');

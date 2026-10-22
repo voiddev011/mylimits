@@ -37,7 +37,7 @@ hosted route is deferred. It was not completed by earlier infrastructure work.
 | D03 Claude isolated-account integration/proof | IMPLEMENTED experimental path | PENDING |
 | D04 Identity/contracts/migration | IMPLEMENTED + automated checks pass | PENDING where relevant |
 | D05 Refresh/process ownership | IMPLEMENTED + automated checks pass | PENDING |
-| D06 Desktop/native bridge | PENDING audit and changes | Windows PENDING |
+| D06 Desktop/native bridge | IMPLEMENTED; native transport test passes | Windows PENDING |
 | D07 Extension + connection journey | PENDING | Windows PENDING |
 | D08 Guided installer/bootstrapper | PENDING | Clean Windows PENDING |
 | D09 Update/uninstall/packages | PENDING | Clean Windows PENDING |
@@ -165,3 +165,21 @@ automated tests, live verification and blocked/unverified work.
   Subprocess/PTY, coalescing, throttling, cancellation and shutdown tests use fixtures;
   provider renewal/revocation/actual quota freshness remain unverified.
 - Next: D06 version negotiation/readiness and actual native host/daemon transport tests.
+
+## D06 — real native host/daemon transport
+
+- Kept the existing authorized host/IPC boundary and protocol 2; new Desktop
+  readiness requires explicit identity-confirmation capability. Old helpers cannot
+  silently skip confirmation. Provider readiness checks actual executable availability.
+- Added generation-bound confirm request validation and sanitized errors. Added
+  explicit operator/test data-directory relocation, never accepted from page input.
+- Added a real host.mjs → framed stdio → authenticated daemon socket → fictional
+  CLI integration test. It confirms no polling before browser attachment, current
+  fixture readings after attachment, strict extra-field rejection and safe frames.
+- Changed paths.mjs, daemon.mjs, connections.mjs, transport.test.mjs,
+  platform/companion.ts and package.json (transport suite joins test:companion).
+- `node --test companion/transport.test.mjs`: 1 passed; `npm run typecheck`: passed.
+  Actual local transport is tested, but provider is fictional; no real account or
+  actual Windows browser handshake claim. Stable store extension IDs remain a
+  publication prerequisite; setup must discover development installs automatically.
+- Next: D07 route + to Desktop and provide identity confirmation/alias in dashboard.
