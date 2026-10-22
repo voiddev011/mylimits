@@ -283,3 +283,11 @@ automated tests, live verification and blocked/unverified work.
   recorded at the delivery checkpoint rather than reusing b260d3c's EXE hash.
 - Next: push this final code checkpoint, inspect its Windows CI, then finish
   installation/privacy/architecture/handoff documentation with matching artifacts.
+
+- Final code CI at f723e32 passed Windows Desktop and all extension checks. Its
+  unrelated hosted transport regression exposed an early assertion: it waited
+  only for account presentation before asserting disconnect. Strengthened the
+  fixture to await the authoritative disabled connection and assert the actual
+  PostgreSQL disconnected generation; provider behavior is still simulated.
+  No hosted production path was added or substituted for Desktop. Rerunning CI
+  checks this stronger boundary before final delivery.

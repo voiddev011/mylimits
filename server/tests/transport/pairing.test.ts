@@ -61,7 +61,11 @@ test('hosted fictional provider crosses real extension/API/PostgreSQL transport 
   const publicData=await page.evaluate(()=>chrome.runtime.sendMessage({type:'state'}));assert.ok(!JSON.stringify(publicData).includes('FICTIONAL-PROVIDER-SECRET'));assert.equal(publicData.data.accounts.length,2);
   const privateData=await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:sync:private:v1'))['mylimits:sync:private:v1'] as {enabled:boolean});assert.equal(privateData.enabled,false);
   await page.getByRole('button',{name:'Details for Hosted Personal',exact:true}).click();await page.getByRole('button',{name:'Disconnect',exact:true}).click();
-  await page.waitForFunction(async()=>{const r=await chrome.runtime.sendMessage({type:'state'});return r.data.accounts.find((a:{alias:string})=>a.alias==='Hosted Personal')?.connection==='inactive';});
+  // Account presentation can briefly be inactive during a concurrent source
+  // refresh. Wait for the authoritative connection mutation as well, rather
+  // than treating that transient presentation as completed disconnect.
+  await page.waitForFunction(async id=>{const r=await chrome.runtime.sendMessage({type:'state'});const c=r.data.connections.find((c:{id:string})=>c.id===`hosted:${id}`);return c?.status==='disabled'&&c.enabled===false&&r.data.accounts.find((a:{alias:string})=>a.alias==='Hosted Personal')?.connection==='inactive';},completed.connectionId);
+  const disconnected=(await pool.query('SELECT state,generation FROM hosted_connections WHERE id=$1',[completed.connectionId])).rows[0];assert.equal(disconnected.state,'disconnected');assert.ok(disconnected.generation>0);
   const after=await page.evaluate(()=>chrome.runtime.sendMessage({type:'state'}));assert.equal(after.data.accounts.find((a:{id:string})=>a.id==='website-A').defaultName,'Website Work');assert.equal(after.data.accounts.find((a:{alias:string})=>a.alias==='Hosted Personal').connection,'inactive');
  }finally{await context.close();await app.close();await pool.end();await admin.query(`DROP SCHEMA ${schema} CASCADE`);await admin.end();await rm(directory,{recursive:true,force:true});}
 });
