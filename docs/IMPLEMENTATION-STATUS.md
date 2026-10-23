@@ -8,6 +8,12 @@ has passed local validation and is ready for review. Main is unchanged. Desktop 
 
 ## Current decision
 
+The latest user instruction authorizes completing tasks in order, merging
+validated checkpoints into main and pruning branches whose commits are preserved.
+This supersedes earlier task-specific no-main-merge instructions. Real-evidence
+gates are unchanged: no C8/C9 implementation is authorized by a simulated PASS.
+Each finished checkpoint will include file-level added/deleted line counts.
+
 The active persistent-accounts plan is
 [the unchanged R2 proposal](MYLIMITS-PERSISTENT-ACCOUNTS-PLAN-v2.md).
 The user explicitly authorized task group C6 only. The next action after C6 is
@@ -839,7 +845,26 @@ automated tests, live verification and blocked/unverified work.
   C6 source checkpoint a60bb25 is pushed on codex/c6 in
   [PR #7](https://github.com/voiddev011/mylimits/pull/7), targeting
   feat/persistent-accounts with the full §11.3 handoff as its description.
-  GitHub CI is pending; the local results above are complete. Human E1–E8,
+  Both C6 verify and connected-services runs passed, as did the Node matrices.
+  One Windows run passed and its duplicate exposed a shutdown metadata race;
+  the correction and actual rerun results are recorded below. Human E1–E8,
   Checkpoint A's trial and real account/logout/rotation/isolation remain PENDING.
   Next action: review C6, collect evidence using INSTALL.md, then stop for the
   separately authorized C7/G0 task. No gate decision or next group was executed.
+
+### C6 review correction — Windows shutdown race
+
+- User authorized safe main integration and branch reduction before continuing.
+  The worktree was clean; no unique user edits were overwritten. C6 PR #7 remains
+  the active review branch while fixing its failing Windows CI job.
+- The failing job read a null StartTime/CreationDate after process enumeration
+  and called ToUniversalTime on it. Added Test-DesktopSameProcess, which refuses
+  termination on missing, unreadable or mismatched timing metadata. The existing
+  bounded exit wait still preserves recovery/account files if a process remains.
+- Changed companion/windows/desktop-runtime.ps1 and scripts/test-windows-setup.ps1.
+  Added deterministic timing/exit-race checks alongside the actual Windows
+  owned-child shutdown and unrelated-child survival checks. No assertions weakened.
+- PowerShell/Windows execution is unavailable locally; the actual Windows job
+  must validate this path. Local full checks and the Windows rerun are pending.
+  Next: obtain actual results, integrate validated C6, prune only merged branches,
+  then write the C7 evidence assessment without inventing provider findings.
