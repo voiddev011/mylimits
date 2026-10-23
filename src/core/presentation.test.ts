@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { demoState } from '../ui/demo';
-import { diagnostics, privatePresentation, needsAttention } from './presentation';
+import { diagnostics, privatePresentation, needsAttention,accountSource,connectionSource } from './presentation';
 import { collectAlerts } from './engine';
 import { emptyStore } from './model';
 import { SettingsSchema } from './schema';
@@ -38,4 +38,13 @@ test('privacy mode masks desktop notification titles and meter labels', () => {
   store.accounts[0]!.meters=store.accounts[0]!.meters.map(m=>({...m,label:'SECRET_WINDOW',usedPercent:99,observedAt:now,resetsAt:now+3600000}));
   store.settings={...store.settings,desktopAlerts:true,privacyMode:true};
   const {alerts}=collectAlerts(store,now); assert.ok(alerts.length); assert.ok(!JSON.stringify(alerts.map(a=>[a.title,a.message])).includes('SECRET'));
+});
+test('source labels follow the live bound reading, not the provider or an account nickname',()=>{
+ const state=demoState(),account=state.accounts[0]!;
+ state.connections=[{...emptyStore('fixture').connections[0]!,id:'old',kind:'website',accountId:account.id,status:'needs-auth',enabled:true},
+  {...emptyStore('fixture').connections[0]!,id:'current',kind:'vault',accountId:account.id,status:'active',enabled:true}];
+ account.meters=account.meters.map(m=>({...m,connectionId:'current'}));
+ assert.equal(accountSource(account,state),'Saved sign-in');
+ assert.equal(connectionSource('companion'),'Companion');assert.equal(connectionSource('cloud'),'Hosted');
+ assert.equal(accountSource({...account,id:'unbound'},state),'Saved reading');
 });

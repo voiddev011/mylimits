@@ -39,7 +39,7 @@ export const ProviderStateSchema: z.ZodType<ProviderState> = z.object({
   failures: z.number().int().min(0), nextRetryAt: time.nullable(),
 });
 export const ConnectionRecordSchema: z.ZodType<ConnectionRecord> = z.object({
-  id, provider: ProviderSchema, kind: z.enum(['website','companion','independent-local','cloud','snapshot-import']),
+  id, provider: ProviderSchema, kind: z.enum(['website','vault','companion','independent-local','cloud','snapshot-import']),
   accountId: id.nullable(), workspaceId: id.nullable(), workspaceIds: z.array(id).max(100), enabled: z.boolean(),
   status: z.enum(['disabled','checking','active','needs-auth','needs-tab','unavailable','offline','error']),
   generation: z.number().int().min(0), lastAttemptAt: time.nullable(), lastSuccessAt: time.nullable(),
@@ -53,7 +53,8 @@ export const UsageSnapshotSchema: z.ZodType<UsageSnapshot> = z.object({
 export const AccountSetupSchema = z.object({
   id: z.string().uuid(), provider: ProviderSchema, mode: z.enum(['detect','another']), nickname: z.string().trim().max(60),
   previousAccountId: id.nullable(), startedAt: time,
-});
+  method:z.enum(['ambient','private']).default('ambient'),slotId:z.string().uuid().optional(),
+}).refine(s=>s.method!=='private'||!!s.slotId,{message:'Private setup requires a saved sign-in slot.'});
 const CurrentStoreSchema: z.ZodType<Store> = z.object({
   accountSetup: AccountSetupSchema.nullable().optional(),
   version: z.literal(2), installSalt: z.string().min(1), accounts: z.array(AccountSchema).max(100),

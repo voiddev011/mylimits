@@ -110,6 +110,57 @@ test.describe('bounded temporary-tab recovery (fictional provider)',()=>{
  });
 });
 
+test.describe('connection-scoped refresh (fictional providers only)',()=>{
+ test.use({grantedProviderOrigin:'https://claude.ai/*'});
+ test('a reserved saved source never borrows browser login, and refresh/disconnect affect only the selected connection',async({context,worker,extensionId})=>{
+  const {vaultId}=await import('../../src/core/connection-id');
+  const slot='0ca82d0c-54da-4b17-901f-64d7c7964adb',savedId=vaultId('claude',slot),salt='fictional-source-salt',old=Date.now()-3600000;
+  const websiteAccount=await accountId('claude','web-user:web-org',salt);
+  let state=applySnapshot(emptyStore(salt),'claude',websiteAccount,{kind:'account',displayName:'Website A',plan:null,meters:[{...demoState().accounts[0]!.meters[0]!,usedPercent:90}]},old);
+  state.connections.find(c=>c.id==='website:claude')!.lastAttemptAt=Date.now();
+  state.connections.push({...state.connections[0]!,id:savedId,kind:'vault',profileId:slot,accountId:null,lastAttemptAt:null});
+  state=applySnapshot(state,'claude','fictional-saved-B',{kind:'account',displayName:'Saved B',plan:null,meters:[{...demoState().accounts[0]!.meters[0]!,usedPercent:80}]},old,{connectionId:savedId});
+  state.accounts.find(a=>a.id==='fictional-saved-B')!.alias='Personal B';
+  await worker.evaluate(async state=>{
+   const scope=globalThis as typeof globalThis & {sourceFixtureReads:number};scope.sourceFixtureReads=0;
+   globalThis.fetch=async input=>{scope.sourceFixtureReads++;const p=new URL(String(input)).pathname;const body=p==='/api/account'?{uuid:'web-user'}:p==='/api/organizations'?[{uuid:'web-org',name:'Personal',capabilities:['chat']}]:{five_hour:{utilization:25,resets_at:'2030-01-01T00:00:00Z'}};return new Response(JSON.stringify(body),{headers:{'content-type':'application/json'}});};
+   await chrome.storage.local.set({'mylimits:state:v2':state});
+  },state);
+  const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
+  expect((await page.evaluate(connectionId=>chrome.runtime.sendMessage({type:'refresh',connectionId}),savedId)).ok).toBe(true);
+  const failed=await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);
+  expect(failed.accounts.find(a=>a.id===websiteAccount)).toMatchObject({connection:'active',updatedAt:old});
+  expect(failed.accounts.find(a=>a.id==='fictional-saved-B')).toMatchObject({alias:'Personal B',connection:'unavailable',updatedAt:old});
+  expect(failed.accounts.find(a=>a.id==='fictional-saved-B')!.meters[0]!.usedPercent).toBe(80);
+  expect(await worker.evaluate(()=>(globalThis as typeof globalThis & {sourceFixtureReads:number}).sourceFixtureReads)).toBe(0);
+  expect(failed.connections.find(c=>c.id===savedId)!.message).toContain('Provider evidence and setup');
+  const publicState=await page.evaluate(()=>chrome.runtime.sendMessage({type:'state'}));expect(publicState.data.connections.find((c:{id:string})=>c.id===savedId)).not.toHaveProperty('profileId');
+  await expect(page.getByRole('button',{name:'Details for Personal B',exact:true}).locator('.source-badge')).toHaveText('Saved sign-in');
+  await page.evaluate(connectionId=>chrome.runtime.sendMessage({type:'disconnect',connectionId}),savedId);
+  await worker.evaluate(async()=>{const store=(await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store;store.connections.find(c=>c.id==='website:claude')!.lastAttemptAt=null;await chrome.storage.local.set({'mylimits:state:v2':store});});
+  await page.evaluate(()=>chrome.runtime.sendMessage({type:'refresh',connectionId:'website:claude'}));
+  const final=await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);
+  expect(final.accounts.find(a=>a.id===websiteAccount)!.meters[0]!.usedPercent).toBe(25);
+  expect(final.accounts.find(a=>a.id==='fictional-saved-B')).toMatchObject({alias:'Personal B',connection:'inactive',updatedAt:old});
+  expect(final.accounts).toHaveLength(2);
+ });
+ test('a stalled optional helper does not delay eligible website refresh on opening MyLimits',async({context,worker,extensionId})=>{
+  const observed=Date.now()-3600000;
+  const state=applySnapshot(emptyStore('fictional-stalled-helper'),'claude','old-browser-account',{kind:'account',displayName:'Old browser reading',plan:null,meters:[]},observed);
+  await worker.evaluate(async state=>{
+   const contains=chrome.permissions.contains.bind(chrome.permissions);chrome.permissions.contains=async p=>p.permissions?.includes('nativeMessaging')?true:contains(p);
+   Object.defineProperty(chrome.runtime,'connectNative',{configurable:true,value:()=>({onMessage:{addListener:()=>{}},onDisconnect:{addListener:()=>{}},disconnect:()=>{},postMessage:()=>{}})});
+   globalThis.fetch=async input=>{const p=new URL(String(input)).pathname;const body=p==='/api/account'?{uuid:'unblocked-user'}:p==='/api/organizations'?[{uuid:'unblocked-org',name:'Personal',capabilities:['chat']}]:{five_hour:{utilization:15,resets_at:'2030-01-01T00:00:00Z'}};return new Response(JSON.stringify(body),{headers:{'content-type':'application/json'}});};
+   await chrome.storage.local.set({'mylimits:state:v2':state,'mylimits:companion-enabled':true});
+  },state);
+  const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
+  await expect.poll(async()=>{
+   const state=await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);
+   return state.accounts.find(a=>a.updatedAt>observed)?.meters[0]?.usedPercent;
+  },{timeout:8000}).toBe(15);
+ });
+});
+
 // Protocol-2 fixture: first-party processes are fictional; no provider is contacted.
 function nativeProfile(id: string, alias = '', authState = 'connected', meters = demoState().accounts[1]!.meters, provider: 'openai'|'claude' = 'openai') {
  return {id,provider,alias,authorizationGeneration:1,status:authState==='connected'?'active':'unavailable',authState,plan:'plus',updatedAt:authState==='connected'?Date.now():0,meters,

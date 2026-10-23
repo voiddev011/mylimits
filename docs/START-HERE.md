@@ -21,10 +21,11 @@ Read root AGENTS.md, the proposal and the current status before coding.
 Real-session gates G0/G1 remain required; no saved-session feature is enabled yet.
 Keep project Markdown directly in docs/.
 
-The current persistent-accounts task is **C4 / Checkpoint A**: bounded normal-tab
-recovery and Phase 1 validation. C1–C3 are integrated into
-`feat/persistent-accounts`; C4 is on `codex/c4`. Review the C4 handoff/status and
-perform the plan's 3–4 day trial before authorizing C5. No session-vault or new
-browser-only independent login has been delivered by these checkpoints.
+The current persistent-accounts task is **C5 / connection-scoped refresh** on
+`codex/c5`. C1–C4 are integrated into `feat/persistent-accounts`. The user
+authorized continuing code work after the C4 review handoff; the 3–4 day live
+trial is still pending and main has not been merged. Review C5 at Checkpoint B
+before continuing to C6. No session vault or browser-only independent login has
+been delivered; G0/G1 are still required before enabling private sign-in.
 
 [Documentation index](README.md) · [Research](COMPETITOR-RESEARCH.md)

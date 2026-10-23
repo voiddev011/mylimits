@@ -1,11 +1,11 @@
 import { browser } from 'wxt/browser';
 import { PROVIDER_IDS, type ProviderId } from '../core/model';
-import { AccountSchema, MeterSchema, SettingsSchema } from '../core/schema';
-import { accountId, applySnapshot, badge, collectAlerts, markProvider, recordObservation } from '../core/engine';
+import { AccountSchema, SettingsSchema } from '../core/schema';
+import { badge, collectAlerts, recordObservation,markConnection } from '../core/engine';
 import { providers, providerForUrl } from '../providers/catalog';
-import { AdapterError, readProvider } from '../providers/adapters';
+import { AdapterError, readProvider,ambientTransport } from '../providers/adapters';
 import { enableWebsite, setWorkspace, accountPreferences, orderAccounts, forgetAccount } from '../core/actions';
-import { RefreshCoordinator, shouldRefresh, type RefreshReason } from '../core/scheduler';
+import { RefreshCoordinator, shouldRefresh, nextRetry, type RefreshReason } from '../core/scheduler';
 import { changeConnection } from '../core/connections';
 import { analyzeHistory } from '../core/insights';
 import { historyPoint, exportReadings } from '../core/history-data';
@@ -20,10 +20,12 @@ import { refreshHosted,hostedStatus,startHosted,hostedAttempt,hostedAction } fro
 import { remoteHostedId } from '../core/hosted';
 import { startAccountSetup, saveAccountSetup } from '../core/account-setup';
 import { createRequestDiagnostics } from './diagnostics';
-import { authRetryDeadline, createSessionCookies } from './session-cookies';
+import { createSessionCookies } from './session-cookies';
 import { createTabRecovery } from './bootstrap-tab';
 import { isNormalTab } from '../core/browser-tabs';
 import { applySyncedSettings } from '../core/sync-contracts';
+import { createConnectionRefresh } from './connection-refresh';
+import { websiteId } from '../core/connection-id';
 
 const coordinator = new RefreshCoordinator(2);
 const requestDiagnostics = createRequestDiagnostics({ storage: browser.storage.session });
@@ -76,63 +78,62 @@ async function saveAcceptedHistory(accountId: string, connectionId: string): Pro
   });
 }
 
-export async function refreshProvider(provider: ProviderId, manual = false, reason: RefreshReason = manual ? 'manual' : 'scheduled'): Promise<void> {
-  await tabRecovery.initialize();
-  const connectionId = `website:${provider}`;
-  return coordinator.run(connectionId, async signal => {
-    const before = await readStore();
-    const connection = before.connections.find(c => c.id === connectionId);
-    if (!connection || !shouldRefresh(connection, reason, Date.now(), before.settings.refreshMinutes)) return;
-    if (!await browser.permissions.contains({ origins: [providers[provider].origin] })) { await setProvider(provider, false); return; }
-    const stamp = connection.generation;
-    await updateStore(store => ({ store: { ...store, connections: store.connections.map(c => c.id === connectionId && c.generation === stamp ? { ...c, status:'checking',lastAttemptAt:Date.now() } : c),
-      providers: { ...store.providers, [provider]: { ...store.providers[provider], status:'checking',checkedAt:Date.now() } } }, value:undefined }));
-    try {
-      // Another account can have different workspaces. Do not carry the old selection through setup.
-      const switchingAccount=before.accountSetup?.provider===provider;
-      const selected = switchingAccount?undefined:before.workspaces.find(w => w.id === connection.workspaceId);
-      const sessionInfo=await sessionCookies.inspect(provider);
-      const snapshot = await readProvider(provider, { workspaceRemoteId: selected?.remoteId,readingMode:before.providers[provider].readingMode }, signal,
-        { record: input => requestDiagnostics.record({...input,sessionCookieState:sessionInfo.state,cookieNames:sessionInfo.names}), lastSuccessAt: connection.lastSuccessAt },
-        {access:tabRecovery,options:{enabled:async()=>((await readStore()).settings.autoRecoverTab??true),cookieState:sessionInfo.state,signal,
-          onStart:async()=>{await updateStore(store=>{const c=store.connections.find(c=>c.id===connectionId);
-            if(!c?.enabled||c.generation!==stamp||signal.aborted||store.settings.autoRecoverTab===false)throw new AdapterError('error','Refresh was cancelled.',null,'cancelled');
-            return {store:{...store,connections:store.connections.map(c=>c.id===connectionId?{...c,message:'Retrying in the background'}:c)},value:undefined};});}}});
-      const meters = snapshot.meters.map(m => MeterSchema.parse(m));
-      const id = await accountId(provider, snapshot.identity, before.installSalt);
-      const choices = await Promise.all((snapshot.workspaces ?? []).map(async w => ({ id:await accountId(provider,`workspace:${w.identity}`,before.installSalt),provider,remoteId:w.identity,name:w.name })));
-      const workspaceId = choices.find(w => w.remoteId === snapshot.workspace?.identity)?.id ?? null;
-      const accepted = await updateStore(store => {
-        const current=store.connections.find(c=>c.id===connectionId);
-        if(!current?.enabled || current.generation!==stamp || signal.aborted)return {store,value:false};
-        const enriched={...store,workspaces:[...store.workspaces.filter(w=>!choices.some(n=>n.id===w.id)),...choices],connections:store.connections.map(c=>c.id===connectionId?{...c,workspaceIds:choices.map(w=>w.id)}:c)};
-        const next=applySnapshot(enriched,provider,id,{...snapshot,meters},Date.now(),{workspaceId,generation:stamp});
-        AccountSchema.parse(next.accounts.find(a=>a.id===id));return {store:next,value:true};
-      });
-      if(accepted&&meters.length)await saveAcceptedHistory(id, connectionId);
-    } catch(error) {
+const collectConnection=createConnectionRefresh({readStore,updateStore,coordinator,
+  permitted:connection=>browser.permissions.contains({origins:[providers[connection.provider].origin]}),
+  permissionMissing:async connection=>{
+    if(connection.kind==='website')await setProvider(connection.provider,false);
+    else await updateStore(store=>({store:changeConnection(store,connection.id,{enabled:false,status:'disabled',message:'Allow site access before reconnecting this source.'},true),value:undefined}));
+  },
+  read:async(connection,options,signal,onRecoveryStart)=>{
+    // C5 adds routing only. Never substitute ambient login for a missing saved driver.
+    if(connection.kind!=='website')throw new AdapterError('unavailable','Saved sign-in is not available. Provider evidence and setup are still required.',null,'saved-transport-unavailable');
+    await tabRecovery.initialize();
+    const sessionInfo=await sessionCookies.inspect(connection.provider);
+    return readProvider(connection.provider,options,signal,ambientTransport(connection.provider,signal,
+      {record:input=>requestDiagnostics.record({...input,sessionCookieState:sessionInfo.state,cookieNames:sessionInfo.names}),lastSuccessAt:connection.lastSuccessAt},
+      {access:tabRecovery,options:{enabled:async()=>((await readStore()).settings.autoRecoverTab??true),cookieState:sessionInfo.state,signal,onStart:onRecoveryStart}}));
+  },
+  cookieState:connection=>sessionCookies.sessionCookieState(connection.provider),
+  saveHistory:saveAcceptedHistory,updated:async()=>{await renderBadge();await sendAlerts();},
+});
+
+export async function refreshConnection(connectionId:string,manual=false,reason:RefreshReason=manual?'manual':'scheduled'):Promise<void>{
+  const source=(await readStore()).connections.find(c=>c.id===connectionId);
+  if(!source)return;
+  if(source.kind==='website'||source.kind==='vault')return collectConnection(connectionId,reason);
+  if(source.kind==='snapshot-import')return; // Imported readings have no live provider authorization.
+  return coordinator.run(connectionId,async signal=>{
+    const store=await readStore(),current=store.connections.find(c=>c.id===connectionId);
+    if(!current||!shouldRefresh(current,reason,Date.now(),store.settings.refreshMinutes)||signal.aborted)return;
+    try{
+      if(current.kind==='cloud'&&remoteHostedId(current.id)){
+        if(manual)await hostedAction(remoteHostedId(current.id)!,'refresh');else await refreshHosted();
+      }else if(current.kind==='companion'&&current.profileId){
+        await companionRequest('refresh',current.profileId);await refreshCompanion();
+      }else throw new AdapterError('unavailable','No refresh transport is available for this connection.');
+    }catch(error){
       if(signal.aborted)return;
-      const status=error instanceof AdapterError?error.status:'error';
-      const message=error instanceof AdapterError?error.message:'The website returned information MyLimits could not verify.';
-      const cookieState=status==='signed-out'?await sessionCookies.sessionCookieState(provider):'unknown';
-      await updateStore(store=>{
-        const current=store.connections.find(c=>c.id===connectionId);
-        if(!current?.enabled||current.generation!==stamp)return {store,value:undefined};
-        const next=markProvider(store,provider,status,message,Date.now());
-        const retry=authRetryDeadline(status,cookieState,Date.now(),current.failures+1,store.settings.refreshMinutes,error instanceof AdapterError?error.retryAt:null);
-        next.connections=next.connections.map(c=>c.id===connectionId?{...c,lastAttemptAt:Date.now(),failures:current.failures+1,nextRetryAt:retry}:c);
-        next.providers[provider].failures=current.failures+1;next.providers[provider].nextRetryAt=retry;
+      await updateStore(latest=>{
+        const live=latest.connections.find(c=>c.id===connectionId&&c.enabled&&c.generation===current.generation);if(!live)return {store:latest,value:undefined};
+        const next=markConnection(latest,connectionId,'unavailable','This connection could not refresh. Its last reading is retained.',Date.now());
+        next.connections=next.connections.map(c=>c.id===connectionId?{...c,failures:c.failures+1,nextRetryAt:nextRetry(Date.now(),c.failures+1,latest.settings.refreshMinutes,null)}:c);
         return {store:next,value:undefined};
       });
     }
     await renderBadge();await sendAlerts();
   });
 }
-
-async function refreshAll(manual = false, reason: RefreshReason = manual ? 'manual' : 'scheduled'): Promise<void> {
-  const results = await Promise.allSettled([...PROVIDER_IDS.map(provider => refreshProvider(provider, manual, reason)), refreshCompanion(true),refreshHosted(manual)]);
+export async function refreshProvider(provider:ProviderId,manual=false,reason:RefreshReason=manual?'manual':'scheduled'):Promise<void>{
+  const connections=(await readStore()).connections.filter(c=>c.provider===provider&&c.enabled);
+  await Promise.allSettled(connections.map(c=>refreshConnection(c.id,manual,reason)));
+}
+async function refreshAll(manual=false,reason:RefreshReason=manual?'manual':'scheduled'):Promise<void>{
+  // Discovery must not hold website collection behind an unavailable helper/API.
+  const discovery=Promise.allSettled([refreshCompanion(),refreshHosted()]);
+  const connections=(await readStore()).connections.filter(c=>c.enabled);
+  const results=await Promise.allSettled([...connections.map(c=>refreshConnection(c.id,manual,reason)),discovery]);
   await snapshotSync.run().catch(()=>{});
-  if (results.some(result => result.status === 'rejected')) await renderBadge().catch(() => undefined);
+  if(results.some(result=>result.status==='rejected'))await renderBadge().catch(()=>{});
 }
 
 async function setProvider(provider: ProviderId, enabled: boolean): Promise<void> {
@@ -141,7 +142,7 @@ async function setProvider(provider: ProviderId, enabled: boolean): Promise<void
   coordinator.cancel(`website:${provider}`);
   await updateStore(store => ({ store: enableWebsite(store, provider, enabled), value: undefined }));
   await reconcileObserver(provider);
-  if (enabled) {await refreshProvider(provider, true);await reconcileWidgets();}
+  if (enabled) {await refreshConnection(websiteId(provider), true);await reconcileWidgets();}
   else {
     await browser.permissions.remove({ origins: [origin] });
     await renderBadge();
@@ -244,7 +245,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
       await updateStore(store => ({store:startAccountSetup(store,command.provider,command.mode,command.nickname,crypto.randomUUID(),Date.now()),value:undefined}));
       const state = await readStore();
       if (!state.providers[command.provider].enabled) await setProvider(command.provider,true);
-      else void refreshProvider(command.provider,true).catch(()=>{});
+      else void refreshConnection(websiteId(command.provider),true).catch(()=>{});
       break;
     }
     case 'account-setup-save':
@@ -255,7 +256,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
     case 'reader-mode': {
       coordinator.cancel(`website:${command.provider}`);
       const enabled=await updateStore(store=>{const enabled=store.providers[command.provider].enabled,next=enableWebsite(store,command.provider,enabled);next.providers[command.provider].readingMode=command.mode;return {store:next,value:enabled}});
-      await reconcileObserver(command.provider);if(enabled)await refreshProvider(command.provider,true);break;
+      await reconcileObserver(command.provider);if(enabled)await refreshConnection(websiteId(command.provider),true);break;
     }
     case 'sync': {
       if(command.action==='status')return snapshotSync.status();
@@ -280,14 +281,14 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
     case 'workspace':
       coordinator.cancel(command.connectionId);
       await updateStore(store => ({ store: setWorkspace(store, command.connectionId, command.workspaceId), value: undefined }));
-      await refreshProvider('claude', true); break;
+      await refreshConnection(command.connectionId, true); break;
     case 'disconnect': {
       const conn = (await readStore()).connections.find(c => c.id === command.connectionId);
       if (!conn) throw new Error('Connection is no longer saved.');
       if(conn.kind==='cloud'&&remoteHostedId(conn.id))await hostedAction(remoteHostedId(conn.id)!,'disconnect');
       else if (conn.kind === 'website') await setProvider(conn.provider, false);
       else if (conn.kind === 'companion') { await companionRequest((await companionStatus()).compatible ? 'disconnect' : 'remove', conn.profileId); await refreshCompanion(); }
-      else await updateStore(store => ({ store: changeConnection(store, conn.id, { enabled:false,status:'disabled' }, true), value:undefined }));
+      else {coordinator.cancel(conn.id);await updateStore(store => ({ store: changeConnection(store, conn.id, { enabled:false,status:'disabled' }, true), value:undefined }));}
       break;
     }
 
@@ -309,9 +310,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
     case 'refresh': {
       const source = command.connectionId ? (await readStore()).connections.find(c => c.id === command.connectionId) : undefined;
       if(command.connectionId && !source) throw new Error('This connection is no longer available.');
-      if(source?.kind === 'cloud'&&remoteHostedId(source.id)){await hostedAction(remoteHostedId(source.id)!,'refresh');}
-      else if(source?.kind === 'companion') { await companionRequest('refresh', source.profileId); await refreshCompanion(); }
-      else if(source) await refreshProvider(source.provider, true);
+      if(source) await refreshConnection(source.id,true);
       else if(command.provider) await refreshProvider(command.provider, true);
       else await refreshAll(true);
       break;
@@ -372,7 +371,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
 
 export function startController(): void {
   let stopSessionCookies=()=>{};
-  const listenSessionCookies=()=>{stopSessionCookies();stopSessionCookies=sessionCookies.listenSessionCookies(provider=>refreshProvider(provider,false,'cookie'));};
+  const listenSessionCookies=()=>{stopSessionCookies();stopSessionCookies=sessionCookies.listenSessionCookies(provider=>refreshConnection(websiteId(provider),false,'cookie'));};
   listenSessionCookies();
   browser.permissions.onAdded.addListener(listenSessionCookies);
   const storage=browser.storage.local as typeof browser.storage.local&{setAccessLevel?:(options:{accessLevel:'TRUSTED_CONTEXTS'})=>Promise<void>};
@@ -410,7 +409,7 @@ export function startController(): void {
   });
   browser.runtime.onStartup.addListener(() => { void refreshAll(false, 'startup').catch(() => undefined); });
   browser.idle.onStateChanged.addListener(state=>{if(state==='active')void refreshAll(false,'idle').catch(()=>{});});
-  browser.tabs.onUpdated.addListener((id, info, tab) => { if(isNormalTab(tab)&&!tabRecovery.owns(id)&&info.status==='complete'&&tab.url){const provider=providerForUrl(tab.url);if(provider)void refreshProvider(provider,false,'tab').catch(()=>{});} });
+  browser.tabs.onUpdated.addListener((id, info, tab) => { if(isNormalTab(tab)&&!tabRecovery.owns(id)&&info.status==='complete'&&tab.url){const provider=providerForUrl(tab.url);if(provider)void refreshConnection(websiteId(provider),false,'tab').catch(()=>{});} });
   void (async () => {
     await tabRecovery.initialize();
     const store = await readStore();

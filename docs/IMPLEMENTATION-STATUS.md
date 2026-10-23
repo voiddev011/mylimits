@@ -1,8 +1,8 @@
 # Current implementation status — Desktop + extension
 
-Updated 23 October 2026. Active work: `codex/c4`, targeting
-`feat/persistent-accounts`. C1–C3 are integrated; C4 passed local checks and is
-ready for Checkpoint A review. Main is unchanged. Desktop was implemented on
+Updated 23 October 2026. Active work: `codex/c5`, targeting
+`feat/persistent-accounts`. C1–C4 are integrated; C5 connection-scoped refresh
+passed local validation and is ready for Checkpoint B review. Main is unchanged. Desktop was implemented on
 `feature/desktop-independent-accounts`, created from clean
 `docs/desktop-accounts-execution-plan` (`3f218f6` locally).
 
@@ -10,9 +10,11 @@ ready for Checkpoint A review. Main is unchanged. Desktop was implemented on
 
 The active persistent-accounts plan is
 [the unchanged R2 proposal](MYLIMITS-PERSISTENT-ACCOUNTS-PLAN-v2.md).
-The next major boundary is Checkpoint A after C4: user review and the 3–4 day
-website-reliability trial, before C5. No saved-session vault or browser-only
-independent login exists from C1–C4. Historical Desktop acceptance remains pending.
+The user authorized continuing code work after the C4 review handoff. C5's next
+major boundary is Checkpoint B review. The Checkpoint A 3–4 day live trial remains
+PENDING; no main merge or trial result is inferred from the instruction to continue.
+No saved-session vault or browser-only independent login exists from C1–C5.
+Historical Desktop acceptance remains pending.
 
 The implemented direction is a desktop app alongside the extension. See
 [Desktop delivery and pending acceptance](DESKTOP-ACCOUNTS-HANDOFF.md) for the guided Windows installation,
@@ -74,9 +76,9 @@ hosted route is deferred. It was not completed by earlier infrastructure work.
 
 ## Next action
 
-Review the C4 PR, then stop at Checkpoint A for user review and
-the [manual trial](INSTALL.md#persistent-accounts-checkpoint-a-c1c4). Keep C5 and
-all private-session/vault work gated. For the separate Desktop path, real-account
+Review the C5 PR, then stop at Checkpoint B for user review.
+The [manual trial](INSTALL.md#persistent-accounts-checkpoint-a-c1c4) is pending;
+keep all private-session/vault implementation gated by G0/G1. For the separate Desktop path, real-account
 acceptance in DESKTOP-ACCOUNTS-HANDOFF.md remains pending for both providers.
 
 After each task record changed files, commands/results and skips, evidence level,
@@ -672,3 +674,74 @@ automated tests, live verification and blocked/unverified work.
   Main is unchanged. Stop before C5. Human review/integration and the 3–4 day trial are
   next; private-session evidence gates, independent browser accounts and logout
   survival remain unimplemented/unverified here.
+
+### C5 — connection-scoped collection, host serialization and source labels
+
+- User's “alright, continue” authorizes the next code checkpoint after C4 review.
+  This does not establish the plan's human live trial or a main merge; both remain
+  pending. C4 PR #5 merged into feat/persistent-accounts as e8c9255 after both
+  latest-head CI runs completed green. One push-run hosted transport test first
+  observed active after disconnect; the identical PR run passed. The isolated
+  failed job reran with unchanged source/assertions and passed. This timing
+  failure is recorded, not presented as proven provider behavior or silently
+  dismissed. No hosted production provider driver exists.
+- T2.1/T2.2: added strict website/vault ID helpers without rewriting old IDs.
+  markConnection mutates only the requested source, mirrors provider state only
+  for website sources and projects accounts from their bound source snapshots.
+  markProvider remains a compatible website wrapper.
+- T2.3/T2.4: extracted the actual source-bound collection path behind injected
+  storage/permission/reader/history ports. Refresh commands and workspace changes
+  route by connection ID; provider/all commands iterate enabled sources with the
+  shared two-job coordinator. Cookie/tab/current-browser setup signals target
+  only the website connection, not other accounts of that provider. Per-host FIFO
+  locks wrap each Chrome background/page/temporary request and hold until I/O
+  settles; queued cancellations never run. Reader transport is pluggable while
+  retaining C4's whole-transaction recovery behavior.
+- A vault metadata record has no production transport yet. Its refresh explicitly
+  reports unavailable and preserves its dated reading; it never falls back to the
+  current browser login. Saved sources reject wrong-account identity. No cookies,
+  credentials, private windows, DNR rules or authentication are added by C5.
+- T2.5/T2.6/T2.7: setup method defaults to ambient and private metadata binds to
+  a validated slot. Added vault kind with Store.version still 2. Public state
+  excludes profileId; migration tests preserve existing accounts/snapshots/aliases.
+  Added Browser login / Saved sign-in / Companion source badges. Native metadata
+  retains an unknown lastAttemptAt instead of inventing an attempt on status read.
+- Changed: core connection-id/engine/model/schema/account-setup/companion/
+  presentation; new injected connection-refresh and host-lock modules/tests;
+  controller/adapters; UI source badges; migrations/setup tests, test registration
+  and browser regression; status/start/architecture/install docs. No dependencies.
+- First fast check passed 148 tests. Lock integration introduced a TypeScript
+  narrowing error for tab.id inside a closure; captured the validated numeric ID.
+  Expanded fast check passed 157/157. Initial full check/browser run and final
+  packaging results are recorded below when completed.
+- New core acceptance tests refresh two fictional same-provider connections
+  concurrently with different quota values and aliases, then verify failed A,
+  wrong identity, late disconnect, coalescing and persisted waits do not damage B.
+  New Chromium test verifies an unavailable saved source makes zero ambient HTTP
+  reads, retains its alias/timestamp and does not affect the website connection.
+- Live status: simulated sources only. Independent login, provider quota access,
+  normal/private isolation, logout survival and renewal are NOT verified/delivered
+  by this refactor. Stop after C5 review delivery; do not start C6 in this task.
+- Final checks: npm run check passed **159 core, 20 native, 24 connection and
+  4 transport/runtime tests**, TypeScript and Chrome build. Full Chromium suite
+  passed **42/42**. The earlier 157/41 full run also passed; final review scoped
+  cookie/tab/setup signals to website only and kept discovery concurrent, then
+  reran the full checks. No existing assertion values were changed or weakened.
+- Added 12 unit regressions in total: IDs (1), host locking/cancellation (2),
+  actual injected connection collection/isolation (5), additive migration (1),
+  setup-slot selection (1), source labels (1), native unknown timestamps (1).
+  Added two Chromium cases: no ambient borrowing by a reserved saved source,
+  plus eligible website collection while an optional helper deliberately stalls.
+- Server typecheck, Edge/Firefox builds and all three package contract checks
+  passed. All builds ran sequentially after browser testing. No new Windows
+  installer is needed for this extension/source-contract refactor.
+- npm run zip passed: .output/mylimits-3.4.0-chrome.zip, **314271 bytes**;
+  SHA-256 **802cbe9f92cf8de3a68fbd6f578640b892aca4469c07fcd70fa99bd8c991484e**.
+  Whitespace and 56 relative documentation links passed. Original R2 plan unchanged.
+  C5 installation/manual review is in INSTALL.md, source contracts in ARCHITECTURE.md.
+- Delivery: source checkpoint 2ea79cd is pushed on codex/c5 in
+  [PR #6](https://github.com/voiddev011/mylimits/pull/6), targeting
+  feat/persistent-accounts. Rebasing onto the C4 integration commit preserved the
+  tested source tree exactly. GitHub CI results remain pending; local results are
+  above. Stop at Checkpoint B. No main merge, C6 spike, G0/G1 approval, production
+  saved-account login or live provider result is claimed.
