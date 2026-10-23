@@ -45,13 +45,17 @@ MyLimits has no analytics, telemetry or advertising. A separate self-hosted snap
 The optional companion is a local background service; Codex makes its authenticated
 OpenAI requests independently of website cookies.
 Without sync, the extension’s own requests target only the enabled provider’s selected session and usage interfaces. Configured sync sends the allowlisted data described below only to its fixed approved server. It will not collect or forward conversations.
-Opening a website or its usage page is a visible action performed by the user.
+With automatic recovery enabled, eligible website checks may briefly open one
+inactive normal provider tab. It uses that browser's existing login. You can turn
+this off in Settings; it does not sign into another account.
 
 ## Permissions
 
 - `storage`: save local preferences and normalized usage.
 - `alarms`: schedule modest refreshes without a continuously running worker.
-- `scripting`: read permitted usage interfaces in an existing website tab
+- `idle`: attempt eligible refreshes when your device becomes active again,
+  honoring existing cooldowns and provider waits.
+- `scripting`: read permitted usage interfaces in an existing or owned recovery tab
   when needed, and install narrow activity observers on enabled websites.
 - `sidePanel`: display the dashboard inside Chrome's side panel.
 - Optional exact site permissions: enable only websites the user chooses.
@@ -264,3 +268,86 @@ Existing local retention controls continue. Global data deletion includes hosted
 attempts, jobs, readings, credentials and connections. Operator backups require
 separate retention/deletion handling; deleting active DB records does not rewrite
 old backups. Public hosting and actual provider renewal/logout remain unverified.
+
+## Experimental request diagnostics (persistent-accounts C1)
+
+Settings → Copy safe diagnostics includes up to 200 recent website-request
+results from this browser session. Entries contain provider, redacted endpoint
+path, timestamp, transport, HTTP status, normalized response type/challenge/retry
+metadata, page-fallback/tab availability and elapsed time since a successful
+reading. Organization identifiers and URL queries are removed. Response bodies,
+request headers, credentials, account names and quota values are not collected.
+On the C3 branch, optional cookie access can report matching session-cookie
+names and presence from the confirmed normal cookie store. Without permission,
+or when the store/names cannot be established, it reports unknown. No cookie
+values are retained in diagnostics or account state.
+
+The buffer uses extension session storage, or bounded memory when unavailable.
+It is not part of account storage, reading exports, analytics or snapshot sync.
+The copy button copies the sanitized report to your clipboard only when clicked;
+it does not send the report anywhere. Browser exit clears the session buffer.
+
+## Optional sign-in change detection (C3 preview)
+
+Connecting the current OpenAI/Claude website account offers the optional cookies
+permission together with that site's access. If declined, Continue without
+sign-in detection requests site access only; backoff-based tracking still works.
+The helper calls the cookie API for the selected provider's normal store and uses
+names, domain/store/partition metadata and expiry to notice possible sign-in
+changes. Cookie values returned by that API are not copied, saved or logged.
+
+Private-store events are excluded. Only failed/waiting website sources may
+refresh after a debounced matching change; healthy accounts do not refresh for
+every rolling cookie. Candidate names remain live-unverified, so a missing
+candidate is unknown in production rather than proof that the user signed out.
+There is no saved session vault or new independent login in C3.
+
+## Bounded background website recovery (C4 preview)
+
+Settings → Recover without opening the site (briefly opens a background tab)
+defaults on. A recovery attempt may open the enabled provider's ordinary homepage
+in an inactive tab, wait for loading/browser checks, read the selected usage
+interfaces and close its own tab. This may run the provider page's ordinary
+scripts and network requests under its own privacy policy. It cannot log you in
+after session expiry or preserve a revoked login. Plain unauthorized or throttled
+responses do not trigger recovery tabs. Selecting that tab cancels recovery and
+leaves it open.
+
+Attempts are limited to one per provider per 30 minutes and eight per UTC day.
+Local storage holds provider, day, count and last-attempt time separately from
+account data. Session storage holds only owned tab/window IDs, provider and
+creation time for cleanup after a worker restart. These records contain no
+credentials, are excluded from export/sync and never create a session vault.
+The recovery preference stays local even when other preferences are synced.
+Diagnostics label this transport `temp-tab`, with the same redaction rules above.
+
+## C6 diagnostic build only
+
+The explicitly flagged evidence spike is a separate test build with required
+cookies, declarativeNetRequestWithHostAccess and webRequest permissions. It asks
+for each provider's site access when you click a test. These required diagnostic
+permissions, its page and its runtime are excluded from ordinary release builds;
+the existing optional cookie sign-in-change grant remains unchanged.
+
+In your separate test profile, you may explicitly select cookie names/store and
+consent to a temporary in-memory capture. The diagnostic worker may then replay
+those values in a tightly scoped Chrome session rule with browser credentials
+omitted, or obtain a transient ChatGPT token for Bearer-only tests. Values stay in
+worker memory and the temporary browser rule; they are never printed, written to
+Store/local account storage, messaged to the page, exported, synced or logged.
+Cookie names/flags, expiry times, store context and sanitized status/path tables
+are visible. Account IDs, bodies and full headers are not returned.
+
+Automatic production tracking does not run in this build. Rule scope requires
+both the selected provider host and this extension's worker initiator/tab-less
+requests. Rules are removed after requests and cleaned up at startup; failed
+cleanup blocks further probes. Response observation keeps Set-Cookie names only,
+filters extension-worker reader paths and stops after 60 seconds. It does not
+retain renewed cookie values. Session storage contains only provider/wait times
+under mylimits:spike:waits:v1; these are outside Store and never synced/exported.
+
+Closing/disconnecting the page or clearing capture cancels work, drops secrets
+and closes only the window created by its private dry run. No logout endpoint or
+cookie deletion is automated. Browser/worker restart loses captures; this is not
+a persistent vault or independent-account feature. Copy sanitized results copies
+the visible metadata report only. Live tests and G0/G1 decisions remain pending.

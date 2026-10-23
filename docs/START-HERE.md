@@ -16,8 +16,17 @@ Completed execution plans and starter prompts were removed on 23 October 2026.
 They remain in Git history. The newly added
 [persistent-accounts proposal](MYLIMITS-PERSISTENT-ACCOUNTS-PLAN-v2.md) is retained
 unchanged. It was written against an older baseline and references archived files
-and branches; reconcile it with current code before executing it. This cleanup
-does not implement or approve its proposed credential/session behavior.
+and branches; reconcile it with current code before executing it. Implementation now starts on `feat/persistent-accounts`, one task group at a time.
+Read root AGENTS.md, the proposal and the current status before coding.
+Real-session gates G0/G1 remain required; no saved-session feature is enabled yet.
 Keep project Markdown directly in docs/.
+
+The current persistent-accounts task is **C6 / evidence spike** on `codex/c6`.
+C1–C5 are integrated into `feat/persistent-accounts`; main is unchanged. The
+user explicitly authorized C6 only. The 3–4 day live trial remains pending.
+Read [spike setup](INSTALL.md#c6-evidence-spike-test-accounts-only) and fill
+[the live evidence ledger](SESSION-PERSISTENCE-EVIDENCE.md) on your own test
+accounts. No session vault or browser-only independent login has been delivered.
+Stop before C7; G0/G1 remain required before enabling private sign-in.
 
 [Documentation index](README.md) · [Research](COMPETITOR-RESEARCH.md)

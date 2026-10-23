@@ -6,6 +6,7 @@ import { applySnapshot } from './engine';
 import { startAccountSetup, saveAccountSetup, setupCandidate } from './account-setup';
 import { StoreSchema } from './schema';
 import { toPublicState } from './public';
+import { vaultId } from './connection-id';
 
 const now = 1_800_000_000_000;
 const setupId = '1f30feba-2b2a-4c19-8ebc-cd35bc96ff71';
@@ -73,4 +74,16 @@ test('another account clears the previous workspace and invalidates reads withou
   assert.equal(current.generation, connection.generation + 1);
   assert.equal(current.nextRetryAt, connection.nextRetryAt);
   assert.equal(current.lastAttemptAt, connection.lastAttemptAt);
+});
+test('private setup selects only its saved slot while ambient setup keeps its current browser binding',()=>{
+ let store=initial();const slot='3cfc53b0-65a4-496a-9df5-ad95ca568941',connectionId=vaultId('claude',slot);
+ store.connections.push({...store.connections[0]!,id:connectionId,kind:'vault',profileId:slot,accountId:null});
+ store=startAccountSetup(store,'claude','detect','Personal',setupId,now+1,{method:'private',slotId:slot});
+ store=applySnapshot(store,'claude','account-a',snapshot,now+2);
+ assert.equal(setupCandidate(store),null);
+ store=applySnapshot(store,'claude','account-b',snapshot,now+3,{connectionId});
+ assert.equal(setupCandidate(toPublicState(store))!.id,'account-b');
+ assert.equal(saveAccountSetup(store,setupId,'account-b').accounts.find(a=>a.id==='account-b')!.alias,'Personal');
+ assert.equal(store.providers.claude.activeAccountId,'account-a');
+ assert.throws(()=>startAccountSetup(store,'claude','detect','',setupId,now,{method:'private'}),/not available/);
 });

@@ -49,7 +49,7 @@ MyLimits 2.1 is a local Manifest V3 extension with an optional separate snapshot
 flowchart TD
   Click[User enables an exact website origin] --> Schedule[Alarms / refresh-on-open / manual request]
   Schedule --> Guard[Per-source cooldown, backoff and generation]
-  Guard --> Reader[Fixed-origin reader: background first, existing tab fallback]
+  Guard --> Reader[Fixed-origin reader: background, normal tab, bounded recovery tab]
   Native[Optional local OpenAI companion] --> Normalize[Validate normalized snapshot]
   Reader --> Normalize
   Normalize --> Reconcile[Source reconciliation and account projection]
@@ -114,13 +114,15 @@ establish a remote account or infer an allowance from a message count.
 ## Collection, concurrency and failure recovery
 
 Chrome alarms default to five minutes. Popup opening refreshes only as needed;
-ordinary UI storage reads do not initiate collection. At most two website reads
-run together. Same-source overlapping requests coalesce, queued work can abort,
+ordinary UI storage reads do not initiate collection. At most two explicit source
+refresh jobs run together. Same-source overlapping requests coalesce, queued work can abort,
 and disabled/forgotten/rebound generations reject late results. State mutations
 serialize through one repository queue.
 
-Background fetch uses fixed origins and timeouts. An existing permitted page can
-provide context when needed; no hidden tab or login window is created. Typed
+Background fetch uses fixed origins and timeouts. An existing permitted normal
+page can provide context when needed. With automatic recovery enabled, selected
+network/403/challenge failures may create one inactive normal tab temporarily;
+this uses the same browser login and never creates an independent login. Typed
 errors distinguish sign-in, missing page, provider denial, offline, throttling
 and unverifiable responses. The native bridge uses its existing coalesced
 request/status path independently of website transport.
@@ -128,14 +130,145 @@ request/status path independently of website transport.
 Next attempts and exponential failure backoff persist across worker restarts.
 Provider retry instructions are capped at 24 hours; ordinary exponential backoff
 caps at an hour. A 15-second click cooldown and persisted retry wait apply before
-requests; explicit reconnect resets local scheduling. Authentication rejection
-pauses scheduled/open retries until a manual/relevant website recovery event.
+requests; explicit reconnect resets local scheduling. On the persistent-accounts
+C2 implementation, authentication rejection retries automatically once a persisted
+nextRetryAt is due. A null authentication retry deadline waits for a manual, tab
+or cookie signal. Those signals still obey the 15-second cooldown; non-auth
+provider waits are never bypassed. C3 adds normal-store cookie signals; C4 adds
+the idle-to-active trigger, which obeys scheduled retry waits.
 A failed request never changes the observation time of the previous reading.
+
+## Persistent-accounts C4: bounded website recovery
+
+The reader first tries the background request and an existing normal tab. Only
+eligible network/403/HTML-challenge failures enter `bootstrap-tab.ts`. Plain 401,
+429, malformed quota data, offline and cancellation do not create a tab. A
+provider Retry-After wait is respected. Recovery does not bypass a challenge or
+provide a login; if the browser cannot satisfy the request, normal backoff resumes.
+
+One inactive provider tab hosts the entire identity → quota → identity transaction.
+Closing after the first endpoint would make the next endpoint collide with its
+own cooldown. Loading is bounded at 20 seconds, followed by a three-second settle.
+Existing quota/identity validation and generation fences still decide acceptance.
+The UI shows “Retrying in the background” only while recovery is running.
+
+The tab factory chooses an explicitly non-private normal window. Reader selection,
+website focus and tab-update triggers reject private, unknown and Firefox container
+contexts. Owned recovery tabs cannot trigger or be borrowed by other checks.
+Only its recorded tab/window may be closed; user activation aborts the attempt
+and leaves that tab open. Session ownership records support worker-start cleanup.
+Unavailable/corrupt ownership storage disables this recovery path conservatively.
+
+Local counters permit at most eight attempts per provider per UTC day, with at
+least 30 minutes between attempts, including creation failures. They live outside
+Store at `mylimits:recovery-counters:v1`; ownership lives only in extension session
+storage at `mylimits:recovery-tabs:v1`. Neither is exported or synced. Settings
+`autoRecoverTab` defaults to true for old version-2 data and is deliberately
+browser-local: preference push/pull excludes it and preserves the receiving
+browser's choice. IDs, aliases, readings and history retain their existing schema.
+`normalizeHeaders` remains absent until the real-session evidence gate.
+
+Normal/private routing and provider data in automated tests are fictional. Real
+Windows Chrome/Brave, browser-wake, challenge and overnight behavior remain manual
+acceptance checks. C4 introduces no browser session vault or independent account.
 
 Freshness uses each meter's observation time, active source status and reset
 expiry. Expired windows await a new reading; a countdown reaching zero does not
 refill a meter. Unknown is null/absent, reported zero is valid, and scopes are
 never combined into an overall AI percentage.
+
+## Persistent-accounts C5: connection-scoped collection
+
+`refreshConnection(id)` is the collection boundary. A provider refresh enumerates
+its enabled sources; Refresh all enumerates all enabled sources. The common
+two-job coordinator coalesces by immutable connection ID. Helper/hosted discovery
+runs alongside collection so an unavailable optional service cannot hold up
+ordinary website reads. Native software retains its own per-account scheduling.
+
+`connection-refresh.ts` contains the actual website/future-vault normalization,
+identity checks, generation fencing, status/backoff and history acceptance with
+injected storage, permission and reader ports. Failures call `markConnection`;
+only website failures update the legacy provider mirror. Account presentation
+continues to derive from source-bound snapshots; another account of the same
+provider remains live. Browser-tab, cookie and current-account setup signals
+target only `website:<provider>`, never another connection.
+
+Provider parsing remains transport-injected. `ambientTransport` supplies ordinary
+background/page requests and the C4 whole-transaction temporary-tab retry.
+`host-lock.ts` serializes each individual Chrome request by exact provider host,
+across background, page and temporary transports. Other hosts may proceed in
+parallel. Waiting cancellation removes that request; running work holds the lock
+until its I/O/cleanup settles even if cancellation was requested. Future saved
+transports must use this same lock before installing any scoped request rule.
+No request-header/cookie rules are installed by C5.
+
+IDs `website:<provider>` stay unchanged. The new reserved form is
+`vault:<provider>:<UUID>`; account/workspace identity is still verified separately
+from the slot and nickname. Setup metadata defaults to `method: ambient` and may
+bind a future private attempt to its own slot. `Store.version` remains 2, existing
+aliases/snapshots/history persist, and public state still excludes `profileId`.
+The source labels are Browser login, Saved sign-in, Companion, Desktop, Hosted
+and Saved reading. A label is not evidence that a provider grant is available.
+
+There is **no vault credential store, private-sign-in UI or production saved
+transport yet**. Refreshing a reserved vault record reports unavailable and keeps
+its dated reading; it cannot use ambient browser credentials. Fictional injected
+readers test two-source concurrency and isolation, not actual authorization.
+C6 and the real-session G0/G1 gates remain before private-sign-in implementation.
+
+## C6 evidence spike — separate build only
+
+`MYLIMITS_SPIKE=1` retains the spike entrypoint and compiles a dedicated runtime.
+Without the flag, WXT drops that entrypoint and the compiled branch/import; release
+directory and ZIP checks reject its files, runtime markers and required diagnostic
+permissions. C3's existing optional cookies grant stays deliberately intact.
+The extra required cookies/DNR/webRequest permissions apply only to the spike.
+The spike uses `.output-spike`, separate from `.output`, and carries a distinct
+manifest name/options/toolbar page. Ordinary Firefox builds remain supported;
+this Chromium-specific diagnostic build rejects Firefox explicitly.
+The toolbar popup promotes itself to a persistent tab before connecting, so
+focusing a private test window cannot close the controlling diagnostic page.
+
+The spike worker never starts normal account collection. Its sole client must be
+the exact same-extension normal `spike.html` page; provider pages, query variants,
+private-page clients, extra fields and credential-bearing commands are rejected.
+One page owns the session. Captured cookies and a transient ChatGPT token stay in
+private closure memory, not Store/IndexedDB/local storage/messages/exports/sync.
+Only metadata and redacted results return to the page. Input never accepts pasted
+cookie/token values or arbitrary endpoints.
+
+A lists names/flags from enumerated stores and identifies the normal store only
+from explicit normal-tab linkage. Capture requires an enumerated store, selected
+names and consent; replay filters domain/path/expiry/partition state and caps the
+header at 16 KB. B runs existing readers with ambient, scoped-header and captured
+cookie transports; the ambient diagnostic path omits C4 automatic temporary tabs
+to avoid confounding E2. Every raw probe has an exact provider endpoint, bounded
+request timeout and shared host lock. Temporary rules include both tabIds [-1]
+and initiatorDomains [runtime.id], and are removed in finally. Startup clears only
+the reserved spike rule range; cleanup failure stops further diagnostic requests.
+No unscoped-rule fallback exists. Rule feedback and request success are reported
+separately; missing feedback is not evidence of a match.
+
+C decodes only exp (not signature verification) and tests Bearer-only usage. F
+requires that existing memory token and returns only the status of an omit-cookie,
+no-rule request; it does not fetch a new session. D observes only selected worker
+reader paths, retains Set-Cookie names only, and expires after 60 seconds. E creates
+one owned private window only after checking access and other private windows;
+inspection reports store metadata, not a connected account. Closure never calls
+logout or deletes cookies.
+
+Provider waits and the 15-second diagnostic click interval persist as metadata in
+extension session storage, with a memory fallback for the current wait when a
+write fails. Unavailable/corrupt wait storage fails closed; no network retry is
+allowed to bypass it. Clear/disconnect cancels active work and drops captures;
+the runtime waits for request/rule cleanup before permitting a replacement client.
+The page sends keepalive messages, but a worker/browser restart still loses its
+capture, invalidating any unfinished original-session lifetime trial.
+
+Automated tests use simulated providers and header effects. They do not verify
+DNR-modified headers, real cookie names, logout survival, provider eligibility or
+independent account refresh. The live ledger is SESSION-PERSISTENCE-EVIDENCE.md.
+C7 and G0/G1 are not executed by this diagnostic implementation.
 
 ## Alerts
 
@@ -391,3 +524,38 @@ Alert identities include account, workspace/scope, meter and reset window.
 Do not collapse different quota windows into one ledger entry. Snooze/quiet
 hours must not falsely mark an undelivered alert as delivered. When notifications
 resume, alert once only if a fresh currently low reading still warrants it.
+
+## Persistent-accounts C1: request diagnostics
+
+The current experimental branch adds a browser-injected, bounded session buffer
+(src/platform/diagnostics.ts). Controller supplies it and the connection's last
+successful fetch time to readProvider; adapters observe background and page
+responses without changing authentication or quota parsing rules. Strict
+metadata reconstruction happens before storage and again on read. A dashboard-only
+request-diagnostics message feeds the existing safe-diagnostics copy action.
+Storage failures degrade to memory and do not fail quota collection. No new
+permissions, session capture or independent browser credentials are enabled.
+
+## Persistent-accounts C3: response classification and cookie signals
+
+Provider response metadata is classified before JSON parsing. HTML responses
+(including HTTP 200) and explicit Cloudflare 403 challenges remain needs-tab
+with challenge provenance instead of becoming network status 0. Plain JSON 401
+is sign-out, JSON 403 is denial, and 429 always retains rate-limit/backoff semantics
+even when its body is HTML. Injected page responses use the same MIME guard and
+the background classifier; C3 creates no new tabs.
+
+createSessionCookies injects browser APIs. Exact provider access plus optional
+cookies permission are required. The default store must be linked to explicitly
+non-incognito tabs; store IDs/list order are never assumed. Firefox container,
+ambiguous and partitioned cases remain unknown. Session-cookie additions/
+overwrites debounce for two seconds and recheck store/permission/source state
+before a cookie-reason refresh; only enabled needs-auth/needs-tab sources qualify.
+Permission changes restart listeners and clear pending work.
+
+Candidate cookie-name absence is not authoritative before live validation.
+Production has no verifiedProviders, so missing candidates retain capped backoff.
+The pure retry helper supports a verified-absent auth state (null retry deadline)
+for later evidence-backed configuration; tests of that branch are simulated.
+Request diagnostics include only recognized names/presence, never values.
+All existing accounts/IDs/history and the Desktop authorization route remain.

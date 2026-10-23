@@ -74,3 +74,10 @@ test('mixed native providers preserve OpenAI namespace and create separate Claud
  assert.equal(store.accounts.find(a=>a.provider==='claude')!.alias,'Claude Work');
  assert.equal(store.connections.find(c=>c.provider==='claude'&&c.kind==='companion')!.independent!.workspaceIdentity,'claude-org');
 });
+test('native status delivery preserves an unknown attempt time instead of postponing eligible refresh',()=>{
+ const independent={provider:'openai' as const,alias:'Work',authState:'connected' as const,identityConfidence:'email-only' as const,providerSubject:null,workspaceIdentity:null,capability:'work-codex' as const,lastAttemptAt:null,providerObservedAt:null,nextRetryAt:null,failures:0,errorCode:null,possibleDuplicate:false};
+ const store=mergeCompanion(emptyStore('test'),[{...profile,independent}],now);
+ const next=mergeCompanion(store,[{...profile,independent}],now+60000);
+ assert.equal(next.connections.find(c=>c.kind==='companion')!.lastAttemptAt,null);
+ assert.equal(next.accounts[0]!.updatedAt,now);
+});

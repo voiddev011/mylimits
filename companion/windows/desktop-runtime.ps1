@@ -7,6 +7,15 @@ function Get-DesktopTasks {
   if($task -and ($task.Principal.UserId -eq $identity.Name -or $task.Principal.UserId -eq $identity.User.Value)){$task}
  }
 }
+function Test-DesktopSameProcess($current,$snapshot) {
+ # A process can exit between enumeration and property access. Missing metadata
+ # never authorizes termination; the shutdown wait below still fails closed if
+ # an unverified process remains alive, preserving account/recovery files.
+ if(!$current -or !$snapshot){return $false}
+ try{$currentStart=$current.StartTime;$snapshotStart=$snapshot.CreationDate}catch{return $false}
+ if($currentStart -isnot [DateTime] -or $snapshotStart -isnot [DateTime]){return $false}
+ return [Math]::Abs(($currentStart.ToUniversalTime()-$snapshotStart.ToUniversalTime()).TotalMilliseconds) -lt 100
+}
 function Stop-DesktopOwnedProcesses {
  $dataRoot=Join-Path $env:LOCALAPPDATA 'MyLimitsCompanion'
  $identity=[Security.Principal.WindowsIdentity]::GetCurrent()
@@ -45,7 +54,7 @@ function Stop-DesktopOwnedProcesses {
  foreach($processId in @($owned)){
   $snapshot=@($all | Where-Object {$_.ProcessId -eq $processId})[0]
   $current=Get-Process -Id $processId -ErrorAction SilentlyContinue
-  if($current -and [Math]::Abs(($current.StartTime.ToUniversalTime()-$snapshot.CreationDate.ToUniversalTime()).TotalMilliseconds) -lt 100){Stop-Process -InputObject $current -Force -ErrorAction Stop}
+  if(Test-DesktopSameProcess $current $snapshot){Stop-Process -InputObject $current -Force -ErrorAction Stop}
  }
  foreach($processId in @($owned)){
   $process=Get-Process -Id $processId -ErrorAction SilentlyContinue

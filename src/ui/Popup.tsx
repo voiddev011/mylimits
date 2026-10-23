@@ -1,6 +1,7 @@
+import { accountStatusText,accountSource } from '../core/presentation';
 import { useState } from 'react';
 import { ArrowUpRight, Bell, Gauge, Plus, RefreshCw, Search, X } from 'lucide-react';
-import { accountName, accountStatus, isFresh, remainingPercent, type Account, type Meter } from '../core/model';
+import { accountName, isFresh, remainingPercent, type Account, type Meter } from '../core/model';
 import { useMyLimits } from './useMyLimits';
 import { selectAccounts } from './overview';
 import { countdown, age } from './format';
@@ -38,8 +39,8 @@ export function Popup() {
       {store.accounts.length > 6 && <label className="search-box quick-search"><Search size={13}/><input aria-label="Search accounts" placeholder="Find an account" disabled={store.settings.privacyMode} value={store.settings.privacyMode ? '' : query} onChange={e => setQuery(e.target.value)}/></label>}
       <div className="quick-accounts">{accounts.map(account => {
         const meters = visibleMeters(account);
-        const status = accountStatus(account, now, store.settings.refreshMinutes);
-        const source = account.id.startsWith('hosted:') ? 'Hosted · independent' : account.companionProfile ? (account.provider==='claude'?'Claude · CLI reading':'Codex · independent') : account.provider === 'chatgpt' ? 'Codex' : '';
+        const status = accountStatusText(account, store, now);
+        const source = `${accountSource(account,store)}${account.provider==='chatgpt'?' · Codex':''}`;
         return <button className="quick-account" key={account.id} aria-label={`View ${accountName(account)} in full dashboard`} onClick={() => dashboard('overview', account.id)}>
           <span className="quick-identity"><ProviderMark provider={account.provider}/><span className="quick-copy"><strong>{accountName(account)}</strong><small title={`${source ? source + ' · ' : ''}${status}${account.updatedAt ? ' · ' + age(account.updatedAt, now) : ''}`}>{source && `${source} · `}{status === 'Current' ? age(account.updatedAt, now) : status}{account.meters.length > 2 && ` · +${account.meters.length - 2} limits`}</small></span></span>
           <span className="quick-meters">{meters.map(m => <Reading key={`${m.scope}/${m.id}`} account={account} meter={m} settings={store.settings} now={now} compact/>)}{!meters.length && <span className="no-quota">{account.kind === 'browser' ? 'Local activity only' : 'Quota not reported'}</span>}</span>

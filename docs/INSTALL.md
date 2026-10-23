@@ -145,3 +145,149 @@ Record results separately for **both providers and Windows Chrome/Brave** in
 
 Firefox can build/temporarily install its ZIP, but Desktop native setup for Firefox
 is not implemented. Use Windows Chrome/Brave for this Desktop preview.
+
+## Persistent-accounts Checkpoint A (C1–C4)
+
+For this review checkout (Node 24+, existing cloned repository):
+
+```powershell
+git status
+git fetch origin
+git switch codex/c4
+git pull --ff-only origin codex/c4
+npm ci --include=optional
+npm run build
+```
+
+Preserve any local changes before switching branches. Load/reload the extension
+at `<your repository>\.output\chrome-mv3` in Chrome/Brave; that folder contains
+`manifest.json`. This website-only checkpoint does not need Desktop setup.
+The PR's successful Actions run also supplies extension ZIPs.
+
+Use current browser account may request optional cookie access for
+OpenAI/Claude sign-in-change detection. Declining it leaves Continue without
+sign-in detection; website tracking then uses ordinary retry backoff. The helper
+inspects normal-store cookie metadata, not saved independent credentials. Real
+provider cookie-name and logout/renewal behavior remain unverified. This preview
+does not provide a browser-only independent account login.
+
+Review these steps with your own test accounts:
+
+1. Full dashboard → Settings → Preferences: **Recover without opening the site
+   (briefly opens a background tab)** defaults on. Turn it off, save and reload
+   to confirm the choice persists; turn it back on for recovery testing.
+2. Connect the current website account, note its alias, quota and reading time,
+   then close provider tabs. Refresh from MyLimits. If background access fails
+   with an eligible browser-check error, one inactive tab may appear briefly,
+   the row says **Retrying in the background**, and only that tab closes.
+   A successful direct request need not open any tab.
+3. Settings → Copy safe diagnostics: recovered requests show `temp-tab`.
+   Keep the sanitized report for failures. Do not share cookies or raw responses.
+   Repeat attempts cannot force more tabs: 30-minute spacing, eight per UTC day.
+   Provider wait instructions and the ordinary click cooldown still apply.
+4. Keep an unrelated tab open during recovery. Select a recovery tab if it appears:
+   recovery must cancel and leave that selected tab open. With incognito access
+   enabled, use a different test account there; the normal account must not switch.
+5. Restart/wake the browser and check without reopening the provider. Record real
+   overnight behavior over the plan's **3–4 day trial**. Sign-out, challenge and
+   device-offline cases may retain a dated reading and ask for website action.
+
+Automated fixture coverage does not establish these live outcomes. Stop at
+Checkpoint A for review; merge to main and the trial are human decisions.
+
+## Persistent-accounts Checkpoint B (C5)
+
+For the next code-review build, use the same source setup above but switch/pull
+`codex/c5` instead of `codex/c4`, build, and reload the same unpacked extension
+folder. Do not uninstall it; aliases and history must remain.
+
+1. Overview and the compact popup show the source of each account. In account
+   details, Browser login identifies ordinary website tracking and Companion
+   identifies an existing Desktop connection.
+2. Refresh one source in its details. Its retry state and successful reading
+   belong to that connection. A failure must retain its old reading time and
+   leave other connected accounts untouched.
+3. Current-browser setup, tab and sign-in-change signals still apply only to
+   Browser login. C4's recovery setting and retry limits still apply.
+4. The add-account choices are unchanged. **C5 does not enable Saved sign-in**;
+   that source label is reserved for later gated work. Do not edit storage or
+   manufacture a vault record to connect an account.
+
+Two same-provider saved sources are tested with simulated readers only. Actual
+independent provider login/logout/renewal remains pending; the existing Desktop
+path retains its separate live acceptance checklist. Stop at Checkpoint B for
+review before C6's evidence tools. Main is not merged by this development task.
+
+## C6 evidence spike (test accounts only)
+
+C6 is a separate diagnostic extension build for your own experiments, not the
+independent-account feature. It never starts normal automatic tracking, writes
+account state, or saves captured credentials. Use a **separate test browser profile**.
+
+```powershell
+git fetch origin
+git switch codex/c6
+git pull --ff-only origin codex/c6
+npm ci --include=optional
+npm run build:spike
+```
+
+Load `<repository>\.output-spike\chrome-mv3` in that test profile. It has a
+different extension ID from the normal output folder. Click its toolbar icon
+(it opens a persistent tab), or Details → Extension options, to open the evidence page. Required cookie/DNR/
+webRequest permissions apply only to this diagnostic build. Site access is still
+requested per provider when you click a test. The C6 spike supports Chromium
+(Chrome/Edge/Brave); ordinary Firefox builds remain supported.
+
+Equivalent direct flag: `$env:MYLIMITS_SPIKE="1"; npm run build`, then
+`Remove-Item Env:MYLIMITS_SPIKE`. The output is still `.output-spike`, separate
+from the normal `.output`. `npm run build` without the flag excludes spike files,
+runtime listener and required diagnostic permissions. Normal builds retain C3's
+existing optional cookie permission for sign-in-change detection.
+
+1. **A:** choose the provider → List cookie metadata. It shows normal/all stores
+   and names/flags, never values. Select names from one store, choose that capture
+   store, tick explicit consent, then Capture selected names in memory. Begin with
+   the names you found; use E3 to identify a minimal subset. No manual token input.
+2. **D:** optionally start response-name observation before B/C. It watches only
+   extension worker requests to that provider's reader paths, stops after 60s,
+   and prints names only. Read/stop it when finished.
+3. **B:** close provider tabs for E2, then Compare three transports. It runs the
+   current background/existing-page reader, Origin/Referer rules, then captured
+   replay with browser credentials omitted. Each variant can make several usage
+   reads. Status 0 means a failed request, not HTTP success. Respect retry waits;
+   a 429 stops later requests. C4 automatic temporary tabs are disabled in this
+   diagnostic comparison so they do not confound the no-tab experiment.
+4. **E3:** in this disposable profile, capture first; then clear the site's browser
+   cookies through browser developer tools (not provider logout) and replay B.
+   Record statuses, selected cookie names, rule-feedback availability, and whether
+   unrelated provider tabs stayed unaffected. Success alone cannot establish the
+   extension-initiator match. Do not remove initiatorDomains/tabIds to force a pass.
+5. **E:** enable Allow in Incognito in extension details. Close other private
+   windows in this test profile before Open private dry run. Sign into your test
+   account yourself; Inspect private stores, then use A to capture selected names
+   from that specific store. Close owned private window without signing out.
+   For E4, sign into the same test account in the normal test window and log out
+   there, then replay. Record private logout and global revocation separately.
+6. **C/F:** ChatGPT only. C obtains a transient session token from the chosen
+   current/captured source, decodes only exp and tests usage with Bearer alone.
+   F uses that in-memory token for one usage request with credentials omitted and
+   no DNR rule, printing only status. Expiry decoding is not token verification.
+7. **Copy sanitized results**, then add live findings to
+   [the evidence ledger](SESSION-PERSISTENCE-EVIDENCE.md). Keep E1–E8 separate by
+   provider/browser/version/date. For E5, losing the in-memory capture ends that
+   original-session trial; recapturing cannot prove its lifetime.
+8. **Clear captured state and results** or close the page when finished. Captures
+   are not durable across page disconnect/worker/browser restart. Only owned
+   private windows are closed; no logout endpoint or cookie deletion is automated.
+
+If rule cleanup or cooldown storage fails, stop testing and reload the diagnostic
+extension; do not loosen scoping or clear provider waits. A reconnect may lose
+capture data and requires a new explicit capture. Desktop is not needed for C6.
+
+`npm run test:spike` runs the separate simulated Chromium suite, restores normal
+generated types, and never contacts providers. `npm run zip:spike` writes a
+clearly separate `*-spike.zip` under `.output-spike`; Actions publishes it as
+`mylimits-evidence-spike-not-for-release`. Ordinary release ZIPs are checked for
+spike files/runtime/required permissions. Stop after C6; C7 requires your filled
+live evidence and must not turn these fixtures into a G0 decision.

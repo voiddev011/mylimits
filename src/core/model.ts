@@ -50,6 +50,7 @@ export interface Settings {
   privacyMode?: boolean;
   historyRetentionDays?: 30 | 90;
   displayMode?: 'remaining' | 'used';
+  autoRecoverTab?: boolean;
   resetAlerts?: boolean;
   quietHours?: { enabled: boolean; start: string; end: string }; 
 }
@@ -66,6 +67,7 @@ export interface ProviderState {
 export interface AccountSetup {
   id: string; provider: ProviderId; mode: 'detect' | 'another'; nickname: string;
   previousAccountId: string | null; startedAt: number;
+  method?: 'ambient' | 'private'; slotId?: string;
 }
 export interface Store {
   accountSetup?: AccountSetup | null;
@@ -89,7 +91,7 @@ export function emptyStore(salt: string): Store {
     providers: Object.fromEntries(PROVIDER_IDS.map(id => [id, {
       readingMode: id==='grok'||id==='perplexity'?'quota':undefined, enabled: false, status: 'disabled', activeAccountId: null, checkedAt: null, message: null, failures: 0, nextRetryAt: null,
     }])) as Store['providers'],
-    settings: { warningRemaining: 20, criticalRemaining: 5, desktopAlerts: false, refreshMinutes: 5, theme: 'system', textSize: 'standard', privacyMode: false, historyRetentionDays:30, displayMode: 'remaining', resetAlerts: false, quietHours: { enabled: false, start: '22:00', end: '08:00' } },
+    settings: { warningRemaining: 20, criticalRemaining: 5, desktopAlerts: false, refreshMinutes: 5, theme: 'system', textSize: 'standard', privacyMode: false, historyRetentionDays:30, displayMode: 'remaining', autoRecoverTab:true, resetAlerts: false, quietHours: { enabled: false, start: '22:00', end: '08:00' } },
     alertLedger: {}, observationLedger: [],
   };
 }
@@ -111,7 +113,7 @@ export function alertThresholds(account: Account, settings: Settings): { warning
   return { warning, critical: Math.min(warning, settings.criticalRemaining) };
 }
 
-export type ConnectionKind = 'website' | 'companion' | 'independent-local' | 'cloud' | 'snapshot-import';
+export type ConnectionKind = 'website' | 'vault' | 'companion' | 'independent-local' | 'cloud' | 'snapshot-import';
 export type ConnectionStatus = 'disabled' | 'checking' | 'active' | 'needs-auth' | 'needs-tab' | 'unavailable' | 'offline' | 'error';
 export interface ConnectionRecord {
   id: string; provider: ProviderId; kind: ConnectionKind; accountId: string | null;

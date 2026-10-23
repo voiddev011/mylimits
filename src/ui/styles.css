@@ -17,3 +17,5 @@
 .independent-list{display:grid;gap:12px}.independent-profile{padding:16px;border:1px solid var(--line);border-radius:10px;display:grid;gap:12px;min-width:0}
 .independent-profile p{margin:6px 0}.independent-profile strong{font-size:17px}.verified-identity{display:flex;align-items:center;gap:7px;font-size:14px;overflow-wrap:anywhere}
 .independent-profile small{display:block;color:var(--muted);margin-top:8px}.independent-accounts .inline-actions{flex-wrap:wrap}
+
+.source-badge{display:inline-flex;align-items:center;padding:2px 7px;border:1px solid var(--line);border-radius:6px;color:var(--muted);font-size:.75rem;font-weight:500;line-height:1.4;flex-shrink:0}.account-copy strong:has(.source-badge){flex-wrap:wrap}
