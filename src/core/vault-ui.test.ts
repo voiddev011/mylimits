@@ -6,6 +6,7 @@ test('production saved-sign-in choices are hidden for all off providers includin
 });
 test('expiry labels use only supplied timestamps and never invent an expiry',()=>{
  const now=1800000000000;assert.equal(signInExpiry(undefined,now),null);assert.equal(signInExpiry(null,now),null);assert.equal(signInExpiry(now,now),'Saved sign-in has expired');assert.equal(signInExpiry(now+86400001,now),'Sign-in expires in 2 days');
+ assert.equal(signInExpiry(now+86400000,now),'Sign-in expires in 1 day');
 });
 test('typed private errors map to fixed help without reflecting provider error text',()=>{
  assert.match(privateSignInHelp('incognito-access-required'),/Allow MyLimits/);assert.match(privateSignInHelp('disabled'),/not enabled/);assert.ok(!privateSignInHelp('TOKEN_SECRET').includes('TOKEN_SECRET'));

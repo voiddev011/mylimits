@@ -53,6 +53,22 @@ test('a corrupt stored key fails closed and is never silently replaced',async({c
   try{await keys.create();return false;}catch(e){return e instanceof Error&&e.message==='Saved sign-in key-unavailable.';}
  })).toBe(true);
 });
+test('simulated expiry watchdog persists deduplication in real storage and manages an actual daily alarm',async({context,extensionId})=>{
+ const page=await open(context,extensionId);
+ const result=await page.evaluate(async()=>{
+  const f=await VaultKeys.expiryFixture(chrome),before=await f.read();
+  await Promise.all([f.check(),f.check()]);const first=await f.alarm();
+  f.restart();await f.check();const firstCount=f.sent.length;
+  f.advance(23);await f.check();const after=await f.read(),messages=f.sent;
+  await f.disconnect();await f.check();
+  return {first,firstCount,messages,finalAlarm:await f.alarm(),accountsUnchanged:JSON.stringify(before.accounts)===JSON.stringify(after.accounts),snapshotsUnchanged:JSON.stringify(before.snapshots)===JSON.stringify(after.snapshots),ledger:after.alertLedger};
+ });
+ expect(result.first?.periodInMinutes).toBe(1440);expect(result.firstCount).toBe(1);expect(result.messages).toHaveLength(2);
+ expect(result.messages.map(a=>a.title)).toEqual(['Account 1: sign-in expiring','Account 1: sign-in expiring']);
+ expect(result.messages[0]!.message).toContain('48 hours');expect(result.messages[1]!.message).toContain('24 hours');
+ expect(result.accountsUnchanged).toBe(true);expect(result.snapshotsUnchanged).toBe(true);expect(result.finalAlarm).toBeUndefined();
+ expect(Object.values(result.ledger)[0]!.sent).toEqual([48,24]);expect(JSON.stringify(result.messages)).not.toContain('PRIVATE FIXTURE ALIAS');
+});
 test('actual extension vault storage survives reload and never enters public state or history exports',async({context,extensionId})=>{
  const page=await open(context,extensionId);
  const result=await page.evaluate(async()=>{

@@ -2,6 +2,12 @@
 
 Gate: **G0 — HOLD, awaiting human evidence**
 
+This is the C7 assessment. Later C9–C12 code was authorized behind off policies;
+its implementation is recorded in [current status](IMPLEMENTATION-STATUS.md) and
+[session persistence](SESSION-PERSISTENCE.md). The implementation/dependency table
+below records the C7 baseline, not missing code after those later checkpoints.
+Activation blockers and all PENDING live evidence still apply.
+
 Completed experiments: **None recorded. E1–E8 are PENDING.**
 
 This report assesses the current [evidence ledger](SESSION-PERSISTENCE-EVIDENCE.md)

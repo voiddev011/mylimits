@@ -65,3 +65,20 @@ not instructions to manufacture connection records or turn on a provider policy.
   old session was rejected. That part of E6 requires your independent live check.
 - No vault, private-account setup, header-normalization rollout or G0/G1 decision
   is implemented in C6. Claude's future policy remains a human decision at G1.
+
+## Later coding checkpoints and T4.4 browser coverage
+
+C9–C12 add disabled storage/transport, private setup, consent/deletion and expiry
+warning code. This does not change any PENDING experiment or acceptance row above.
+All provider policies remain off and allowlists empty. C12's fictional-clock
+tests prove local notification/alarm decisions, not provider lifetime or real OS
+notification delivery. See [the current behavior summary](SESSION-PERSISTENCE.md).
+
+| Browser | Private access/store/window (E8) | A/B isolation and refresh | Real expiry/OS notification | Result |
+| --- | --- | --- | --- | --- |
+| Chrome | PENDING | PENDING | PENDING | No live run recorded |
+| Edge / InPrivate | PENDING | PENDING | PENDING | No live run recorded |
+| Brave | PENDING | PENDING | PENDING | No live run recorded |
+
+Record version, OS, provider, date and sanitized outcome when actually tested.
+Browser build success and simulated Chromium fixtures cannot fill these boxes.

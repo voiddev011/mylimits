@@ -44,3 +44,5 @@ import '../src/core/vault-ui.test.ts';
 import '../src/platform/private-access.test.ts';
 import '../src/platform/vault-lifecycle.test.ts';
 import '../src/platform/secrets.test.ts';
+import '../src/core/signin-expiry.test.ts';
+import '../src/platform/expiry-watchdog.test.ts';
