@@ -1,14 +1,20 @@
-# Start here — stable main
+# Start here — MyLimits
 
-This branch contains the MyLimits 2.2 stable source baseline. The newer experimental
-Desktop implementation is on `feature/desktop-independent-accounts`; this cleanup
-does not merge it into main or change application behavior.
+The current implementation is the Desktop + extension preview on
+`main`. Website tracking works without Desktop.
+Independent OpenAI/Claude connections use separate official provider profiles.
+**Real two-account acceptance remains pending for both providers.**
 
-Read [installation and overview](README.md), [implementation status](IMPLEMENTATION-STATUS.md),
-and [architecture and retained contracts](ARCHITECTURE.md).
-[The compact accounts handoff](COMPACT-ACCOUNTS-HANDOFF.md) preserves delivery and
-manual acceptance details. Provider live checks remain separate from fixture tests.
+Read:
 
-Completed phase plans, the original roadmap and starter prompt were removed on
-23 October 2026. Their versions remain in Git history. Do not replay completed
-phases; follow the user's next instructions. Keep project Markdown directly in docs/.
+1. Applicable repository instructions and Git status; preserve user changes.
+2. [Current implementation status](IMPLEMENTATION-STATUS.md).
+3. [Desktop handoff and pending acceptance](DESKTOP-ACCOUNTS-HANDOFF.md).
+4. [Installation](INSTALL.md) and relevant [architecture](ARCHITECTURE.md).
+
+Completed execution plans and starter prompts were removed on 23 October 2026.
+They remain in Git history. No replacement plan has been agreed yet; follow the
+user's next instructions instead of replaying completed implementation tasks.
+Keep project Markdown directly in docs/.
+
+[Documentation index](README.md) · [Research](COMPETITOR-RESEARCH.md)

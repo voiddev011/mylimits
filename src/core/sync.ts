@@ -22,9 +22,9 @@ export class SnapshotSync {
   this.active=new AbortController();try{return await this.port.request(path,{method,token:s.token??undefined,body,signal:AbortSignal.any([this.active.signal,AbortSignal.timeout(10000)])})}finally{this.active=null}
  }
  async start(name='My browser'){return this.serial(async()=>{const s=await this.state();if(s.token)throw new Error('Disconnect the existing sync device first.');const next=initial(this.origin);next.pair=Pair.parse(await this.request(next,'/pairing/start','POST',{name}));await this.port.write(next);return this.public(next)})}
- async poll(){return this.serial(async()=>{const s=await this.state();if(!s.pair)return this.public(s);if(s.pair.expiresAt<Date.now()){s.pair=null;s.error='Pairing expired. Start again.'}else{
+ async poll(enableSnapshotSync=true){return this.serial(async()=>{const s=await this.state();if(!s.pair)return this.public(s);if(s.pair.expiresAt<Date.now()){s.pair=null;s.error='Pairing expired. Start again.'}else{
    const result=z.discriminatedUnion('status',[z.object({status:z.literal('pending')}),z.object({status:z.literal('connected'),deviceId:z.string().uuid(),token:z.string().min(32).max(200)})]).parse(await this.request(s,'/pairing/poll','POST',{id:s.pair.id,secret:s.pair.secret}));
-   if(result.status==='connected'){s.deviceId=result.deviceId;s.token=result.token;s.enabled=true;s.pair=null;s.error=null;}
+   if(result.status==='connected'){s.deviceId=result.deviceId;s.token=result.token;s.enabled=enableSnapshotSync;s.pair=null;s.error=null;}
   }await this.port.write(s);return this.public(s)})}
  async enable(enabled:boolean){if(!enabled)this.active?.abort();return this.serial(async()=>{const s=await this.state();s.enabled=enabled&&!!s.token;s.error=null;await this.port.write(s);return this.public(s)})}
  async reset(){this.active?.abort();return this.serial(async()=>{const s=initial(this.origin);await this.port.write(s);return this.public(s)})}
@@ -35,7 +35,7 @@ export class SnapshotSync {
   s.lastAttemptAt=now;try{
    for(const id of [...s.pendingDeletes]){try{await this.request(s,'/v1/source-data','DELETE',{sourceAccountId:id})}catch(e){if(!(e instanceof SyncError&&[404,410].includes(e.status)))throw e}s.pendingDeletes=s.pendingDeletes.filter(x=>x!==id);delete s.mappings[id];await this.port.write(s)}
    const local=await this.port.store(),expired=local.snapshots.filter(x=>x.observedAt<now-90*86400000);
-   const pending=local.snapshots.filter(x=>x.observedAt>=now-90*86400000&&x.observedAt<=now+60000&&x.receivedAt<=now+60000&&!s.acknowledged.includes(x.snapshotId)&&!s.excluded.includes(x.accountId)&&local.accounts.some(a=>a.id===x.accountId));
+   const pending=local.snapshots.filter(x=>!x.accountId.startsWith('hosted:')&&x.observedAt>=now-90*86400000&&x.observedAt<=now+60000&&x.receivedAt<=now+60000&&!s.acknowledged.includes(x.snapshotId)&&!s.excluded.includes(x.accountId)&&local.accounts.some(a=>a.id===x.accountId));
    let batches=0;
    for(const accountId of [...new Set(pending.map(x=>x.accountId))]){
     if(batches++>=5)break;const account=local.accounts.find(a=>a.id===accountId)!;const items=pending.filter(x=>x.accountId===accountId).slice(0,20).map(x=>syncItem(account,x));
@@ -47,6 +47,11 @@ export class SnapshotSync {
    s.failures=0;s.nextAttemptAt=null;s.error=expired.length?'Readings older than 90 days stay local; newer snapshots are synced.':null;s.lastSyncedAt=now;
   }catch(e){s.failures++;s.nextAttemptAt=now+Math.min(3600000,30000*2**Math.min(6,s.failures));s.error=e instanceof SyncError&&e.status===401?'Device access was revoked or expired. Disconnect and pair again.':'Sync is waiting to retry. Local tracking continues.';if(e instanceof SyncError&&e.status===401)s.enabled=false;}
   await this.port.write(s);return this.public(s);
+ })}
+ async hostedRequest(path:string,method='GET',body?:unknown){return this.serial(async()=>{
+  if(!/^\/v1\/hosted\/(connections(?:\/[0-9a-f-]{36}(?:\/(?:refresh|data))?)?|attempts(?:\/[0-9a-f-]{36})?)$/i.test(path)||!['GET','POST','PATCH','DELETE'].includes(method))throw new Error('Invalid hosted operation.');
+  const s=await this.state();if(!s.token)throw new Error('Connect MyLimits first.');
+  try{return await this.request(s,path,method,body);}catch(e){if(e instanceof SyncError&&e.status===401){s.token=null;s.deviceId=null;s.enabled=false;s.pair=null;s.error='MyLimits access expired. Sign in again.';await this.port.write(s);}throw e;}
  })}
  async pushPreferences(){return this.serial(async()=>{const s=await this.state();if(!s.enabled||!s.token)throw new Error('Connect sync first.');const local=await this.port.store();const names=Object.fromEntries(local.accounts.flatMap(a=>s.mappings[a.id]?[[s.mappings[a.id]!,(a.alias||a.defaultName||a.provider).slice(0,60)]]:[]));
   try{const result=z.object({revision:z.number().int()}).parse(await this.request(s,'/v1/preferences','PATCH',{expectedRevision:s.preferenceRevision,data:{settings:local.settings,names}}));s.preferenceRevision=result.revision;s.error=null;await this.port.write(s);return this.public(s)}catch(e){if(e instanceof SyncError&&e.status===409)throw new Error('Cloud preferences changed. Review/apply them before pushing again.');throw e}

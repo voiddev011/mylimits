@@ -1,6 +1,49 @@
+# Current Desktop accounts extension (3.4)
+
+The + independent path now uses `OpenAICompanion` / `platform/companion.ts` and
+the allowlisted Native Messaging host, not the empty hosted registry. The local
+daemon manages per-connection official profiles, generation-bound confirmation,
+bounded refresh and owned-process recovery. Official Codex App Server RPC owns
+OpenAI authorization; unmodified Claude Code owns Claude authorization and /usage.
+Separate external browser profiles handle sign-in without borrowing website cookies.
+Pending confirmation survives restart. Readings retain their successful fetch time
+through failures; provider observation time remains unknown unless supplied.
+
+Windows setup downloads pinned official dependencies, registers discovered extension
+origins, activates program directories with rollback and confirms local bridge health.
+Provider credentials live outside runtime update directories. Detailed acceptance
+and remaining gaps are in [the handoff](DESKTOP-ACCOUNTS-HANDOFF.md).
+
+## Earlier hosted foundation (3.3, deferred)
+
+Version3.3 adds `src/core/hosted-contracts.ts` (strict public metadata),
+`src/core/hosted.ts` (additive local projection), `src/platform/hosted.ts`
+(background-only API/auth-window routing), and capability-aware + UI.
+
+`server/src/hosted.ts` owns durable owner-scoped attempts/identity/lifecycle;
+`hosted-jobs.ts` owns bounded leases, cooldown/backoff and successful dated reads;
+`transit-kms.ts` wraps envelope keys through configured Vault transit. Migrations
+006–008 are additive. Official driver maps are empty: actual OpenAI/Claude
+hosted integration is blocked. No generic credential-upload or callback proxy
+exists. Test drivers are forbidden outside test environment.
+
+MyLimits identity and optional device pairing reuse the existing OIDC/API boundary.
+Hosted-only pairing does not consent to website snapshot upload. The compact view
+uses prefixed remote IDs; it never merges remote identity into website/native
+accounts by email or nickname. Existing local IDs/preferences/IndexedDB history
+are preserved. History mirrors are bounded; immutable server/IndexedDB records
+retain their original successful fetch/observation timestamps.
+
+See [Desktop delivery and pending acceptance](DESKTOP-ACCOUNTS-HANDOFF.md),
+[handoff](IMPLEMENTATION-HISTORY.md) and [operator setup](SERVER-SETUP.md).
+The older architecture below records the earlier Phase2 baseline; Guide was
+removed in3.0 and is not restored by this work.
+
+---
+
 # Architecture — implemented Phase 2
 
-MyLimits 2.1 is a local Manifest V3 extension with an optional separate snapshot service. Local tracking requires no backend account. The [Architecture and retained contracts](ARCHITECTURE.md) defines contracts; [this handoff](PHASE-2-HANDOFF.md) records current evidence.
+MyLimits 2.1 is a local Manifest V3 extension with an optional separate snapshot service. Local tracking requires no backend account. The [master plan](https://github.com/voiddev011/mylimits/blob/73799f592b43a8aeac89776700239a42a06056b8/docs/V2-IMPLEMENTATION-PLAN.md) defines contracts; [this handoff](https://github.com/voiddev011/mylimits/blob/73799f592b43a8aeac89776700239a42a06056b8/docs/PHASE-2-HANDOFF.md) records current evidence.
 
 ```mermaid
 flowchart TD
@@ -224,6 +267,7 @@ extension-page sender. Removing a grant unregisters scripts and removes visible
 widgets across tabs. Widget settings are separate local storage, not synced.
 
 ## Retained V2 implementation contracts
+
 
 These historical contracts remain relevant to the stable code on this branch.
 

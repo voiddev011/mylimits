@@ -1,3 +1,4 @@
+import type { IndependentMetadata } from './independent-contract';
 // Pure domain types and calculations. No browser APIs or package dependencies.
 export const PROVIDER_IDS = ['claude', 'chatgpt', 'gemini', 'grok', 'perplexity', 'cursor'] as const;
 export type ProviderId = typeof PROVIDER_IDS[number];
@@ -45,6 +46,8 @@ export interface Settings {
   desktopAlerts: boolean;
   refreshMinutes: number;
   theme: 'system' | 'dark' | 'light';
+  textSize?: 'standard' | 'large';
+  privacyMode?: boolean;
   historyRetentionDays?: 30 | 90;
   displayMode?: 'remaining' | 'used';
   resetAlerts?: boolean;
@@ -86,7 +89,7 @@ export function emptyStore(salt: string): Store {
     providers: Object.fromEntries(PROVIDER_IDS.map(id => [id, {
       readingMode: id==='grok'||id==='perplexity'?'quota':undefined, enabled: false, status: 'disabled', activeAccountId: null, checkedAt: null, message: null, failures: 0, nextRetryAt: null,
     }])) as Store['providers'],
-    settings: { warningRemaining: 20, criticalRemaining: 5, desktopAlerts: false, refreshMinutes: 5, theme: 'system', historyRetentionDays:30, displayMode: 'remaining', resetAlerts: false, quietHours: { enabled: false, start: '22:00', end: '08:00' } },
+    settings: { warningRemaining: 20, criticalRemaining: 5, desktopAlerts: false, refreshMinutes: 5, theme: 'system', textSize: 'standard', privacyMode: false, historyRetentionDays:30, displayMode: 'remaining', resetAlerts: false, quietHours: { enabled: false, start: '22:00', end: '08:00' } },
     alertLedger: {}, observationLedger: [],
   };
 }
@@ -115,7 +118,7 @@ export interface ConnectionRecord {
   workspaceId: string | null; workspaceIds: string[]; enabled: boolean;
   status: ConnectionStatus; generation: number; lastAttemptAt: number | null;
   lastSuccessAt: number | null; nextRetryAt: number | null; failures: number;
-  message: string | null; profileId?: string;
+  message: string | null; profileId?: string; independent?: IndependentMetadata;
 }
 export interface Workspace { id: string; provider: ProviderId; remoteId: string; name: string; }
 export interface UsageSnapshot {
@@ -136,5 +139,5 @@ export function accountStatus(account: Account, now: number, refreshMinutes: num
   if (account.connection === 'offline') return 'Offline';
   if (account.connection !== 'active') return 'Temporarily unavailable';
   if (!account.meters.some(m => m.evidence === 'reported')) return 'Quota unavailable';
-  return account.meters.some(m => m.evidence === 'reported' && isFresh(account, m, now, refreshMinutes)) ? 'Updating' : 'Awaiting fresh reading';
+  return account.meters.some(m => m.evidence === 'reported' && isFresh(account, m, now, refreshMinutes)) ? 'Current' : 'Awaiting fresh reading';
 }

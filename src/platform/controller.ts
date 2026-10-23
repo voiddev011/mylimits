@@ -14,8 +14,10 @@ import { readHistory, readHistoryPage, readHistorySeries, pruneHistory, historyE
 import { CommandSchema, type Command } from './messages';
 import { mergeCompanion, markCompanionUnavailable } from '../core/companion';
 import { addCompanionAccount, companionRequest, companionStatus, enableCompanion, listenCompanion, refreshCompanion } from './companion';
-import { widgetSettings,updateWidgetSettings,reconcileWidgets,readWidget,listenWidgets } from './widget';
+import { widgetSettings,updateWidgetSettings,reconcileWidgets,readWidget } from './widget';
 import { snapshotSync } from './sync';
+import { refreshHosted,hostedStatus,startHosted,hostedAttempt,hostedAction } from './hosted';
+import { remoteHostedId } from '../core/hosted';
 import { startAccountSetup, saveAccountSetup } from '../core/account-setup';
 
 const coordinator = new RefreshCoordinator(2);
@@ -111,7 +113,7 @@ export async function refreshProvider(provider: ProviderId, manual = false, reas
 }
 
 async function refreshAll(manual = false, reason: RefreshReason = manual ? 'manual' : 'scheduled'): Promise<void> {
-  const results = await Promise.allSettled([...PROVIDER_IDS.map(provider => refreshProvider(provider, manual, reason)), refreshCompanion()]);
+  const results = await Promise.allSettled([...PROVIDER_IDS.map(provider => refreshProvider(provider, manual, reason)), refreshCompanion(true),refreshHosted(manual)]);
   await snapshotSync.run().catch(()=>{});
   if (results.some(result => result.status === 'rejected')) await renderBadge().catch(() => undefined);
 }
@@ -193,8 +195,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
   if(command.type==='widget-state'||command.type==='widget-action'){
     if(!sender.url||providerForUrl(sender.url)!==command.provider||!sender.tab?.id||sender.frameId!==0)throw new Error('Widget sender does not match its website.');
     const view=await readWidget(command.provider);if(command.type==='widget-state'||!view.enabled)return view;
-    if(command.action==='open'){await browser.tabs.create({url:browser.runtime.getURL('/dashboard.html')});return null}
-    await updateWidgetSettings(s=>({...s,providers:command.action==='hide'?s.providers.filter(p=>p!==command.provider):s.providers,collapsed:command.action==='collapse'?true:command.action==='expand'?false:s.collapsed,position:command.position??s.position}));return null;
+    await updateWidgetSettings(s=>({...s,providers:command.action==='hide'?s.providers.filter(p=>p!==command.provider):s.providers,position:command.position??s.position}));return null;
   }
   if (command.type === 'observer-ready' || command.type === 'observation') {
     if (!sender.url || providerForUrl(sender.url) !== command.provider || !sender.tab?.id) throw new Error('Website observation did not match its sender.');
@@ -214,6 +215,12 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
   switch (command.type) {
     case 'widget-settings': return command.settings?updateWidgetSettings(()=>command.settings!):widgetSettings();
     case 'state': return publicStore();
+    case 'hosted-status': return hostedStatus();
+    case 'hosted-link': return command.action==='start'?snapshotSync.start('MyLimits hosted accounts'):snapshotSync.poll(false);
+    case 'hosted-start': return startHosted(command.provider,command.reconnectId);
+    case 'hosted-attempt': return hostedAttempt(command.id,!!command.cancel);
+    case 'hosted-list': await refreshHosted();return publicStore();
+    case 'hosted-action': await hostedAction(command.id,command.action,command.alias);return publicStore();
     case 'account-setup-start': {
       if (!await browser.permissions.contains({origins:[providers[command.provider].origin]})) throw new Error('Allow site access before detecting an account.');
       await updateStore(store => ({store:startAccountSetup(store,command.provider,command.mode,command.nickname,crypto.randomUUID(),Date.now()),value:undefined}));
@@ -259,8 +266,9 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
     case 'disconnect': {
       const conn = (await readStore()).connections.find(c => c.id === command.connectionId);
       if (!conn) throw new Error('Connection is no longer saved.');
-      if (conn.kind === 'website') await setProvider(conn.provider, false);
-      else if (conn.kind === 'companion') { await companionRequest('remove', conn.profileId); await refreshCompanion(); }
+      if(conn.kind==='cloud'&&remoteHostedId(conn.id))await hostedAction(remoteHostedId(conn.id)!,'disconnect');
+      else if (conn.kind === 'website') await setProvider(conn.provider, false);
+      else if (conn.kind === 'companion') { await companionRequest((await companionStatus()).compatible ? 'disconnect' : 'remove', conn.profileId); await refreshCompanion(); }
       else await updateStore(store => ({ store: changeConnection(store, conn.id, { enabled:false,status:'disabled' }, true), value:undefined }));
       break;
     }
@@ -272,31 +280,42 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
       await enableCompanion(command.enabled);
       break;
     case 'companion-add': {
-      const profile = await addCompanionAccount();
+      const profile = await addCompanionAccount(command.provider, command.nickname);
       await refreshCompanion();
       if (command.nickname) await updateStore(store=>({store:{...store,accounts:store.accounts.map(a=>a.companionProfile===profile?{...a,alias:command.nickname!}:a)},value:undefined}));
       break;
     }
+    case 'companion-confirm': await companionRequest('confirm', command.profile, { generation:command.generation,alias:command.alias }); await refreshCompanion(); break;
+    case 'companion-action': await companionRequest(command.action, command.profile); await refreshCompanion(); break;
     case 'companion-remove': await companionRequest('remove', command.profile); await refreshCompanion(); break;
     case 'refresh': {
       const source = command.connectionId ? (await readStore()).connections.find(c => c.id === command.connectionId) : undefined;
       if(command.connectionId && !source) throw new Error('This connection is no longer available.');
-      if(source?.kind === 'companion') { await companionRequest('refresh', source.profileId); await refreshCompanion(); }
+      if(source?.kind === 'cloud'&&remoteHostedId(source.id)){await hostedAction(remoteHostedId(source.id)!,'refresh');}
+      else if(source?.kind === 'companion') { await companionRequest('refresh', source.profileId); await refreshCompanion(); }
       else if(source) await refreshProvider(source.provider, true);
       else if(command.provider) await refreshProvider(command.provider, true);
       else await refreshAll(true);
       break;
     }
     case 'enable': await setProvider(command.provider, command.enabled); break;
-    case 'rename':
+    case 'rename': {
+      const account = (await readStore()).accounts.find(a => a.id === command.accountId);
+      if(remoteHostedId(command.accountId))await hostedAction(remoteHostedId(command.accountId)!,'rename',command.alias);
+      if (account?.companionProfile) {
+        const status = await companionStatus();
+        if (status.compatible) await companionRequest('rename', account.companionProfile, { alias: command.alias });
+      }
       await updateStore(store => ({ store: { ...store, accounts: store.accounts.map(account => account.id === command.accountId ? { ...account, alias: command.alias } : account) }, value: undefined }));
       break;
+    }
     case 'account-settings':
       await updateStore(store => ({ store: { ...store, accounts: store.accounts.map(account => account.id === command.accountId ? { ...account, alertRemaining: command.alertRemaining, alertsMuted: command.alertsMuted } : account) }, value: undefined }));
       break;
     case 'forget': {
       const store = await readStore();
       const account = store.accounts.find(item => item.id === command.accountId);
+      if(remoteHostedId(command.accountId))await hostedAction(remoteHostedId(command.accountId)!,'forget');
       if (account?.companionProfile) { await companionRequest('remove', account.companionProfile); await refreshCompanion(); }
       if (account && !account.companionProfile && store.providers[account.provider].activeAccountId === account.id) await setProvider(account.provider, false);
       await snapshotSync.forget(command.accountId);
@@ -333,7 +352,6 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
 }
 
 export function startController(): void {
-  listenWidgets();
   const storage=browser.storage.local as typeof browser.storage.local&{setAccessLevel?:(options:{accessLevel:'TRUSTED_CONTEXTS'})=>Promise<void>};
   void storage.setAccessLevel?.({accessLevel:'TRUSTED_CONTEXTS'}).catch(()=>{});
   listenCompanion(async profiles => {

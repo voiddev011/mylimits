@@ -10,5 +10,12 @@ export function companionPaths(platform, home, localAppData) {
   const directory = path.join(home, '.local', 'share', 'mylimits-companion');
   return { dataDir: directory, socketPath: path.join(directory, 'companion.sock') };
 }
-export const { dataDir, socketPath } = companionPaths(process.platform, homedir(), process.env.LOCALAPPDATA);
+const defaults = companionPaths(process.platform, homedir(), process.env.LOCALAPPDATA);
+// Explicit operator/test relocation; never accepted from an extension request.
+const relocated = process.env.MYLIMITS_DESKTOP_DATA_DIR;
+if (relocated && !path.isAbsolute(relocated)) throw new Error('Desktop data directory must be absolute.');
+export const dataDir = relocated || defaults.dataDir;
+export const socketPath = !relocated ? defaults.socketPath : process.platform === 'win32'
+  ? `\\\\.\\pipe\\mylimits-${createHash('sha256').update(dataDir.toLowerCase()).digest('hex').slice(0,24)}`
+  : path.join(dataDir,'companion.sock');
 export const hostName = 'com.mylimits.openai';

@@ -1,421 +1,420 @@
-# MyLimits 2.0 implementation status
-
-Updated: **16 October 2026**. **Phases 1 and 2 verified in available automation; live/manual checks remain pending.** No cloud deployment or
-credential upload has been performed.
-
-## Active checkpoint
-
-- Requested work: user-authorized compact popup and explicit multi-account setup upgrade.
-- Current work package: 2.2 delivered paths verified; independent Claude/other-provider authorization remains unavailable.
-- Next action: use the packaged preview; live provider/Windows acceptance remains pending. No additional product work is assumed.
-- Historical working branch (now deleted after consolidation): `v2/compact-accounts`; published code `7a8f48fb76babfa9b02e29a02e01fc339bb68441`.
-- Main and completed Phase 1/2 branches preserved.
-- Current handoff: [compact accounts upgrade](COMPACT-ACCOUNTS-HANDOFF.md).
-- Historical scope: [Architecture and retained contracts](ARCHITECTURE.md), [Historical implementation status](IMPLEMENTATION-STATUS.md), [Historical implementation status](IMPLEMENTATION-STATUS.md).
-
-## Task ledger
-
-Allowed states: `not_started`, `in_progress`, `implemented`, `verified`, `blocked`.
-`implemented` means code exists but its specified checks are incomplete.
-`verified` requires the task's available automated evidence; live/manual claims
-remain separately recorded. Never mark an unsupported integration complete
-because a generic stub builds. A task with one external check blocked may list
-implemented independent work while leaving that specific check pending.
-
-| Task | Points | State | Evidence / commit / blocker |
-| --- | ---: | --- | --- |
-| P1-01 | 8 | verified | See checkpoint below.
-| P1-02 | 12 | verified | See checkpoint below.
-| P1-03 | 10 | verified | See checkpoint below.
-| P1-04 | 10 | verified | See checkpoint below.
-| P1-05 | 10 | verified | See checkpoint below.
-| P1-06 | 10 | verified | See checkpoint below.
-| P1-07 | 12 | verified | See checkpoint below.
-| P1-08 | 8 | verified | See checkpoint below.
-| P1-09 | 8 | verified | See checkpoint below.
-| P1-10 | 12 | verified | See checkpoint below.
-| **Phase 1 total** | **100** | **verified** | 62 core + 16 companion + 15 browser tests; packaged; live/manual checks pending. |
-| P2-01 | 8 | verified | See checkpoint below. |
-| P2-02 | 12 | verified | See checkpoint below. |
-| P2-03 | 12 | verified | See checkpoint below. |
-| P2-04 | 8 | verified | See checkpoint below. |
-| P2-05 | 12 | verified | See checkpoint below. |
-| P2-06 | 10 | verified | See checkpoint below. |
-| P2-07 | 10 | verified | See checkpoint below. |
-| P2-08 | 8 | verified | See checkpoint below. |
-| P2-09 | 10 | verified | See checkpoint below. |
-| P2-10 | 10 | verified | See checkpoint below. |
-| **Phase 2 total** | **100** | **verified** | 90 core + 17 companion + 19 browser + 30 server + 2 service/browser checks; all three CI jobs pass. External gates remain recorded. |
-
-Points are relative estimates, not elapsed time. Record changes to remaining
-estimates and the reason; do not alter completed effort or add filler to disguise
-an unavailable provider/cloud capability.
-
-## Decisions already made
-
-1. Keep the existing WXT/React/TypeScript/Zod stack, explicit unit runner and
-   Node 24+. Use one workstream; no parallel agents in this handoff.
-2. Exactly two implementation phases, each estimated at 100 points.
-3. Local website connection is the default; native/cloud connections are optional.
-4. Accounts, workspaces, connections and snapshots are distinct. Preserve V1 data.
-5. Provider-reported quota, local counts and estimates are never interchangeable.
-6. Ordinary tab closure, website logout, collector revocation and global logout
-   are different checks. Backend hosting does not override invalid credentials.
-7. All project-owned Markdown lives directly in `docs/`.
-8. Verification applies only to the recorded commands/evidence; live provider claims remain pending.
-
-## External verification currently pending
-
-- Real signed-in provider comparisons, plan/workspace differences and shared
-  phone/other-browser quota updates.
-- Ordinary website logout, collector revocation, renewal and global logout for
-  each separate connection type.
-- Actual Windows Chrome/Brave display scaling and native host behavior.
-- Hosted provider authorization/registration and exact quota-resource access.
-- Other-browser/native packaging/signing and any production cloud vendor setup.
-
-## Checkpoint entry template
-
-Append a compact entry after each task; replace the active checkpoint above.
-
-```text
-Task / state / date:
-Branch / commit:
-Changed files and behavior:
-Commands actually run and results:
-Live/manual checks performed or still pending:
-Decisions / contract changes / revised estimates:
-External blockers (precise missing access or failure):
-Next executable action:
-```
-
-The original documentation-preparation checkpoint preceded implementation. The
-subsequent entries below record actual application work and verification.
-
-## P1-01 checkpoint — 16 October 2026
-
-State: **verified**. Verified all 73 published baseline blobs match the workspace before preserving them in a local baseline commit. Created local and remote v2/phase-1 branches; main remains unchanged. Node 24.19.0/npm 11.9.0 and dependencies are available. Baseline typecheck, 35 core tests and production WXT build pass. Companion tests: 15/16 pass; the real child-process fixture fails in this sandbox (standalone spawnSync reports EPERM). Browser fixtures cannot launch Chromium: setsockopt is denied and Chromium exits SIGTRAP. These are concrete environment blockers, not live provider evidence. Direct Git fetch fails because the shell proxy is unreachable; publication uses the authorized GitHub connector. Added the capability matrix; all live/provider/Windows checks remain pending.
-
-Next: P1-02 — implement V2 domain and public contracts.
-
-## P1-01 checkpoint — 16 October 2026
-
-State: **verified**. Resolved the baseline process-sandbox blockers by running the local fixture command with approved process permissions: companion tests now pass 16/16. Chromium fixtures are being retried with the same approved process access; no provider traffic or real accounts are used.
-
-Next: P1-02 — implement V2 domain and public contracts.
-
-## P1-02 checkpoint — 16 October 2026
-
-State: **verified**. Added explicit connection/workspace/snapshot contracts, validated V2 schemas, generation fencing, account read-model projection and allowlisted public state. Added four domain regression tests and retained the 35 existing tests. Type checking and all 39 core tests pass. Account meters/status remain a materialized read projection inside the same aggregate for existing UI/parser compatibility; connection snapshots are authoritative for source reconciliation, not a second independent store. Baseline browser fixtures passed 10/10 with approved process permissions.
-
-Next: P1-03 — implement resumable V1-to-V2 migration.
-
-## P1-03 checkpoint — 16 October 2026
-
-State: **verified**. Added strict legacy parsing, a V1 backup, V2 state/pointer keys and resumable migration journal. IndexedDB upgrades preserve legacy readings and add idempotency/pagination indexes. Added crash-after-each-write, retry, history failure, malformed/future version and preservation tests. Type checking and 43 core tests pass. Actual browser IndexedDB migration coverage will run at the integration gate.
-
-Next: P1-04 — adapt existing readers and native snapshots to V2 reconciliation.
-
-## P1-04 checkpoint — 16 October 2026
-
-State: **verified**. Adapted existing readers to V2 snapshots and preserved independent native sources. Added Claude workspace choice from validated membership, strict unavailable-selection handling, fixed-origin request-local authentication, sanitized choices and retry timing. Native cold-start readings retain their original age. Type checking and 47 core tests pass; legacy cold-start assertion now compares retained normalized readings, preserving its original behavior guarantee.
-
-Next: P1-05 — add source-aware account and connection commands.
-
-## P1-05 checkpoint — 16 October 2026
-
-State: **implemented**. Added validated account pin/order/snooze preferences, source disconnect and verified workspace commands, plus generation-safe website enable/disable and forget behavior. Native disconnect now retains remembered readings; forgetting explicitly deletes data. Added action regressions for names, workspace membership, invalid reorder and collector shutdown. User-facing controls are integrated in P1-07; no live revocation is claimed.
-
-Next: P1-06 — implement persisted refresh policy and request coordination.
-
-## P1-06 checkpoint — 16 October 2026
-
-State: **verified**. Added a two-slot refresh coordinator, same-source coalescing/cancellation, persisted generation/attempt/backoff state, Retry-After handling and startup/open/tab recovery policies. Added fake-clock and concurrency tests; type checking and 54 core tests pass. Browser observation updates retain their original reported-meter age and are stored in source snapshots. Account controls from P1-05 are ready for UI integration.
-
-Next: P1-07 — build the compact shared interface and account controls.
-
-## P1-05 checkpoint — 16 October 2026
-
-State: **verified**. Completed UI integration in P1-07: rename, pins, order, per-account thresholds, source disconnect, reconnect and workspace controls are available. Production browser regressions for rename persistence, denied access, native independent accounts and remembered disconnect pass.
-
-Next: P1-08 — implement timing-aware notification delivery.
-
-## P1-07 checkpoint — 16 October 2026
-
-State: **verified**. Rebuilt shared popup/dashboard/side-panel surfaces with compact account rows, two pinned meters, clear source age/status, Accounts/History/Settings screens, optional advanced companion, keyboard Escape and light/dark themes. Type check, production build and all 10 adapted regression browser fixtures pass. Visually inspected the captured dashboard preview. Added an explicit six-account fit and pin-persistence integration case for the final gate; actual Windows DPI remains unverified.
-
-Next: P1-08 — implement quiet hours, snooze and confirmed reset notifications.
-
-## P1-08 checkpoint — 16 October 2026
-
-State: **verified**. Implemented overnight local quiet hours, per-account snooze, scoped deduplication with legacy-ledger compatibility, conservative fresh-reading reset confirmation and used/remaining badge semantics. Failed notification delivery restores its ledger entry for retry. Added timing, no-false-reset and migration-dedup tests; all 58 core tests and type checking pass. No timestamp-only reset claim is made.
-
-Next: P1-09 — finish paginated history, export and data controls.
-
-## P1-09 checkpoint — 16 October 2026
-
-State: **verified**. Implemented real IndexedDB pagination with stable timestamp/ID cursors, snapshot deduplication, 30-day pruning, safe JSON/CSV export, date filters, basic observation bars and confirmed history clearing. Exports allowlist fields and disarm CSV formulas. Serializing accepted-history writes prevents forgotten accounts from being reinserted. Browser checks verified pagination, retention, source metadata and V1 history migration across a real browser restart. Fixed an IndexedDB auto-key write issue caught by those tests. Added pruning of forgotten accounts from local recovery copies and late-native-source tombstones; final integration verifies these additional deletion cases.
-
-Next: P1-10 — run integrated checks, package and prepare the Phase 1 handoff.
-
-## P1-10 checkpoint — 16 October 2026
-
-State: **in_progress**. Initial integrated gate passed: TypeScript, 62 core tests, 16 companion tests and production build; all 14 browser fixtures passed. Final inspection found two refresh edge cases: a manual/startup retry could bypass persisted backoff and page-context fallback dropped Retry-After. Hardened these and explicit offline reporting; added controller/history offline and shared-surface keyboard/layout checks. Final gate will be repeated after these code changes. Changed files: src/core/scheduler.ts and its test, src/providers/adapters.ts, tests/browser/extension.spec.ts, package manifests and wxt.config.ts; release documentation in progress.
-
-Next: P1-10 — finalize integrated checks, documentation, ZIP and publication.
-
-## P1-10 checkpoint — 15 October 2026
-
-State: **in_progress**. Final integration passed: npm run check (TypeScript, 62 core tests, 16 companion tests, production build) and 15/15 production browser fixtures. npm run zip passed. Package inspection caught and fixed WXT display-version naming: explicit manifest version 2.0.0 and package-version ZIP template now match installation docs. Follow-up typecheck passed. Archive: .output/mylimits-2.0.0-chrome.zip, 175641 bytes, SHA-256 af171f5062c27578296863c79f3cafc618fa33a14c83fa0d6814d6907bc1de94; manifest/entrypoints/permission allowlist/CRC verified. Changed files: wxt.config.ts, package manifests, scheduler and transport hardening, browser regression suite; final release docs pending publication. Live provider, other-device, logout and actual Windows browser/native checks remain pending.
-
-Next: P1-10 — publish final documentation and verify the branch/package handoff.
-
-## Changed-file index
-
-The task-to-file and local checkpoint map is maintained in
-[PHASE-1-HANDOFF.md](PHASE-1-HANDOFF.md#changed-files-and-task-checkpoints).
-New tests are explicitly imported by `scripts/run-tests.mjs`; the final browser
-suite is `tests/browser/extension.spec.ts`. All authored Markdown remains directly
-in `docs/`. No Phase 2 files or implementation tasks were started.
-
-## P1-10 checkpoint — 15 October 2026
-
-State: **verified**. P1-10 complete. Changed files: package.json/package-lock.json, wxt.config.ts; final retry/offline hardening in src/core/scheduler.ts and src/providers/adapters.ts; regression additions in tests/browser/extension.spec.ts; docs/README.md, ARCHITECTURE.md, SUPPORT.md, PRIVACY.md, PROVIDER-CAPABILITIES.md, START-HERE.md, BUILD-STATUS.md and new PHASE-1-HANDOFF.md. npm run check passed (TypeScript, 62 core + 16 companion tests, production build), all 15 browser fixtures passed, npm run zip and final configuration typecheck passed. Archive manifest/permissions/entrypoints/CRC/path inspection passed; 16 Markdown files passed direct-docs placement, links and fence checks; git diff --check passed. GitHub implementation checkpoint b54109e passed Checks run 38739932337, including Linux browser/package artifact and Windows logic jobs. Local ZIP is .output/mylimits-2.0.0-chrome.zip (175641 bytes; SHA-256 af171f5062c27578296863c79f3cafc618fa33a14c83fa0d6814d6907bc1de94). Main remains unchanged; final docs publication verification follows. No live provider, other-device/logout, Windows desktop scaling or native host launch was available; these remain explicitly pending in support/capability docs. No application backend or Phase 2 work was added.
-
-Next: Await user Phase 1 acceptance; stop before Phase 2.
-
-## P1-10 checkpoint — 15 October 2026
-
-State: **in_progress**. Final publication inspection found a real packaging blocker despite successful Checks run 38739932337: upload-artifact skipped the hidden .output folder and produced no Chrome artifact. Job logs confirmed include-hidden-files=false and no-files warnings. Fixed .github/workflows/checks.yml to include hidden files for the narrowly scoped ZIP/results paths and make a missing ZIP a hard failure. Runtime/core/browser checks remain passed; corrected CI artifact availability must be verified before completing handoff. This changes packaging only and does not start Phase 2.
-
-Next: P1-10 — verify corrected CI ZIP upload, then publish the handoff.
-
-## P1-10 checkpoint — 15 October 2026
-
-State: **verified**. Release gate complete after fixing CI delivery. Changed final files: .github/workflows/checks.yml (include hidden output on scoped paths; fail on missing ZIP), docs/README.md, ARCHITECTURE.md, SUPPORT.md, PROVIDER-CAPABILITIES.md, START-HERE.md, BUILD-STATUS.md, PHASE-1-HANDOFF.md and this ledger; privacy was updated in P1-09. Corrected GitHub checkpoint 571b251 passed run 38740486309: both Linux verify/browser/package and Windows logic jobs succeeded. Artifact mylimits-chrome ID 11975222283 exists, is not expired and is linked from README/handoff. Extracted local ZIP smoke passed on all three surfaces at manifest version 2.0.0. Final evidence remains 62 core + 16 companion + 15 browser tests, successful type/build/ZIP and archive inspection; 16 directly stored docs passed links/fences/location checks. Main was verified unchanged at 380125a8cdc411c7c49d6aac8e61e159315950e5. Final docs publish will be verified by full Git tree comparison. Provider/live logout/cross-device and actual Windows browser/native checks remain pending; no Phase 2 implementation or backend was started.
-
-Next: Stop here. Await user Phase 1 acceptance and explicit Phase 2 instruction.
-
-## P2-01 checkpoint — 15 October 2026
-
-State: **verified**. Read repository instructions, Phase 1 handoff, Phase 2 tasks and shared contracts. Clean local Phase 1 tree preserved; local and remote v2/phase-2 branches created from their matching Phase 1 content. Changed docs/HOSTED-FEASIBILITY.md, PROVIDER-CAPABILITIES.md and this ledger. Reviewed current official OpenAI App Server/SIWC, Google, xAI and Perplexity docs; no hosted registration/test account exists. Decision: production independent collection disabled, continue snapshot-only sync and test-only job seams. No live logout/renewal claim. Node 24.19.0/npm 11.9.0; network/Docker access verified using approved process execution; no configured provider secrets or identities. Documentation links checked against the retrieved first-party sources. Next package may build a locally runnable service without deploying it.
-
-Next: P2-02 — implement the optional authenticated PostgreSQL snapshot API.
-
-## P2-02 checkpoint — 15 October 2026
-
-State: **in_progress**. Implement a separate Fastify/PostgreSQL package with shared normalized snapshot contracts. Authentication uses a configured OIDC verifier; tests inject a verifier only under test mode. Device-bound source mappings keep browser hashes isolated and deletion tombstones prevent old uploads from recreating data. No public deployment or vendor registration. Run real PostgreSQL API integration tests in an isolated local container.
-
-Next: P2-02 — implement schemas, Postgres migrations, authentication and tenant API tests.
-
-## P2-02 checkpoint — 15 October 2026
-
-State: **verified**. Implemented server/package.json and lockfile, TypeScript config, src/app.ts/auth.ts/oidc.ts/config.ts/db.ts/service.ts/main.ts/migrate.ts, migrations/001_core.sql, tests/api.test.ts, .env.example; shared src/core/sync-contracts.ts and docs/SERVER-SETUP.md. Root TS excludes the separate server; Node loader now preserves normal dependency JS resolution. Real isolated PostgreSQL 17 is running on loopback with synthetic data. Server typecheck and all 11 API/database tests pass; root typecheck and all 62 core regressions pass. Tests include two-tenant isolation, forged owners, device binding, duplicate/old uploads, pagination, revision conflict, deletion tombstones, revocation, callback binding, origins/limits and unconfigured-auth rejection. No OIDC tenant/client or live provider grant is configured. API remains snapshot-only; a cloud refresh returns explicit unavailability rather than a fake quota.
-
-Next: P2-03 — implement gated durable jobs, credential boundaries and race tests.
-
-## P2-03 checkpoint — 15 October 2026
-
-State: **in_progress**. Continue in one workstream. Use PostgreSQL leases, connection generations and provider budgets. Keep the production collector registry empty because P2-01 did not pass; implement credential/KMS and worker behavior with guarded test-only collectors. Do not expose provider OAuth login or pretend hosted authorization is configured.
-
-Next: P2-03 — implement leased jobs and tenant-bound credential rotation fixtures.
-
-## P2-03 checkpoint — 15 October 2026
-
-State: **verified**. Changed server/migrations/002_jobs_credentials.sql, src/jobs.ts/credentials.ts/worker.ts, app/service deletion/refresh paths, package script, tests/jobs.test.ts and docs/SERVER-SETUP.md. Implemented PostgreSQL leases/coalescing, persisted per-provider budgets, six-attempt bounded retry, auth pause, generation/identity validation and redacted failures. Tenant-bound AES-GCM envelopes require an external KMS interface; no production KMS or provider collector is configured. Synthetic-only collectors/KMS are guarded against non-test environments. Revocation cleanup is bounded and cannot remove a replacement credential generation; explicit data deletion removes envelopes. Server typecheck and 22 real PostgreSQL API/job tests pass, including worker crash, rotation race, throttling, late result after disconnect and stale cleanup. Root typecheck passes. Production provider OAuth and live renewal remain gated/unimplemented until P2-01 prerequisites exist.
-
-Next: P2-04 — implement opt-in device pairing, snapshot queues and responsive dashboard.
-
-## P2-04 checkpoint — 15 October 2026
-
-State: **in_progress**. P2-02/03 checkpoints pushed to remote v2/phase-2 at 7f8ed4f. Implement build-configured optional snapshot sync, one-time user-approved device pairing, private device credentials, persisted acknowledgement/deletion queues and a same-origin responsive dashboard. Local-only/preview paths must issue no sync requests. Do not merge source identities by matching local hashes or refresh the age of old samples.
-
-Next: P2-04 — implement pairing, persisted sync, preference conflicts and mobile dashboard.
-
-## P2-04 checkpoint — 15 October 2026
-
-State: **verified**. Changed core sync.ts/sync.test.ts/sync-contracts.ts/sync-origin.ts/remote-view.ts, private platform sync transport/controller/messages, SyncSettings/App UI, WXT fixed-origin configuration and env declaration; server pairing/source-tombstone migrations, pairing/web/OIDC/API/service code, responsive React dashboard, Vite config/dependencies and real phone/API tests; SERVER-SETUP and PRIVACY docs. Sync is off by default with no endpoint/extra host grant unless explicitly configured at build time. Pairing is user-approved, expiring, secret-bound and single-use. Acks/backoff/deletion survive restart; lost acknowledgements are covered by source tombstones. Preferences are explicit/revisioned; server-origin changes cannot receive old tokens. Verification: root typecheck + 70 core tests pass; server typecheck + 25 real PostgreSQL API/job tests pass; phone dashboard real-service browser test passes; production extension build passes (570.91 kB) and all 15 extension browser fixtures pass. Visually reviewed phone UI and fixed setup clutter/button wrapping; repeated phone check passes. Real OIDC/provider sign-in and deployed cross-device service remain unconfigured, not live-verified. No hosted provider collector was enabled.
-
-Next: P2-05 — research and implement viable additional quota readers without inventing consumer limits.
-
-## P2-05 checkpoint — 15 October 2026
-
-State: **in_progress**. Proceed with prioritized quota integrations. Keep the current local activity counters separate. No live consumer accounts are available, so a usable documented or source-backed resource and sanitized response contracts are required; blocked candidates must be named explicitly, not filled with fake cap values. Continue existing fixed-origin/optional-permission/generation boundaries.
-
-Next: P2-05 — inspect primary/source evidence for Grok, Perplexity, Gemini and feasible coding-plan quotas.
-
-## P2-05 checkpoint — 15 October 2026
-
-State: **verified**. Changed providers/additional.ts and tests, reader/transport/catalog, core meter display/model/schema/public/history export, frozen V1 schema and V1/V2 migration tests, controller/messages and account source controls, WXT Cursor origin, web count display and browser fixtures. Implemented Grok subscriptions identity plus default-mode quota POST, Perplexity signed-in identity plus remaining-count quotas, and Cursor stable subject/coding-plan/spend reader. Identity is rechecked after usage to reject mid-read account switches. Count-only/monetary/percentage values remain distinct; unknown totals/reset times are not inferred. Grok/Perplexity activity-only mode remains available; old browser-only bindings preserve that mode. Cursor is the explicit fallback for Gemini’s unverified consumer account/quota path. All three are source/fixture-tested prototypes, not live-verified. Added source evidence and current capability matrix under docs/. Root typecheck and 78 core tests pass; server typecheck and 25 PostgreSQL tests pass; production build passes (580.36 kB); all 16 extension browser fixtures pass, including counts/mode switch and original V1 migration. Connector version tag updated to website-v2.1; final integrated build will include it. Live plan/tab/logout/other-device checks remain pending.
-
-Next: P2-06 — implement segmented history, reset timeline, retention and conservative pacing.
-
-## P2-06 checkpoint — 15 October 2026
-
-State: **in_progress**. Preserve existing pagination/export and all known gaps. Add 30/90-day retention, bounded downsampled series, separate reported spend, reset timeline and minimum-evidence range estimates. Unknown windows, local activity, sparse/stale/reset-crossing or source-changed data must not produce fabricated forecasts or messages-left estimates.
-
-Next: P2-06 — implement history series and pacing using same-source/window samples only.
-
-## P2-06 checkpoint — 16 October 2026
-
-State: **verified**. Changed core insights/history-data/model/schema, history platform/controller/messages, HistoryCharts/HistoryView/preferences/styles, server retention and tests. Separate account/source/workspace/scope/window/evidence/currency series; bounded downsampling and honest gaps; minimum four fresh readings over 30 minutes with bounded robust rate quartiles and padded range. Selectable immediate local 30/90-day retention; server prunes older history on upload while keeping one dated last-known reading per source. No messages-left, subscription fees or token cost invented. Typecheck passed; 82 core tests passed; 26 PostgreSQL server tests passed; production build passed at 590.23 kB; three existing history browser fixtures and new chart/retention fixture passed with Playwright Chromium. System Chromium failed to load extensions, so browser verification used downloaded Chromium instead. Live provider access remains unavailable.
-
-Next: P2-07 — implement local task guidance and explicit prompt/handoff utilities.
-
-## P2-07 checkpoint — 16 October 2026
-
-State: **in_progress**. Guidance stays local and read-only. Match actual quota scope to a task, explain stale/unknown exclusions, and expose user-supplied text preview/copy only. No conversation scraping, inference calls or fixed token savings.
-
-Next: P2-07 — build deterministic guidance and private prompt utilities, then verify.
-
-## P2-07 checkpoint — 16 October 2026
-
-State: **verified**. Changed core/guide.ts and tests, GuideView, dashboard navigation/styles, runner, architecture and browser fixture. Original deterministic task/scope rules, dated cited product metadata, speed/quality/usage mode suggestions, explicit exclusions, reported reset and optional matching local pacing context. Prompt templates/review and user-pasted handoff preview/copy/download remain component-memory-only; edits invalidate previews. No inference, scraping, fabricated token savings or model entitlement assumptions. Typecheck passed; 86 core tests passed; build passed at 601.9 kB; Guide browser privacy/explicit-preview test passed. Source product scope checked using primary OpenAI, Anthropic, Perplexity and Cursor docs; live model entitlements remain unverified.
-
-Next: P2-08 — add an off-by-default isolated website widget with restricted public messages.
-
-## P2-08 checkpoint — 16 October 2026
-
-State: **in_progress**. Widget defaults off. Use exact provider grants, isolated content script and Shadow DOM. Background returns a tiny formatted reading projection, never the full store. No page message bridge, composer access, provider calls or broad site grants.
-
-Next: P2-08 — implement restricted widget state/actions, registration, UI and isolation fixtures.
-
-## P2-08 checkpoint — 16 October 2026
-
-State: **verified**. Changed runtime widget entrypoint, pure public projection/settings schemas, background registration/permissions/messages, Settings controls and focused tests/docs. Defaults off; exact-host scripts, Shadow DOM, corner/collapse/hide persistence, public status/two meters only, trusted-click controls, singleton/remount cleanup and debounced local reading updates. No page bridge, full-store messages, raw storage subscription, provider calls or composer reads. Typecheck passed; 87 core tests passed; build passed at 716.2 kB; real Chromium two-tab synthetic-page fixture passed for hostile CSS, SPA/remount, trusted vs synthetic clicks, public-only messages and disable cleanup. Headless permission approval unavailable: fixture grants a single synthetic host in an isolated copied build; ordinary permission denial remains covered. Consumer permission UI and live provider/widget checks remain pending.
-
-Next: P2-09 — implement Firefox fallbacks, Edge registration and normal optional Windows installer packaging.
-
-## P2-09 checkpoint — 16 October 2026
-
-State: **in_progress**. Implement browser-specific manifests/capability handling, Edge native registration, public-metadata extension discovery and GUI install/uninstall/start-menu packaging. Preserve Linux/authentication behavior. Windows desktop/live provider access are not available and must remain pending rather than treated as tested.
-
-Next: P2-09 — implement and verify browser fallbacks and unsigned Windows installer artifacts.
-
-## P2-09 checkpoint — 16 October 2026
-
-State: **verified**. Changed browser-specific WXT builds/permissions and Firefox sync data-consent checks; optional native UI fallback; Edge host registration; extension-metadata discovery; Windows GUI setup/uninstall, NSIS packaging/checksums and Windows CI parser/GUI/compiler steps; platform/companion docs and tests. Chrome/Edge/Firefox MV3 builds pass and package-contract checker passes; Firefox 140+ uses sidebar/event page and excludes unsupported native setup. 88 core and 17 companion tests passed. Actual unsigned NSIS EXE compiled locally (158753 bytes) with SHA-256; installer/Start-menu use current-user paths, no elevation, automatic profile selection plus manual fallback and explicit credential deletion choice. Local apt index lacked NSIS; temporary official Debian packages supplied compiler, without changing system packages. Real Windows clean install/update/uninstall/browser/native acceptance and real Firefox/provider behavior remain pending; Windows PowerShell parser/GUI checks execute in CI, not claimed locally passed. Installer prerequisites remain Node 24+ and official Codex CLI, documented as optional advanced setup.
-
-Next: P2-10 — run integrated hardening, server/browser checks, release packaging and handoff.
-
-## P2-10 checkpoint — 16 October 2026
-
-State: **in_progress**. Final phase gate: extension/core/native/browser suites, real PostgreSQL server and phone dashboard tests, actual transport pairing/snapshot E2E, platform package checks and unsigned installer. Preserve source dates, tenant isolation, deletion tombstones and disabled production collectors. Measure bundles/request bounds; update all current user docs and publish branch.
-
-Next: P2-10 — harden auth/deletion/sync edges, add integrated service CI and produce final packages/handoff.
-
-## P2-10 checkpoint — 16 October 2026
-
-State: **in_progress**. Actual local integrated extension gate passed: typecheck, 90 core tests, 17 companion tests and production build (717.31 kB); all 19 Chromium fixtures passed. Actual HTTP extension pairing/upload/delete E2E passed; phone dashboard test passed against PostgreSQL. Server typecheck found an uninitialized test variable, now corrected; rerun pending. Earlier P2-09 Windows CI exposed empty-array/null discovery handling in PowerShell GUI; fixed filtering, awaiting Windows CI retest. Real Windows GUI install/browser/provider and Firefox/provider remain unverified. No production collector or credentials enabled.
-
-Next: P2-10 — finish server recheck, publish hardening checkpoint and inspect all CI jobs/artifacts.
-
-## P2-10 checkpoint — 16 October 2026
-
-State: **implemented**. Changed final extension version/package locks, auth verification helper and real-signature tests, tenant lock order/deletion/device scrubbing, bounded API storage and hourly retention plus migration 005, stale sync backlog handling, activity-only observer lifecycle, currency display/export, actual HTTP transport fixture, complete service/platform/archive CI, Windows empty/multiple discovery regression, current docs and Phase 2 handoff. Available local checks pass: 90 core, 17 companion, 19 full browser fixtures plus targeted source/widget and popup measurement reruns; 30 real-PostgreSQL server tests/types with fresh/repeat migrations; phone and actual extension HTTP pairing/upload/delete fixtures. Six cached rows measured 230 ms at 520x600 in Linux headless Chromium. Browser variants/contracts, actual clean ZIPs/checksums and unsigned NSIS installer compiled. Source ZIP auto-generation was disabled after inspection found generated artifacts included; distributable extension ZIPs contain no private/test grants. Final Windows CI and complete release artifact inspection are pending. Production cloud collector, live provider/logout and real OS acceptance remain external blockers.
-
-Next: P2-10 — publish final code checkpoint, inspect all CI jobs and artifact presence, then record final handoff.
-
-## P2-10 checkpoint — 16 October 2026
-
-State: **implemented**. Final connected-services CI passed 30 PostgreSQL/auth/job tests, phone view and actual HTTP transport; Linux verification and clean extension ZIP artifact were produced. Windows CI now passes real PowerShell parsing, GUI construction and empty/multiple candidate checks, but NSIS exposed mixed Windows source-path separators; corrected to native NSIS separators and actual Linux EXE compilation passes. Final controller registration/stop guards ensure Grok/Perplexity observers exist only in activity mode, reconcile on restart and unregister on quota switch. Typecheck and targeted Perplexity/widget fixtures pass locally; final Windows packaging rerun remains pending. No live OS/provider claim changed.
-
-Next: P2-10 — inspect replacement CI run, verify native/extension artifacts, then finalize status and handoff.
-
-## P2-10 checkpoint — 16 October 2026
-
-State: **implemented**. Windows CI now passes real PowerShell parsing/GUI regression checks and actual NSIS packaging, producing a nonempty unsigned installer artifact. Full extension CI passes with the clean Chrome/Firefox artifact. Actual transport CI exposed a fixture race: cached test state could be written before durable schema/history initialization. The fixture now waits for the initialized empty dashboard, seeds inactive cached data independently of provider grants, and waits for that named account before pairing. Local actual HTTP transport retest passes with original observation age and deletion; server typecheck passes. No runtime code changed for this fixture correction. Final all-job CI rerun pending.
-
-Next: P2-10 — verify initialized transport fixture in CI, then record successful run and artifact IDs.
-
-## P2-10 checkpoint — 16 October 2026
-
-State: **verified**. Final all-job CI passed on code checkpoint 20a810d83d70f57229171494771d0db18bd5bdd2: run 38846628036. Linux: 90 core, 17 companion, 19 Chromium fixtures; Chrome/Edge/Firefox builds and clean ZIP/checksum contracts. Connected services: types, 30 real-PostgreSQL/auth/job tests, responsive phone view and actual HTTP extension pairing/upload/delete. Windows: core/native gate, real PowerShell parse/GUI/candidate regressions and actual NSIS compiler all passed. Verified nonempty, nonexpired artifacts: extension packages 12023223325 and unsigned native installer 12023517174. README and final handoff contain exact install/download links, schemas/migrations, performance/resource limits and pending external acceptance. Main unchanged; no public deployment, production collectors, provider credentials, store publication or signing. Complete code is pushed; this final documentation checkpoint records actual results.
-
-Next: Phase 2 complete — stop and await the user; live/provider/desktop checks remain listed in PHASE-2-HANDOFF.md.
-
-## Compact popup and account setup upgrade — 16 October 2026
-
-State: **in_progress**. User requested a smaller essential-actions popup and explicit
-multi-account setup alongside automatic website detection. Working on
-`v2/compact-accounts` from clean `v2/phase-2`; main is preserved. Added a dedicated
-400px popup (500px height ceiling), shared live-store hook/readings, account links
-to dashboard details, plus/provider picker, persistent identity-bound account
-setup/nickname confirmation and optional OpenAI independent-connection entry.
-Provider choices: OpenAI Work/Codex, Claude subscription (including shared Claude
-Code scope where returned), Cursor, Grok, Perplexity; Gemini is explicitly local
-activity only. No new provider grant, hosted collector or credential storage.
-Website mode still updates only the current login; independent Claude and other
-provider grants remain unavailable, not simulated by saving a second label.
-
-Changed files: popup entrypoint/CSS; core model/schema/public/account-setup + tests;
-platform messages/controller/companion; reader/reader tests; App, AccountConnect,
-Popup, ProviderMark, Reading, useMyLimits, navigation and styles; browser fixtures
-and test runner. OpenAI companion addition accepts an optional nickname, scoped
-to the returned profile. Claude/OpenAI readers now recheck account identity after
-quota retrieval to reject mid-request switching.
-
-Actual checks so far: TypeScript passed; 96 core tests passed; production Chrome
-build passed. Restricted-sandbox native subprocess fixture failed (child exits
-without running); rerun outside sandbox passed all 17 companion tests unchanged.
-Restricted Chromium startup denied local sockets; outside-sandbox focused tests
-confirmed dashboard deep links and six-row bounds. The new manual-account flow
-completed, but its final assertion incorrectly searched the private workspace
-store for a raw organization ID; narrowed to public-facing account records.
-Full 22-test Chromium rerun is underway. Live provider accounts are unavailable;
-logout, renewal, shared cross-device scope and real Windows DPI remain pending.
-
-Next: inspect full browser results and screenshots, fix actual regressions, build
-browser variants/ZIPs, finish installation/handoff documentation and publish.
-
-
-## Compact popup and account setup — verified publication, 16 October 2026
-
-State: **verified for delivered paths**. All available local checks pass:
-`npm run check` (types, 97 core tests, 17 companion tests and production build),
-24 Chromium fixtures, Chrome/Edge/Firefox builds and package contracts, actual
-Chrome/Firefox ZIP/archive inspection and SHA-256 output. Actual browser/child
-process tests require the approved environment outside the restricted sandbox;
-the initial sandbox failures were environment failures, not skipped tests.
-Visually reviewed light six-account popup and dark popup/provider picker.
-
-Final workspace-switch hardening keeps the first account's workspace from being
-reused during detection/another-account setup. Browser coverage uses two Claude
-identities with different organizations, preserves Personal/Work nicknames after
-popup reload, and confirms only the new independent OpenAI profile receives its
-requested nickname. Ten-account overflow/search and fixed footer are tested.
-All source dates and unknown quotas remain honest. Schema stays V2 with optional
-setup metadata; existing IDs/names are preserved. No credential migration.
-
-Published code checkpoint: `7a8f48fb76babfa9b02e29a02e01fc339bb68441`, tree
-`508a9f35905ed328e3a6ac2427959cde8f206543`. Local code commit `7afefe0` has the
-same complete tree; the pre-existing local Phase 2 commit differs in metadata
-from GitHub but has the identical base tree. Publication used the GitHub connector
-with the actual remote Phase 2 parent, without force-pushing either history.
-
-All three jobs passed in [Checks run 38922290094](https://github.com/voiddev011/mylimits/actions/runs/38922290094):
-Linux extension/types/core/native/browser/packages; connected PostgreSQL service,
-phone and actual extension HTTP transport checks; Windows logic/PowerShell/NSIS.
-Verified nonexpired, nonempty extension artifact **12054622767** and optional
-unsigned native artifact **12055521330**. Local ZIPs: Chrome **230643 bytes**,
-Firefox **229948 bytes**, plus `.output/SHA256SUMS`.
-
-Independent OpenAI remains the existing optional companion path, not a new
-extension-only grant. Independent Claude/other-provider authorization, every
-ordinary ChatGPT limit, real provider sign-in/logout/renewal and actual desktop
-DPI/installation remain **unimplemented or live-unverified as explicitly listed**
-in the handoff. No production collector, backend deployment, store publication or
-signing was added. Main remains unchanged.
-
-Next: install/update using the current 2.2 artifact. Further independent-provider
-work needs a viable permitted authorization/quota source and live acceptance;
-never relabel saved website readings as independently updating accounts.
+# Current implementation status — Desktop + extension
+
+Updated 23 October 2026. Working branch: `main`. Desktop was implemented on
+`feature/desktop-independent-accounts`, created from clean
+`docs/desktop-accounts-execution-plan` (`3f218f6` locally).
+
+## Current decision
+
+The implemented direction is a desktop app alongside the extension. See
+[Desktop delivery and pending acceptance](DESKTOP-ACCOUNTS-HANDOFF.md) for the guided Windows installation,
+isolated official provider profiles and combined account quotas. The installer-free
+hosted route is deferred. It was not completed by earlier infrastructure work.
+
+## Baseline before this feature branch (historical)
+
+- Existing: website tracking, compact popup/dashboard/logos, aliases/history,
+  local independent account service, official Codex and experimental Claude CLI
+  adapters, per-account queues, browser router, Native Messaging and Windows GUI/NSIS.
+- Existing 3.3 default independent choice uses hosted capabilities. Production hosted
+  drivers are absent; local experimental service is available through advanced setup.
+- Missing from the agreed upgrade: verified A/B provider behavior, desktop-first +
+  integration, revised guided installer/bootstrapper, measured size reduction and
+  clean Windows install/update/uninstall acceptance.
+- OpenAI email metadata has limited identity confidence; same-email workspaces
+  cannot be treated as distinct verified identities without supported evidence.
+- Neither real authenticated provider quotas, other-device refresh, browser account
+  preservation, logout behavior nor actual credential renewal has been verified here.
+- Source/fixture tests and unauthenticated official-binary routing are historical
+  evidence only. See [the consolidated record](IMPLEMENTATION-HISTORY.md).
+
+## Execution checklist
+
+| Task | Code status | Live acceptance |
+| --- | --- | --- |
+| D01 Existing local path audit/reproduction | COMPLETE | Not provider proof |
+| D02 OpenAI isolated-account integration/proof | IMPLEMENTED; user-run proof pending | PENDING |
+| D03 Claude isolated-account integration/proof | IMPLEMENTED experimental path | PENDING |
+| D04 Identity/contracts/migration | IMPLEMENTED + automated checks pass | PENDING where relevant |
+| D05 Refresh/process ownership | IMPLEMENTED + automated checks pass | PENDING |
+| D06 Desktop/native bridge | IMPLEMENTED; Linux and Windows transport tests pass | Real Windows browser PENDING |
+| D07 Extension + connection journey | IMPLEMENTED; 31 Chromium fixtures pass | Real Windows browser PENDING |
+| D08 Guided installer/bootstrapper | IMPLEMENTED; actual EXE compiled | Clean Windows PENDING |
+| D09 Update/uninstall/packages | IMPLEMENTED; local lifecycle/payload checks pass | Clean Windows PENDING |
+| D10 Acceptance and handoff | Packages/checks delivered; handoff recorded below | Both providers PENDING; feature incomplete |
+
+## Documentation checkpoint — this task
+
+- Created the single desktop implementation plan and concise Sol 6.1 starter.
+- Consolidated eleven superseded Markdown files and the long old status ledger.
+  Unique test/provider conclusions are in IMPLEMENTATION-HISTORY; research and
+  installation details remain in their relevant reference files. Full originals
+  remain recoverable from the baseline Git commits.
+- Updated start/index/install/reference links. Provider code, runtime behavior,
+  account data, versions and existing extension artifacts are unchanged. Only help
+  URL targets outside Markdown may change to follow consolidated documentation.
+- Validation: 69 relative Markdown links checked, zero missing targets; 18 project
+  Markdown files, all directly in docs/. `npm run typecheck` exited 0 and
+  `git diff --check` passed. The two executable-file changes only replace help URLs.
+- No application suite or live account test has been run by this documentation task.
+- No new Desktop feature, backend deployment, main merge or release is claimed.
+- Publication: Git CLI could not reach its configured proxy; the connected GitHub
+  tools published this branch while preserving the remote parent. Source checkpoint
+  `fba0e3829f37d7da9cc3738244b786a2e73b5ef6` matches local `73df840` exactly
+  (tree `b18d76fd81ff66ff23e0bc46e20aa192a3c10080`). This documentation follow-up
+  records that publication. Do not force-push older divergent commit IDs.
+
+## Next action
+
+On a Windows laptop, install the delivered matching extension/Desktop artifacts
+and run the real-account matrix in DESKTOP-ACCOUNTS-HANDOFF.md for both providers.
+Automated code/package delivery is recorded below. Both providers remain
+experimental; the requested feature is not fully accepted or release-ready.
+
+After each task record changed files, commands/results and skips, evidence level,
+decisions, blockers and next action. Final reporting separates implementation,
+automated tests, live verification and blocked/unverified work.
+
+## D01 — inspected and reproduced
+
+- Inspected required documents and existing connections, App Server, Claude adapter,
+  isolated browser/router, native host, storage contracts, controller, + UI and
+  Windows installer/dependency packaging. No user edits were present.
+- Gaps: default + selects empty hosted drivers; login presently auto-accepts the
+  reported account; identity is email-only for Codex; installer requires a separate
+  registration GUI, carries all dependencies and has no bootstrapper/update staging.
+- Baseline: `npm run test:account-proof` 30/30 passed and
+  `npm run test:connections` 18/18 passed with real fictional subprocesses/PTYs.
+  Initial sandbox runs failed from EPERM on child-process execution; rerunning
+  the same commands through permitted local execution passed. No tests were weakened.
+- Measured existing unsigned installer: 211310699 bytes. Cached official Node ZIP:
+  37733703 bytes; Codex TGZ: 167618721 bytes. Installed official Codex executable
+  alone is 341270320 bytes; a bootstrapper cannot erase those runtime requirements.
+- Refreshed official App Server/login/rate-limit and Claude auth/credential-use
+  documentation. Official local-profile routes remain the selected integration;
+  public product/distribution eligibility is not claimed from code inspection.
+- Real accounts and a Windows interactive desktop are unavailable. All real-provider
+  matrix rows stay PENDING. No compiler for the Windows installer was found on PATH;
+  build access will be addressed in packaging rather than reporting an EXE prematurely.
+- Changed file: this status ledger. Next: D02 account confirmation and OpenAI tests.
+
+## D02 — official account completion now requires confirmation
+
+- Reused actual App Server managed browser login, separate CODEX_HOME/browser
+  directories and documented account/rate-limit RPCs. Added an explicit staged
+  identity state and generation-bound confirm command before first quota acceptance.
+  A window/route marker/CLI completion alone cannot connect a new profile.
+- Shared confirmation also prepares Claude without replacing its official login.
+  Wrong identities, cancelled confirmations and late generations are rejected;
+  display identity stays in local service/connection UI, not extension account storage.
+- Changed: companion/connections.mjs, protocol.mjs, connections.test.mjs;
+  src/core/independent-contract.ts; platform/messages.ts, companion.ts, controller.ts.
+- `npm run test:connections`: 20 passed; actual fictional CLI/PTY mechanics,
+  including explicit confirmation/no-early-quota/wrong-account cases.
+  Initial regression used obsolete adjacent-client indexing after confirmation
+  added a second client; assertion now verifies the two distinct account homes.
+- `npm run typecheck`: passed. No real provider sign-in/quota test was possible.
+  Provider subject/workspace stay null where official metadata omits them.
+- Next: D03 Claude-specific identity/freshness/error cases; provider acceptance pending.
+
+## D03 — Claude isolated official-runtime path
+
+- Retained unmodified Claude Code login with per-account CLAUDE_CONFIG_DIR,
+  official BROWSER route, metadata checks around bounded `/usage` reads and scoped
+  official logout. New shared confirmation now applies to Claude too.
+- Consent is retained when verified identity is accepted but the first usage read
+  requires official onboarding. Finishing setup can recover without an inaccessible
+  confirmation loop. Identity change revokes local confirmation and rejects readings.
+- Expanded allowlisted errors for unsupported auth/profile/identity/panel formats;
+  no raw CLI output/token material is sent to the extension.
+- Changed companion/connections.mjs and connections.test.mjs. `npm run
+  test:connections`: 21 passed, including same-email/distinct-organization,
+  explicit confirmation, setup recovery and changed fixture quota/identity cases.
+- These are simulated providers. No real Claude login, idle upstream freshness or
+  account-B browser preservation was tested. Official authentication docs support
+  separate claude.ai config directories; official credential conditions distinguish
+  unmodified end-user CLI sign-in from third-party credential collection. No Claude
+  binary is modified/redistributed; public product/distribution review remains open.
+- Next: D04 additive metadata backup/migration and pending confirmation recovery.
+
+## D04 — additive migration and restart recovery
+
+- Retained version-2 file/connection/account IDs; added metadata revision 1 with
+  one-time owner-only metadata backup before upgrading old files. Provider credential
+  directories are neither copied nor parsed. Existing aliases/readings/history remain.
+- Pending confirmation now survives service restart with its reported identity and
+  generation. Restarts do not publish fresh readings. Existing official Codex config
+  is no longer overwritten on every check. Invalid new fields fail validation.
+- Changed companion/connections.mjs and connections.test.mjs.
+- `npm run test:connections`: 23 passed; `npm run typecheck`: passed;
+  `npm test`: 109 passed. Migration, existing config, old IDs and confirmation
+  recovery are simulated local tests, not real provider behavior.
+- Next: D05 refresh scheduling, serialized sign-in and process ownership.
+
+## D05 — serialized authorization and browser-attached refresh
+
+- Only one provider authorization starts at a time, avoiding competing callback
+  listeners or parallel login windows. Other account refreshes retain their bounded
+  per-account queues. Reconnect requires explicit renewed identity confirmation.
+- Desktop polling now starts on an authenticated native client and pauses without
+  clients. Closing provider tabs does not affect it; browser reopening triggers
+  only eligible checks. Existing persisted cooldown/backoff, dated failures and
+  confirmed owned-process shutdown remain in force.
+- Claude rendered throttling errors are classified without exposing raw panel text.
+- Changed connections.mjs/tests, daemon.mjs and proof/claude.mjs.
+- `npm run test:connections`: 24 passed; `npm run test:account-proof`: 30 passed.
+  Subprocess/PTY, coalescing, throttling, cancellation and shutdown tests use fixtures;
+  provider renewal/revocation/actual quota freshness remain unverified.
+- Next: D06 version negotiation/readiness and actual native host/daemon transport tests.
+
+## D06 — real native host/daemon transport
+
+- Kept the existing authorized host/IPC boundary and protocol 2; new Desktop
+  readiness requires explicit identity-confirmation capability. Old helpers cannot
+  silently skip confirmation. Provider readiness checks actual executable availability.
+- Added generation-bound confirm request validation and sanitized errors. Added
+  explicit operator/test data-directory relocation, never accepted from page input.
+- Added a real host.mjs → framed stdio → authenticated daemon socket → fictional
+  CLI integration test. It confirms no polling before browser attachment, current
+  fixture readings after attachment, strict extra-field rejection and safe frames.
+- Changed paths.mjs, daemon.mjs, connections.mjs, transport.test.mjs,
+  platform/companion.ts and package.json (transport suite joins test:companion).
+- `node --test companion/transport.test.mjs`: 1 passed; `npm run typecheck`: passed.
+  Actual local transport is tested, but provider is fictional; no real account or
+  actual Windows browser handshake claim. Stable store extension IDs remain a
+  publication prerequisite; setup must discover development installs automatically.
+- Next: D07 route + to Desktop and provide identity confirmation/alias in dashboard.
+
+## D07 — Desktop is the main independent + journey
+
+- + now routes OpenAI/Claude independent choices to the actual local service,
+  keeping website tracking separate. Other providers honestly remain website-only.
+  Added reported-identity confirmation, aliases, wrong-account discard, provider
+  setup/error states, and pending sign-in resume after view closure/restart.
+- Popup remains compact; detailed setup stays in the dashboard. Added a Desktop
+  connection prompt, renamed advanced local settings and retained privacy masking.
+  Optional public HTTPS setup URL is build-configured; without publication, the
+  beta button points at branch CI artifacts and is labelled test setup.
+- Version is 3.4.0 Desktop accounts preview. Changed AccountConnect,
+  OpenAICompanion, App, Popup, build/environment config, package metadata and browser
+  fixtures. No hosted backend or custom provider login was added.
+- `npm run typecheck` and `npm run build`: passed. Browser run: 30 passed and one
+  stale settings-navigation selector failed; corrected that selector and added
+  pending-sign-in resume coverage. Targeted rerun: 1 passed. Full suite will run
+  at final delivery after packaging changes.
+- Browser provider/native responses are fictional; no real OpenAI/Claude connection
+  or Windows browser acceptance is claimed. Stable signed public download/store IDs
+  remain release prerequisites, not completed by a test setup link.
+- Next: D08 guided per-user bootstrapper and measured dependency downloads.
+
+## D08 — guided Windows bootstrapper built
+
+- Added a guided WinForms setup that detects MyLimits installations automatically,
+  selects providers, verifies official archive/executable integrity, displays download
+  progress, registers all detected browsers in one operation and checks daemon
+  readiness before success. No ID copying, npm or terminal commands are required.
+- Node/Codex are acquired from pinned official sources only when needed; unmodified
+  Claude uses its official WinGet installation with provider/Windows prompts. Shared
+  private runtimes are reused by pinned executable hash. No Chromium is bundled.
+- Lean Windows payload preserves executable PTY dependencies/licenses while excluding
+  debug symbols, maps, other-platform builds, source/tests and provider credentials.
+  Default packaging is online; an explicitly larger offline option remains available.
+- Changed Windows setup/runtime/NSIS, install.mjs batch registration, new
+  desktop-health.mjs, desktop package builder/test, dependency metadata, licensing,
+  npm commands and Windows CI packaging/parser tests.
+- `npm run test:desktop-package`: 1 passed; JavaScript syntax checks passed.
+  Compiled an actual unsigned setup EXE with isolated Debian NSIS 3.08 (no admin
+  install). Initial bootstrapper ~1.56 MB, payload ~3.09 MB, versus old 211.31 MB EXE.
+  Node download remains 37733703 bytes; selected Codex adds 167618721 bytes.
+  Installed official runtimes remain large. Final checksums/sizes follow D09/D10.
+- Windows PowerShell parser/GUI/download/install execution is pending Windows CI
+  and interactive acceptance. Compiling an EXE is not proof of a clean Windows install.
+- Next: D09 staged upgrade/rollback and owned process-tree shutdown/uninstall.
+
+## D09 — owned shutdown and staged upgrade/recovery
+
+- Added credential-free process ownership records for real Codex/Claude processes,
+  including metadata commands and setup. Confirmed exit clears records; an
+  unconfirmed writer blocks service restart until guided repair checks its PID,
+  executable, creation time and current-user ownership. No all-node/browser kill.
+- Program files stage separately and activate by directory rename with rollback.
+  Guided setup stops owned tasks/process trees, verifies replacement runtimes,
+  restores executable backups on failure and repairs interrupted script updates.
+  Account profiles, aliases and readings are outside the runtime transaction.
+  Uninstall uses the same bounded owned shutdown and explicit keep/delete data.
+- Tasks now include the current user's SID; owned legacy tasks are retired after
+  successful setup. A per-user setup mutex prevents concurrent setup operations.
+  Successful setup deletes archive cache and writes local installed-byte/download
+  measurements without credential contents. Official Claude download bytes stay
+  unknown; failed partial-transfer traffic is not counted as a verified archive.
+- Changed connections/adapters/proof runtime, Windows setup/runtime/uninstall/tasks,
+  install.mjs, new owned-processes/runtime-update modules and tests, actual native
+  health transport coverage and Windows parser/rollback/process tests.
+- `npm run check`: passed (109 core, 20 legacy native, 24 connections, 3 native/
+  runtime lifecycle tests, typecheck/build). `npm run test:account-proof`: 30 passed;
+  `npm run test:hosted-probe`: 10 passed; `npm run test:desktop-package`: 1 passed.
+- First pushed CI at 84a3d87 passed Windows integrated/ConPTY and unauthenticated
+  official browser checks, but found a PowerShell 5 UTF-8 decoding bug and two old
+  UI selectors. Fixed setup scripts to ASCII, scoped the duplicate Add button, and
+  retained hosted API transport regression through commands instead of restoring
+  hosted login to +. Final CI and full browser rerun are in progress for D10.
+- All provider fixtures are simulated. No live account, clean laptop installation,
+  publication eligibility or real quota freshness has been established.
+- Next: D10 final CI, artifacts/checksums, install instructions and live-test handoff.
+
+## D10 — final validation and recovery follow-up
+
+- Full Chromium suite: 31 passed. Linux check/typecheck/core/native/build and
+  Chrome/Edge/Firefox package contracts passed; clean Chrome/Firefox archives and
+  checksum files generated. Windows CI run 39732012852 at b260d3c passed all three
+  jobs, including real Windows parser/GUI construction, executable rollback and
+  owned/unrelated-process shutdown assertions, NSIS packaging and existing server
+  transport regressions. No interactive account sign-in was performed.
+- Retrieved and hash-verified that run's actual Windows EXE (1499970 bytes).
+  Guided setup itself, official runtime acquisition on a clean laptop, account
+  login, A/B browser isolation and independent provider freshness remain PENDING.
+- Final inspection found crash/reboot markers could unnecessarily require repair
+  after their process had exited. Startup now clears only records whose process is
+  confirmed absent by the OS. Live, reused or inaccessible PIDs stay fenced until
+  guided ownership repair; no process is killed by the daemon's recovery check.
+  Added actual subprocess-exit/restart coverage, plus clearer UI repair instructions.
+- Latest `npm run check`: passed (109 core, 20 legacy native, 24 connections,
+  4 native/runtime tests, typecheck/build). Desktop payload test passed. This
+  recovery fix changes the Desktop artifact; final CI/artifact hashes will be
+  recorded at the delivery checkpoint rather than reusing b260d3c's EXE hash.
+- Next: push this final code checkpoint, inspect its Windows CI, then finish
+  installation/privacy/architecture/handoff documentation with matching artifacts.
+
+- Final code CI at f723e32 passed Windows Desktop and all extension checks. Its
+  unrelated hosted transport regression exposed an early assertion: it waited
+  only for account presentation before asserting disconnect. Strengthened the
+  fixture to await the authoritative disabled connection and assert the actual
+  PostgreSQL disconnected generation; provider behavior is still simulated.
+  No hosted production path was added or substituted for Desktop. Rerunning CI
+  checks this stronger boundary before final delivery.
+
+## D10 — delivery checkpoint
+
+- Pushed final code checkpoint `8f43c21c0934774cbcea810667579d162346961f`.
+  [CI run 39756974345](https://github.com/voiddev011/mylimits/actions/runs/39756974345)
+  passed all three jobs: verify, windows-logic and connected-services. This includes
+  109 core tests, 20 legacy native, 24 connections, 4 runtime/native transport,
+  30 proof, 10 hosted diagnostic, 1 payload and 31 Chromium tests; Windows setup
+  parser/GUI/rollback/owned-process checks, official unauthenticated router check,
+  NSIS build and existing 43-test PostgreSQL/API suite plus web/transport checks.
+- Downloaded the actual CI artifacts through the GitHub connector and verified
+  their own hashes locally. Windows EXE: 1500185 bytes, SHA-256
+  `8c4651c2bd21801b7ed9ec0927d7480fe9409317ac1b3c74d8abd5321d8d2e74`.
+  Chrome ZIP: 307211 bytes; Firefox ZIP: 305119 bytes. Exact ZIP hashes and all
+  download links are in DESKTOP-ACCOUNTS-HANDOFF and artifact SHA256SUMS.
+- Bootstrapper payload 3110365 bytes; first Node/Codex archives add 205352424 bytes.
+  Actual clean installed footprint/time and Claude downloads remain unmeasured;
+  extracted Node/Codex components alone are 559572171 bytes. A small initial EXE
+  is not a tiny total install. Setup now records actual per-machine byte totals.
+- Added DESKTOP-ACCOUNTS-HANDOFF with complete pending live matrix and short
+  installation/testing steps. Updated INSTALL, START-HERE, README, architecture,
+  privacy, platform/provider references, active plan and starter follow-up note.
+  Documentation validation: 19 project Markdown files all directly in docs, zero
+  missing relative links; git diff whitespace check passed.
+- IMPLEMENTED: actual local provider/extension integration, confirmation/migration,
+  refresh/ownership/recovery, guided installer and packaged artifacts. AUTOMATED
+  TESTED: results above. LIVE VERIFIED: no authenticated real provider pair.
+  BLOCKED/UNVERIFIED: both actual A/B identities/quota/freshness/logout/renewal,
+  clean interactive Windows install/update/uninstall, signing/store publication,
+  provider product eligibility and same-email OpenAI workspace discrimination.
+- No main merge, release or hosted deployment. Next: user-run real account tests
+  from INSTALL/HANDOFF. Report provider errors as integration failures to resolve;
+  never turn these PENDING rows into passed rows from fictional CI evidence.
+
+## Brave detection follow-up — 22 October 2026
+
+- User reports the installed extension is not discovered in the normal Brave
+  `User Data\Default` location. That rules out a custom-root assumption, but no
+  browser settings file or credentials were requested/uploaded.
+- Inspected setup: it required `entry.manifest.name` and parsed the entire saved
+  profile through Windows PowerShell 5 ConvertFrom-Json. This misses unpacked
+  entries containing only `path`, and rejects valid case-distinct/empty dictionary
+  keys anywhere in Chromium preferences. The catch hid those parse failures.
+- Updated desktop-runtime.ps1 to use the built-in dictionary JSON reader and a
+  bounded local manifest fallback for known extension IDs. No cookie/session file
+  access, UNC reads or unrelated-data exports. Relative installed paths cannot
+  escape the profile's Extensions directory. Added a guided browser-profile folder
+  picker with automatic IDs and correct custom-root return-to-extension routing.
+- Changed Windows setup/runtime, Windows tests and INSTALL. Added real Windows
+  regression cases for Brave Default/path-only unpacked manifests, relative
+  installed manifests, unusual unrelated JSON keys, rejected external paths and
+  a selected custom profile. Existing GUI still operates before Node download.
+- Local payload/whitespace checks and actual Windows parser/GUI/discovery results
+  will be recorded after running them. Next: validate, push, inspect Windows CI,
+  then deliver the corrected setup artifact; user-machine detection remains to retry.
+
+- Verification completed at `999509d642245ceaafd36ab28c983dcb368db5a2`:
+  [CI 39775842039](https://github.com/voiddev011/mylimits/actions/runs/39775842039)
+  passed all three jobs, including the real Windows PowerShell parser, setup GUI,
+  expanded Brave discovery cases, process/rollback checks and installer build.
+  Local `npm run test:desktop-package`: 1 passed; whitespace check passed.
+- Retrieved and verified corrected Windows setup: 1501400 bytes, SHA-256
+  `4dc87e522945a23f4c0e568097009f2a1965857f829f4bb96f8ffb1272e7b3de`.
+  Updated INSTALL/HANDOFF links, sizes and checksums to the matching run.
+  Extension 3.4 needs no rebuild for this setup-only fix; no ID entry or browser
+  cookie/password copying was introduced. Next: user reruns the corrected setup
+  as their normal Windows user and reports whether Brave Default is now detected.
+  Real provider account-isolation/quota acceptance remains PENDING.
+
+## Branch consolidation
+
+- User authorized safe branch merging and deletion of merged branches. Fetched
+  all 13 remote heads; no open PRs or uncommitted work were present. Keep `main`
+  and the active `feature/desktop-independent-accounts` while provider acceptance
+  remains pending. Main stays at its existing stable source snapshot.
+- Verified the remote desktop-plan tree exactly matches the local plan baseline.
+  Recorded a content-preserving ancestry merge so the earlier published branch
+  commits remain reachable alongside the original local implementation history.
+- Found one unique user commit, `b5931cc` (dockerize), on hosted-account-proof.
+  Integrated its Docker/Compose files, Node compatibility matrix/metadata and
+  empty OIDC-secret fix. Conflict resolution preserves current Vault configuration,
+  broader Docker secret exclusions and current Desktop documentation. Node wording
+  changes from superseded documents were ported into maintained docs instead of
+  restoring obsolete plans. No container was deployed or image execution certified.
+- Local `npm run check` passed, server typecheck passed and the merged OIDC config
+  regression passed (1 test). Relative documentation links and whitespace passed.
+  [CI 39891316967](https://github.com/voiddev011/mylimits/actions/runs/39891316967)
+  passed all six jobs: Node 22/24/26 compatibility, extension/browser verification,
+  Windows logic/installer packaging and connected PostgreSQL/API/transport tests.
+  These checks do not verify live provider account behavior.
+- A verified local all-refs Git bundle and the original SHA map were saved under
+  `/tmp/mylimits-branch-cleanup-6sxdoe_l`. Every deletion will additionally require
+  ancestor verification and an expected-tip lease, preventing removal of newly
+  pushed work. After CI passed, all 11 redundant remote heads were deleted in
+  one atomic push with expected-tip leases, and their 11 merged local branches
+  were deleted. Only `main` and `feature/desktop-independent-accounts` remain.
+  Local main now follows the unchanged remote stable main; its previous history
+  is preserved in Desktop. All original remote tips are ancestors of the pushed
+  Desktop merge `25dfb4e`. No release was published. Next: continue work on Desktop
+  when requested; provider live acceptance remains pending.
 
 ## Documentation cleanup — 23 October 2026
 
-- Removed completed Phase 1/2 execution plans, the V2 master execution plan,
-  original roadmap and obsolete starter prompt. Their history remains in Git.
-- Retained shared V2 contracts in ARCHITECTURE.md, all handoff/test evidence,
-  research, installation, privacy and operational documentation.
-- Updated links and START-HERE. Main application source is unchanged.
-- The newer Desktop preview remains on feature/desktop-independent-accounts.
+- User requested removal of unnecessary Markdown on both retained branches.
+- Removed the completed Desktop execution plan and its obsolete starter prompt;
+  the current handoff retains delivery details and outstanding live acceptance.
+- Preserved unique research, provider conditions, architecture, privacy, operations,
+  installation and historical test evidence. Previous plans remain in Git history.
+- Updated entry points and links. No new product plan is authorized by this cleanup.
+
+## Main integration — 23 October 2026
+
+- User authorized merging the remaining branches. Merged Desktop into main with
+  both parent histories retained. Four documentation conflicts were resolved
+  using current Desktop documentation while retaining stable V2 shared contracts.
+- Preserved the documentation cleanup on both branches; removed plans were not
+  restored. Updated current entry point and source installation to main.
+- This promotes experimental code, not live-provider verification. OpenAI and
+  Claude real two-account acceptance remains pending; no release is published.
+- Validation: local Markdown links and staged whitespace passed. The initial
+  sandboxed check stopped at child-process fixture execution; rerunning with
+  permitted subprocess access passed `npm run check` (types, 109 core tests,
+  native/connection/runtime suites and Chrome production build). Application
+  source matches the previously CI-verified Desktop tip; only docs differ.
+- Main is the retained integration branch. The merged feature head is removed
+  using its expected tip after verifying it is an ancestor of pushed main.

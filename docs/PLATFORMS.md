@@ -1,5 +1,11 @@
 # Platform and installer acceptance
 
+> Historical platform notes below. Current 3.4 online Desktop setup, automatic
+> extension detection and measured downloads are documented in [INSTALL.md](INSTALL.md)
+> and the [handoff](DESKTOP-ACCOUNTS-HANDOFF.md). It downloads selected official runtimes;
+> older large bundled installers are superseded. Real Windows provider acceptance
+> remains pending; Firefox native setup is not implemented.
+
 Phase 2 builds separate Chrome/Brave, Edge and Firefox MV3 packages. This is an
 unsigned desktop preview, not a store release. Linux Chromium fixtures exercise
 the extension. Actual Windows Chrome/Brave/Edge and Firefox provider/native
@@ -32,7 +38,7 @@ was reviewed 16 October 2026. No conversations are part of snapshot sync.
 
 `mylimits-companion-windows-unsigned.exe` is a normal per-user NSIS installer with
 Start-menu Setup/Uninstall entries. **Unsigned development artifact.** It needs
-Node 24+ and the official Codex CLI already installed. Open Setup, select the
+Node 22.15+ and the official Codex CLI already installed. Open Setup, select the
 automatically detected MyLimits browser/profile, then Register and start. Detection
 reads extension name/ID metadata from browser Preferences/Secure Preferences;
 it does not read cookies, copy sessions or report unrelated profile settings.

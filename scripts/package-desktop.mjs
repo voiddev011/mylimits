@@ -1,0 +1,17 @@
+import {readFile,writeFile,mkdir} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+import {execFileSync} from 'node:child_process';
+import path from 'node:path';
+import {stageDesktop} from './desktop-package.mjs';
+const out=path.resolve('artifacts');await mkdir(out,{recursive:true});
+const offline=process.argv.includes('--offline');
+const staging=path.join(out,offline?'desktop-windows-offline-staging':'desktop-windows-staging');
+const report=await stageDesktop(staging,{offline});
+const output=path.join(out,`mylimits-desktop-windows-x64-${offline?'offline-':''}unsigned.exe`);
+const compiler=process.env.MAKENSIS??(process.platform==='win32'?'C:\\Program Files (x86)\\NSIS\\makensis.exe':'makensis');
+const prefix=process.platform==='win32'?'/':'-';
+execFileSync(compiler,[`${prefix}DSTAGING=${staging}`,`${prefix}DOUTPUT=${output}`,path.resolve('companion/windows/installer.nsi')],{stdio:'inherit'});
+const bytes=await readFile(output);const sha256=createHash('sha256').update(bytes).digest('hex');
+await writeFile(output+'.sha256',sha256+'  '+path.basename(output)+'\n');
+await writeFile(output+'.json',JSON.stringify({...report,version:'3.4.0',installerBytes:bytes.length,installerSha256:sha256,liveWindowsAcceptance:'PENDING',providerAccounts:'NOT TESTED'},null,2)+'\n');
+console.log(`Built ${path.basename(output)}: ${bytes.length} bytes; payload ${report.payloadBytes} bytes. Runtime downloads/Windows acceptance are separate.`);

@@ -235,3 +235,41 @@ Primary evidence is linked at the claim, with these implementation files examine
 - Publisher/store/FAQ evidence for commercial tools is a lower-confidence source for implementation internals than inspected code. Absence of a repository link is reported as unverified source availability.
 
 For a reproducible audit, the examined Git trees were TokenYou `16d24c439c4ef3386a1ec0fc87a1991012b1bada`, AI Limits `22ee1d5fb8052e75aa93dfb1a670a30e0f41d813`, cupcakedev AI Usage Tracker `374c0fc8fe65698e389188079d45d9c75c6820de`, and Claude Monitor `abe79c2f823f683cb3b9292482ddbc6d25b8b805`. These are **tree identifiers**, not commit identifiers; branch links can advance after the research date. Prices and distribution status are dated observations.
+
+## 22 October update — independent account evidence
+
+The following documentation/source was inspected during the user-requested
+comparison. No competitor was authenticated with real A/B accounts. These main
+branch links can change; do not treat source inspection as live provider acceptance.
+
+| Tool | Mechanism observed | What it supports and does not establish |
+| --- | --- | --- |
+| [ClaudeBar multi-account guide](https://github.com/tddworks/ClaudeBar/blob/main/docs/features/providers/multi-account/README.md) | Separate official Claude/Codex sign-in folders; per-account refresh, aliases, reconnect/removal | Closest reference. Its [sign-in runner](https://github.com/tddworks/ClaudeBar/blob/main/Modules/DataSources/Sources/AccountSignIn.swift) uses official CLI commands. Actual B selection preserving browser A was not tested in this review. |
+| [ClaudeBar Codex](https://github.com/tddworks/ClaudeBar/blob/main/docs/providers/codex/README.md) | Default App Server rate-limit RPC; alternate direct credential/API mode | Borrow the managed RPC/profile design. Do not copy token-file reading or label Codex quota as all ChatGPT quota. |
+| [ClaudeBar Claude](https://github.com/tddworks/ClaudeBar/blob/main/docs/providers/claude/README.md) | Default CLI `/usage`; alternate OAuth credential/API mode | Borrow bounded official CLI collection. API mode documents a 15-minute cache/throttle waits; real-time marketing is not instantaneous refresh. macOS app, not Windows extension-only. |
+| [AIUsage](https://github.com/sylearn/AIUsage) | SwiftUI macOS account manager; isolated Codex login and saved-credential quota reads | Useful account UI/independent refresh architecture. Its token-reading route conflicts with MyLimits' credential boundary. |
+| [AIUsage Claude subscription collector](https://github.com/sylearn/AIUsage/blob/main/QuotaBackend/Sources/QuotaBackend/Providers/ClaudeSubscriptionProvider.swift) and [design](https://github.com/sylearn/AIUsage/blob/main/docs/CLAUDE_SUBSCRIPTION_MONITORING_DESIGN.md) | Official isolated Claude login and status-line snapshots | Passive snapshots do not prove remote-device changes are fetched while the local CLI is idle. Do not claim the full Claude requirement is solved by this implementation. |
+| [AIUsage WebLoginView](https://github.com/sylearn/AIUsage/blob/main/AIUsage/Views/WebLoginView.swift) | Nonpersistent WKWebView with session-cookie capture for Cursor/Droid | Demonstrates an isolated native login surface, not verified ChatGPT/Claude support. Do not copy cookie collection into MyLimits. |
+| [tokenkarma browser setup](https://tokenkarma.app/help/browser-extension/) and [accounts](https://tokenkarma.app/help/accounts/) | Extension collects available readings from signed-in accounts/profile; desktop aggregates; server handles API cost sources | Several accounts advertised, but instructions require staying signed in and distinguish browser profiles. Not proof of website-logout-independent consumer subscription tracking. |
+| [UsageAtlas README](https://github.com/SRX9/UsageAtlas) | Electron desktop; Codex official local App Server, Claude local credential/API reads, local log analytics and optional cloud save | Strong history/alert source. Inspected adapters do not establish an independent A/B authorization UI; cloud history backup is not cloud monitoring. |
+| [AI Usage Tracker Microsoft listing](https://apps.microsoft.com/detail/9pfj3wq9j96d) | Listing required JavaScript in the research tool | Underlying implementation/multi-account claims remain unverified. Do not substitute a similarly named GitHub project as proof for this exact product. |
+| [CUStats](https://custats.info/) and [App Store](https://apps.apple.com/us/app/custats-ai-usage-tracker/id6756333957?mt=12) | Advertises per-account credentials, several accounts, staggered refresh, pace/history | Additional product inspiration. Closed-source public claims, not code or live verification in this review. |
+
+Useful next product features are per-account identity/error/freshness, independent
+refresh, clearly labelled pace estimates, reset notifications after confirmation,
+history and compact pinned accounts. Do not add coaching/leaderboards/proxies to
+the current provider-proof workstream. The active
+[Desktop delivery and pending acceptance](DESKTOP-ACCOUNTS-HANDOFF.md) applies these
+findings without starting another broad research cycle.
+
+Retained regression references from the previous account research:
+[CodexBar issue 403](https://github.com/steipete/CodexBar/issues/403) described rows
+receiving an ambient account's readings; it is closed, but the failure is worth
+testing. [Issue 567](https://github.com/steipete/CodexBar/issues/567) is another
+ownership/UI mismatch example. Neither is a current-version behavior claim.
+
+Native isolation references: [WebView2 data folders](https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/user-data-folder)
+and [Firefox contextual identities](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/contextualIdentities).
+An isolation mechanism does not itself establish supported sign-in, quota access
+or survival of provider revocation. The chosen first route uses official CLI
+profiles and an external browser, avoiding a speculative embedded OAuth surface.

@@ -4,7 +4,29 @@ on:
   pull_request:
 permissions:
   contents: read
+concurrency:
+  group: checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
+  node-compatibility:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22, 24, 26]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Install extension dependencies
+        run: npm ci
+      - name: Core tests and extension build
+        run: npm run check
+      - name: Install server dependencies
+        run: npm ci --prefix server
+      - name: Type-check server
+        run: npm run typecheck --prefix server
+
   verify:
     runs-on: ubuntu-latest
     steps:
@@ -16,6 +38,13 @@ jobs:
         run: npm ci
       - name: Core tests, type checking and extension build
         run: npm run check
+      - name: Account proof subprocess and PTY regressions (fictional accounts)
+        timeout-minutes: 3
+        run: npm run test:account-proof
+      - name: Hosted transport observation redaction and lifecycle regressions
+        run: npm run test:hosted-probe
+      - name: Desktop bootstrapper payload checks
+        run: npm run test:desktop-package
       - name: Install Chromium for browser tests
         run: npx playwright install --with-deps chromium
       - name: Browser tests
@@ -54,20 +83,47 @@ jobs:
         with:
           node-version: 24
       - run: npm ci
-      - run: npm run check
+      - name: Compile the owned Windows Claude browser launcher
+        shell: powershell
+        run: ./companion/windows/compile-claude-browser.ps1 -Source ./companion/windows/claude-browser.cs -Output ./companion/windows/claude-browser.exe
+      - name: Official Claude browser interface (no account sign-in)
+        timeout-minutes: 3
+        run: node scripts/check-claude-browser.mjs
+      - name: Windows integrated checks
+        timeout-minutes: 4
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          cmd /d /c "npm run check > artifacts\windows-check.log 2>&1"
+          $checkExit = $LASTEXITCODE
+          Get-Content artifacts/windows-check.log
+          exit $checkExit
+      - name: Retain Windows check diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-check-diagnostics
+          path: artifacts/windows-check.log
+          if-no-files-found: ignore
+      - name: Account proof Windows ConPTY regressions (fictional accounts)
+        timeout-minutes: 3
+        run: npm run test:account-proof
       - name: Parse Windows scripts and construct setup GUI without installing
         shell: powershell
         run: ./scripts/test-windows-setup.ps1
       - name: Install NSIS compiler
         run: choco install nsis --no-progress -y
-      - name: Package unsigned optional Windows companion
-        run: npm run package:companion
+      - name: Desktop bootstrapper payload checks
+        run: npm run test:desktop-package
+      - name: Package unsigned Windows Desktop setup
+        run: npm run package:desktop
       - uses: actions/upload-artifact@v4
         with:
-          name: mylimits-companion-windows-unsigned
+          name: mylimits-desktop-windows-x64-unsigned
           path: |
-            artifacts/mylimits-companion-windows-unsigned.exe
-            artifacts/mylimits-companion-windows-unsigned.exe.sha256
+            artifacts/mylimits-desktop-windows-x64-unsigned.exe
+            artifacts/mylimits-desktop-windows-x64-unsigned.exe.sha256
+            artifacts/mylimits-desktop-windows-x64-unsigned.exe.json
           if-no-files-found: error
 
   connected-services:

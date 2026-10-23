@@ -8,18 +8,21 @@ import { transaction } from './db';
 import { SyncPreferencesSchema } from '../../src/core/sync-contracts';
 import { authRoutes } from './oidc';
 import { JobRunner } from './jobs';
-import { CredentialStore } from './credentials';
+import { type Kms,CredentialStore } from './credentials';
 import { pairingRoutes } from './pairing';
 import { startRetention } from './retention';
 import { webRoutes } from './web';
+import { HostedJobs } from './hosted-jobs';
+import { HostedService,type HostedDriver } from './hosted';
 export type RequestWithPrincipal=FastifyRequest&{principal:Principal};
 const identifier=z.string().uuid();
 const params=(request:FastifyRequest)=>z.object({id:identifier}).parse(request.params).id;
-export function createApp(options:{config:Config;pool:pg.Pool;testVerifier?:Verify}){
+export function createApp(options:{config:Config;pool:pg.Pool;kms?:Kms;testHostedDrivers?:ReadonlyMap<import('../../src/core/hosted-contracts').HostedProvider,HostedDriver>;testVerifier?:Verify}){
  const config=ConfigSchema.parse(options.config),pool=options.pool;
  if(options.testVerifier&&config.environment!=='test')throw new Error('Test authentication is forbidden outside tests.');
  const verify=options.testVerifier??oidcVerifier(config);
- const jobs=new JobRunner({pool,credentials:new CredentialStore(pool),environment:config.environment});
+ const jobs=new JobRunner({pool,credentials:new CredentialStore(pool,options.kms),environment:config.environment});
+ const hosted=new HostedService(pool,new CredentialStore(pool,options.kms),config.environment,options.testHostedDrivers);
  const app=Fastify({logger:false,bodyLimit:512*1024,requestTimeout:15000,trustProxy:false});
  app.decorateRequest('principal',null);
  const budgets=new Map<string,{at:number;count:number}>();
@@ -46,6 +49,15 @@ export function createApp(options:{config:Config;pool:pg.Pool;testVerifier?:Veri
  });
  const p=(r:FastifyRequest)=>(r as RequestWithPrincipal).principal;
  app.get('/health',async()=>({ok:true,mode:'snapshot-only',authenticationConfigured:!!config.oidc}));
+ app.get('/hosted/capabilities',async()=>hosted.capabilities());
+ app.post('/v1/hosted/connections/:id/refresh',async r=>{z.object({}).strict().parse(r.body??{});return new HostedJobs(hosted).enqueue(p(r).owner,params(r));});
+ app.get('/v1/hosted/connections',async r=>hosted.list(p(r).owner));
+ app.post('/v1/hosted/attempts',async r=>hosted.start(p(r).owner,r.body));
+ app.get('/v1/hosted/attempts/:id',async r=>hosted.attempt(p(r).owner,params(r)));
+ app.delete('/v1/hosted/attempts/:id',async r=>hosted.cancel(p(r).owner,params(r)));
+ app.patch('/v1/hosted/connections/:id',async r=>hosted.rename(p(r).owner,params(r),r.body));
+ app.delete('/v1/hosted/connections/:id/data',async r=>hosted.forget(p(r).owner,params(r)));
+ app.delete('/v1/hosted/connections/:id',async r=>hosted.disconnect(p(r).owner,params(r)));
  authRoutes(app,pool,config);
  pairingRoutes(app,pool);
  webRoutes(app);
@@ -115,6 +127,7 @@ export function createApp(options:{config:Config;pool:pg.Pool;testVerifier?:Veri
    await db.query("UPDATE connections SET enabled=false,generation=generation+1,status='disabled' WHERE owner_id=$1",[p(r).owner]);
    await db.query('DELETE FROM jobs WHERE owner_id=$1',[p(r).owner]);await db.query('DELETE FROM snapshots WHERE owner_id=$1',[p(r).owner]);await db.query('DELETE FROM preferences WHERE owner_id=$1',[p(r).owner]);
    for(const table of ['encrypted_credentials','connection_cleanup'])await db.query(`DELETE FROM ${table} WHERE owner_id=$1`,[p(r).owner]);
+   for(const table of ['hosted_attempts','hosted_jobs','hosted_readings','hosted_credentials','hosted_connections'])await db.query(`DELETE FROM ${table} WHERE owner_id=$1`,[p(r).owner]);
    await db.query('DELETE FROM pair_requests WHERE approved_owner=$1',[p(r).owner]);
   });return {deleted:true,devicesRevoked:true};
  });

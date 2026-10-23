@@ -18,7 +18,7 @@ export function taskScript(node, daemon, codex, directory) {
   const command = `& ${[node, daemon, codex].map(psLiteral).join(' ')}; exit $LASTEXITCODE`;
   const args = '-NoProfile -NonInteractive -WindowStyle Hidden -EncodedCommand ' + encodedPowerShell(command);
   return `$ErrorActionPreference = 'Stop'
-$name = 'MyLimitsCompanion'
+$name = 'MyLimitsCompanion-' + [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
 $existing = Get-ScheduledTask -TaskName $name -ErrorAction SilentlyContinue
 if ($existing) { Stop-ScheduledTask -TaskName $name -ErrorAction Stop }
 $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument ${psLiteral(args)} -WorkingDirectory ${psLiteral(directory)}

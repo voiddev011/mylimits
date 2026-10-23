@@ -22,13 +22,28 @@ export function frameReader(onMessage) {
   };
 }
 export function validRequest(value) {
-  return value && typeof value.id === 'string' && /^[a-zA-Z0-9-]{1,80}$/.test(value.id)
-    && ['status', 'add', 'remove', 'refresh'].includes(value.method)
-    && (value.method !== 'remove' || typeof value.profile === 'string' && /^[a-f0-9-]{36}$/.test(value.profile));
+  if (!value || typeof value !== 'object' || Array.isArray(value) || typeof value.id !== 'string' || !/^[a-zA-Z0-9-]{1,80}$/.test(value.id)) return false;
+  const allowed = {
+    status: [], capabilities: [], list: [], add: ['provider', 'alias'], start: ['provider', 'alias'],
+    setup: ['profile'], cancel: ['profile'], confirm: ['profile','generation','alias'], reconnect: ['profile'], rename: ['profile', 'alias'],
+    remove: ['profile'], disconnect: ['profile'], refresh: ['profile'],
+  };
+  if (!Object.hasOwn(allowed, value.method) || Object.keys(value).some(k => !['id', 'method', ...allowed[value.method]].includes(k))) return false;
+  if (['setup','cancel','confirm','reconnect','rename','remove','disconnect'].includes(value.method) && !value.profile) return false;
+  if (value.method === 'confirm' && (!Number.isSafeInteger(value.generation) || value.generation < 0)) return false;
+  if (value.profile !== undefined && (typeof value.profile !== 'string' || !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(value.profile))) return false;
+  if (value.provider !== undefined && !['openai','claude'].includes(value.provider)) return false;
+  if (value.method === 'rename' && value.alias === undefined) return false;
+  return value.alias === undefined || typeof value.alias === 'string' && value.alias.length <= 60 && !/[\x00-\x1f\x7f]/.test(value.alias);
 }
-export function safeAuthUrl(value) {
+export function safeAuthUrl(value, provider = 'openai') {
   try {
     const url = new URL(value);
-    return url.protocol === 'https:' && ['auth.openai.com', 'chatgpt.com'].includes(url.hostname) && !url.username && !url.password && (!url.port || url.port === '443');
+    if (url.protocol !== 'https:' || url.username || url.password || url.port && url.port !== '443') return false;
+    if (provider === 'openai') return ['auth.openai.com', 'chatgpt.com'].includes(url.hostname);
+    if (provider !== 'claude' || url.hash || !(['claude.ai'].includes(url.hostname) && url.pathname === '/oauth/authorize' || url.hostname === 'claude.com' && url.pathname === '/cai/oauth/authorize')) return false;
+    const redirect = new URL(url.searchParams.get('redirect_uri'));
+    return url.searchParams.get('response_type') === 'code' && !!url.searchParams.get('state') && !!url.searchParams.get('code_challenge') &&
+      redirect.protocol === 'http:' && ['localhost','127.0.0.1','[::1]'].includes(redirect.hostname) && !!redirect.port && !redirect.username && !redirect.password && redirect.pathname === '/callback';
   } catch { return false; }
 }

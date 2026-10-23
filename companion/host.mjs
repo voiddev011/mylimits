@@ -11,7 +11,7 @@ const finish = () => { socket.destroy(); process.exit(0); };
 socket.on('error', finish); socket.on('end', finish);
 const read = frameReader(request => {
   if (!validRequest(request)) { finish(); return; }
-  socket.write(frame({ id: request.id, method: request.method, ...(request.method === 'remove' ? { profile: request.profile } : {}) }));
+  socket.write(frame(request)); // Strictly validated allowlisted fields only.
 });
 let verified = false;
 const receive = frameReader(message => {

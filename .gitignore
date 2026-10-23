@@ -17,3 +17,5 @@ local-data/
 .DS_Store
 
 server/web-dist/
+
+companion/windows/claude-browser.exe
