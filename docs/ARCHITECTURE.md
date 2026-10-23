@@ -1,6 +1,6 @@
 # Architecture — implemented Phase 2
 
-MyLimits 2.1 is a local Manifest V3 extension with an optional separate snapshot service. Local tracking requires no backend account. The [master plan](V2-IMPLEMENTATION-PLAN.md) defines contracts; [this handoff](PHASE-2-HANDOFF.md) records current evidence.
+MyLimits 2.1 is a local Manifest V3 extension with an optional separate snapshot service. Local tracking requires no backend account. The [Architecture and retained contracts](ARCHITECTURE.md) defines contracts; [this handoff](PHASE-2-HANDOFF.md) records current evidence.
 
 ```mermaid
 flowchart TD
@@ -222,3 +222,128 @@ gets no postMessage bridge; content controls ignore synthetic events. Dashboard
 URLs are fixed by the extension. General UI/state/sync messages still require an
 extension-page sender. Removing a grant unregisters scripts and removes visible
 widgets across tabs. Widget settings are separate local storage, not synced.
+
+## Retained V2 implementation contracts
+
+These historical contracts remain relevant to the stable code on this branch.
+
+
+These are proposed contracts. Finalize them in P1-02 against the existing code,
+record any justified adjustment, and keep the same semantics throughout both
+phases. Avoid implementing a second competing model in UI or server code.
+
+### Identity and connections
+
+- Preserve existing account IDs and installation salt through migration; old IDs
+  may already combine account and workspace. Preserve that mapping until verified
+  evidence supports a more granular mapping. Do not reverse hashes or guess raw IDs.
+- A user-facing account can have several sources, but browser sessions, native
+  profiles and cloud grants remain independently addressable connections.
+- A workspace is explicit when verified. `null` means no known workspace, not
+  permission to combine workspaces.
+- Suggested connection kinds: `website`, `companion`, `independent-local`,
+  `cloud`, `snapshot-import`. Only implement usable kinds in each phase; listing
+  a kind in a type does not enable that connection method.
+- Suggested lifecycle: `disabled`, `checking`, `active`, `needs-auth`,
+  `needs-tab`, `unavailable`, `offline`, `error`. Derive the display-only
+  “remembered” account label from its connections and dated readings.
+- One website-session connection may change the detected current account when
+  the user signs into another login. Detach its live mapping from the previous
+  account while retaining that account's nickname and snapshot. Native/cloud
+  connections for other accounts must remain active.
+- Increment a connection generation on disable, disconnect, account rebinding
+  or credential replacement. A response from an older generation cannot mutate
+  current state. Account deletion additionally removes history and preferences.
+
+### Snapshot contract
+
+Use runtime-validated data with the following fields or their documented equivalent:
+
+```ts
+type Evidence = 'reported' | 'observed' | 'estimated';
+interface UsageSnapshot {
+  schemaVersion: 2;
+  snapshotId: string;
+  providerId: string;
+  accountId: string;
+  connectionId: string;
+  workspaceId: string | null;
+  observedAt: number; // milliseconds UTC; age of the actual reading
+  receivedAt: number; // milliseconds UTC; local ingestion time
+  connectorVersion: string;
+  meters: UsageMeter[];
+}
+interface UsageMeter {
+  id: string;
+  label: string;
+  scope: 'subscription' | 'work-codex' | 'chat' | 'api' | 'local';
+  evidence: Evidence;
+  unit: 'percent' | 'messages' | 'requests' | 'searches' | 'credits' | 'currency';
+  used: number | null;
+  total: number | null;
+  usedPercent: number | null;
+  currency: string | null;
+  resetsAt: number | null;
+  windowId: string | null;
+  sourceLabel: string;
+}
+```
+
+Reject non-finite values, negative counters and malformed timestamps. Percentage
+clamping for visual display must not hide malformed input. A positive total is
+needed for division; reported zero is valid and unknown is `null`. Monetary
+values require a currency and cannot silently mix currencies. Retain separate
+windows even if their reset times coincide. Validate clock skew/old arrivals
+before selecting the current snapshot; a newer arrival can contain older data.
+
+Transport-level transient identity/authentication is not part of the public
+snapshot. Account verification happens before publishing the normalized record.
+The UI never receives raw responses, salts, cookie values, access/refresh tokens
+or native bridge secrets.
+
+### Adapter and capability contract
+
+An adapter takes a permitted connection context and abort signal, returns a
+normalized validated snapshot or typed error, and declares fixed provider
+origins. Inject transport and clocks for tests. Errors distinguish authentication,
+missing page context, permission denial, network/offline, throttling with retry
+time, unsupported quota scope and unexpected response shape.
+
+Capabilities record tab-independent access, account-wide scope, supported meters,
+multi-account behavior, independent authorization, renewal and hosted deployment.
+Each includes `supported`, `unsupported` or `unverified`, its evidence level
+(`documentation`, `fixture`, `live`), last check date and connection type.
+Do not promote documentation/fixture evidence into live support automatically.
+
+### Storage and messages
+
+- Existing state key: `mylimits:state:v1`. Introduce an explicitly versioned V2
+  key only after schema validation and backup; preserve V1 for recovery. A pointer
+  to the active schema is written only after the V2 state is durable and validated.
+- Existing IndexedDB: `mylimits-history`, version 1, store `readings`, indexes
+  `account` and `time`. Browser storage and IndexedDB do not share an atomic
+  transaction: use a resumable migration journal and make retries idempotent.
+- Default history retention remains 30 days until Phase 2 changes it explicitly.
+  Keep legacy history usable with a documented legacy-source mapping.
+- Serialize writes; reject unrecognized versions without resetting data. Never
+  “fix” parse failure by silently creating an empty store over the saved record.
+- Extend validated messages for connect/enable, account preferences, workspace
+  selection, refresh by connection, disconnect, forget and paginated history.
+  Public state uses purpose-built public types; private fields are not excluded
+  merely by relying on callers to ignore them.
+- Keep the current observation sender/origin/path checks. Page messages cannot
+  choose arbitrary fetch origins, invoke cloud actions or issue UI commands.
+
+### Alert and timing contract
+
+Use one unit throughout storage and messages: epoch milliseconds. Convert source
+seconds/durations in parsers only. Clock injection makes reset/freshness tests
+deterministic. Schedule collection with browser alarms, not a permanent worker
+loop. Refresh-on-open reuses an already fresh/in-flight read rather than causing
+a network storm. The quiet-hours policy uses local time with a defined overnight
+range; it suppresses delivery, not quota collection.
+
+Alert identities include account, workspace/scope, meter and reset window.
+Do not collapse different quota windows into one ledger entry. Snooze/quiet
+hours must not falsely mark an undelivered alert as delivered. When notifications
+resume, alert once only if a fresh currently low reading still warrants it.

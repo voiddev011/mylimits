@@ -1,7 +1,7 @@
 # MyLimits 2.2 — Compact accounts preview
 
 Your AI usage readings, named accounts and reset times in one compact view.
-This upgrade lives on **`v2/compact-accounts`**. See the
+This stable upgrade is preserved on **`main`**; the original feature branch was merged and deleted. See the
 [compact accounts handoff](COMPACT-ACCOUNTS-HANDOFF.md) for installation, actual
 verification and remaining provider limitations. All maintained Markdown lives
 in `docs/`; run commands from the repository root.

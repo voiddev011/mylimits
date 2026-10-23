@@ -8,10 +8,10 @@ credential upload has been performed.
 - Requested work: user-authorized compact popup and explicit multi-account setup upgrade.
 - Current work package: 2.2 delivered paths verified; independent Claude/other-provider authorization remains unavailable.
 - Next action: use the packaged preview; live provider/Windows acceptance remains pending. No additional product work is assumed.
-- Working branch: `v2/compact-accounts`; published code `7a8f48fb76babfa9b02e29a02e01fc339bb68441`.
+- Historical working branch (now deleted after consolidation): `v2/compact-accounts`; published code `7a8f48fb76babfa9b02e29a02e01fc339bb68441`.
 - Main and completed Phase 1/2 branches preserved.
 - Current handoff: [compact accounts upgrade](COMPACT-ACCOUNTS-HANDOFF.md).
-- Historical scope: [master plan](V2-IMPLEMENTATION-PLAN.md), [Phase 1](PHASE-1.md), [Phase 2](PHASE-2.md).
+- Historical scope: [Architecture and retained contracts](ARCHITECTURE.md), [Historical implementation status](IMPLEMENTATION-STATUS.md), [Historical implementation status](IMPLEMENTATION-STATUS.md).
 
 ## Task ledger
 
@@ -410,3 +410,12 @@ signing was added. Main remains unchanged.
 Next: install/update using the current 2.2 artifact. Further independent-provider
 work needs a viable permitted authorization/quota source and live acceptance;
 never relabel saved website readings as independently updating accounts.
+
+## Documentation cleanup — 23 October 2026
+
+- Removed completed Phase 1/2 execution plans, the V2 master execution plan,
+  original roadmap and obsolete starter prompt. Their history remains in Git.
+- Retained shared V2 contracts in ARCHITECTURE.md, all handoff/test evidence,
+  research, installation, privacy and operational documentation.
+- Updated links and START-HERE. Main application source is unchanged.
+- The newer Desktop preview remains on feature/desktop-independent-accounts.
