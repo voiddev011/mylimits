@@ -36,3 +36,18 @@ Project Markdown lives directly in this folder. One execution plan is active.
 Older removed plans and phase ledgers remain in Git history; their unique evidence
 is consolidated above. Version 3.4 defaults independent connections to Desktop.
 The hosted provider registry remains empty and is not a fallback for Desktop.
+
+## Docker build and optional API
+
+The extension builder defaults to Node 24. Select another maintained major through
+`NODE_VERSION` (22, 24 or 26); source tooling requires at least Node 22.15.
+
+```powershell
+docker build --build-arg NODE_VERSION=22 -t mylimits-extension-builder .
+docker run --rm -v "${PWD}\.output:/app/.output" mylimits-extension-builder
+```
+
+This builds extension files; it does not host a browser extension or connect AI
+accounts remotely. The root `compose.yaml` runs the optional API and PostgreSQL
+with `docker compose up --build`. See [server setup](SERVER-SETUP.md) for local
+configuration, data-volume behavior and production limitations.

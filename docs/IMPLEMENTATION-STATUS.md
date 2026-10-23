@@ -360,3 +360,27 @@ automated tests, live verification and blocked/unverified work.
   cookie/password copying was introduced. Next: user reruns the corrected setup
   as their normal Windows user and reports whether Brave Default is now detected.
   Real provider account-isolation/quota acceptance remains PENDING.
+
+## Branch consolidation
+
+- User authorized safe branch merging and deletion of merged branches. Fetched
+  all 13 remote heads; no open PRs or uncommitted work were present. Keep `main`
+  and the active `feature/desktop-independent-accounts` while provider acceptance
+  remains pending. Main stays at its existing stable source snapshot.
+- Verified the remote desktop-plan tree exactly matches the local plan baseline.
+  Recorded a content-preserving ancestry merge so the earlier published branch
+  commits remain reachable alongside the original local implementation history.
+- Found one unique user commit, `b5931cc` (dockerize), on hosted-account-proof.
+  Integrated its Docker/Compose files, Node compatibility matrix/metadata and
+  empty OIDC-secret fix. Conflict resolution preserves current Vault configuration,
+  broader Docker secret exclusions and current Desktop documentation. Node wording
+  changes from superseded documents were ported into maintained docs instead of
+  restoring obsolete plans. No container was deployed or image execution certified.
+- Local `npm run check` passed, server typecheck passed and the merged OIDC config
+  regression passed (1 test). Relative documentation links and whitespace passed.
+  Actual Node matrix/browser/Windows/server CI must pass before remote deletion.
+- A verified local all-refs Git bundle and the original SHA map were saved under
+  `/tmp/mylimits-branch-cleanup-6sxdoe_l`. Every deletion will additionally require
+  ancestor verification and an expected-tip lease, preventing removal of newly
+  pushed work. Next: push merged Desktop history, inspect CI, then remove only
+  the 11 redundant heads and matching merged local branches.

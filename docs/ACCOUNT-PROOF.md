@@ -17,7 +17,7 @@ npm install --include=optional
 npm run account-proof
 ```
 
-Use Node 24+. The diagnostic needs the official CLI for each provider being tested.
+Use Node 22.15+. The diagnostic needs the official CLI for each provider being tested.
 If absent, install only the provider you want:
 
 ```powershell

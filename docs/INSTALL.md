@@ -84,7 +84,7 @@ npm ci --include=optional
 npm run build
 ```
 
-Use Node 24+ for source builds. If the branch exists only remotely, `git switch`
+Use Node 22.15+ for source builds (Node 24 is the default Desktop runtime). If the branch exists only remotely, `git switch`
 normally creates its tracking branch; otherwise use
 `git switch --track origin/feature/desktop-independent-accounts`.
 A source ZIP starts at `node -v` in its package.json directory, without Git commands.
