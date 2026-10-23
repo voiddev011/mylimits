@@ -508,7 +508,7 @@ test('Perplexity count-only quotas and activity mode preserve names without gues
  expect((await worker.evaluate(()=>chrome.scripting.getRegisteredContentScripts())).some(s=>s.id==='mylimits-observer-perplexity')).toBe(false);
  const account=result.data.accounts.find((a:Account)=>a.provider==='perplexity');expect(account.meters[0].usedPercent).toBeNull();expect(account.meters[0].total).toBeNull();
  await page.getByRole('button',{name:'Details for Perplexity',exact:true}).click();await page.getByRole('button',{name:'Rename Perplexity',exact:true}).click();await page.getByLabel('Account nickname').fill('Personal search');await page.getByRole('button',{name:'Save nickname',exact:true}).click();
- await page.getByRole('button',{name:'Accounts',exact:true}).click();await page.getByLabel('Reading source for Perplexity').selectOption('activity');
+ await page.getByRole('button',{name:'Accounts',exact:true}).click();await page.locator('.website-card').filter({has:page.getByRole('heading',{name:'Perplexity',exact:true})}).locator('summary').click();await page.getByLabel('Reading source for Perplexity').selectOption('activity');
  await expect.poll(async()=>worker.evaluate(async()=>{const s=(await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store;return s.accounts.find(a=>a.kind==='browser'&&a.provider==='perplexity')?.connection})).toBe('active');
  const saved=await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);expect(saved.accounts.find(a=>a.id===account.id)!.alias).toBe('Personal search');expect(saved.accounts.find(a=>a.id===account.id)!.connection).toBe('inactive');expect(saved.providers.perplexity.readingMode).toBe('activity');
  expect((await worker.evaluate(()=>chrome.scripting.getRegisteredContentScripts())).some(s=>s.id==='mylimits-observer-perplexity')).toBe(true);await page.getByLabel('Reading source for Perplexity').selectOption('quota');await expect.poll(async()=>worker.evaluate(async()=>(await chrome.scripting.getRegisteredContentScripts()).some(s=>s.id==='mylimits-observer-perplexity'))).toBe(false);
@@ -624,6 +624,40 @@ test('popup opens the selected account in the full dashboard and keeps six rows 
   await page.screenshot({path:'artifacts/compact-popup-six-accounts.png'});
 });
 
+test('minimal dashboard keeps limits first and advanced controls discoverable without changing saved accounts',async({context,worker,extensionId})=>{
+ const fixture={...emptyStore('minimal-ui'),accounts:demoState().accounts};
+ fixture.providers.claude.message='Reconnect to refresh this browser account.';
+ await worker.evaluate(async s=>chrome.storage.local.set({'mylimits:state:v2':s}),fixture);
+ const page=await context.newPage();await page.setViewportSize({width:1120,height:920});await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
+ await expect(page.getByRole('heading',{level:1})).toHaveText('MyLimits');
+ await expect(page.getByRole('button',{name:'Add account',exact:true})).toHaveCount(1);
+ await expect(page.getByLabel('Sort limits')).toBeHidden();await expect(page.getByLabel('Filter provider')).toBeHidden();
+ expect((await page.locator('.account-summary').first().boundingBox())!.y).toBeLessThan(360);
+ await mkdir('artifacts',{recursive:true});await page.screenshot({path:'artifacts/minimal-dashboard.png',fullPage:true});
+ await page.getByLabel('Search accounts').fill('GPT');await expect(page.locator('.account-row')).toHaveCount(3);
+ const filters=page.locator('.overview-filters>summary');await filters.focus();await page.keyboard.press('Enter');
+ await page.getByLabel('Filter provider').selectOption('chatgpt');await page.getByLabel('Sort limits').selectOption('remaining');
+ await expect(page.locator('.account-identity').first()).toHaveAccessibleName('Details for GPT Work');
+ await filters.click();await expect(page.getByLabel('2 active filters')).toBeVisible();
+ await expect(page.getByLabel('Sort limits')).toBeHidden();await page.getByRole('button',{name:'Low only',exact:true}).click();
+ await expect(page.locator('.account-row')).toHaveCount(1);await expect(page.getByLabel('3 active filters')).toBeVisible();
+ await filters.click();await page.getByRole('button',{name:'Reset filters',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Low only',exact:true})).toHaveAttribute('aria-pressed','false');
+ await expect(page.getByLabel('Filter provider')).toHaveValue('all');await expect(page.getByLabel('Sort limits')).toHaveValue('default');
+ await page.getByLabel('Search accounts').fill('');await expect(page.locator('.account-row')).toHaveCount(5);
+ await page.getByRole('button',{name:'Accounts',exact:true}).click();
+ await expect(page.getByText('Reconnect to refresh this browser account.',{exact:true})).toBeVisible();
+ await expect(page.getByRole('link',{name:'Open website',exact:true})).toHaveCount(0);
+ await expect(page.locator('.website-top button')).toHaveCount(6);
+ await expect(page.getByLabel('Reading source for Perplexity')).toBeHidden();
+ await page.screenshot({path:'artifacts/minimal-services.png',fullPage:true});
+ await page.locator('.website-card').filter({has:page.getByRole('heading',{name:'Perplexity',exact:true})}).locator('summary').click();
+ await expect(page.getByLabel('Reading source for Perplexity')).toBeVisible();
+ await expect(page.getByRole('link',{name:'Open website',exact:true})).toBeVisible();
+ const saved=await worker.evaluate(async()=>(await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);
+ expect(saved.accounts).toEqual(fixture.accounts);expect(saved.connections).toEqual(fixture.connections);
+});
+
 test('provider picker lists the supported services and labels Gemini as activity only',async({context,worker,extensionId})=>{
   const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html#add`);
   for(const name of ['OpenAI · ChatGPT / Codex','Claude · Claude Code','Cursor','Gemini','Grok','Perplexity'])await expect(page.getByRole('button',{name:new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))})).toBeVisible();
@@ -727,7 +761,7 @@ test('popup plus opens dashboard setup and local genuine logos load without exte
  const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/popup.html`);
  await expect(page.locator('.provider-mark img')).toHaveCount(5);
  expect(await page.locator('.provider-mark img').evaluateAll(imgs=>imgs.every(img=>(img as HTMLImageElement).complete&&(img as HTMLImageElement).naturalWidth>0))).toBe(true);
- expect(await page.locator('.quick-copy strong').first().evaluate(e=>getComputedStyle(e).fontSize)).toBe('14px');
+ expect(await page.locator('.quick-copy strong').first().evaluate(e=>getComputedStyle(e).fontSize)).toBe('15px');
  const opened=context.waitForEvent('page');await page.getByRole('button',{name:'Add account',exact:true}).click();const dashboard=await opened;
  await expect(dashboard.getByRole('region',{name:'Add an account'})).toBeVisible();
  await expect(page.getByRole('region',{name:'Add an account'})).toHaveCount(0);

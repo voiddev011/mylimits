@@ -21,8 +21,8 @@ Read root AGENTS.md, the proposal and the current status before coding.
 Real-session gates G0/G1 remain required; no saved-session feature is enabled yet.
 Keep project Markdown directly in docs/.
 
-The current persistent-accounts task is **C11 / gated setup UI and credential deletion**.
-C1–C7 and C9/C10 are merged into main through PRs #8, #10, #12 and #14. The user authorized merging validated
+The latest completed persistent-accounts task is **C11 / gated setup UI and credential deletion**.
+C1–C7 and C9–C11 are merged into main through PRs #8, #10, #12, #14 and #16. The user authorized merging validated
 checkpoints and pruning merged branches. The 3–4 day live trial remains pending.
 Read [spike setup](INSTALL.md#c6-evidence-spike-test-accounts-only) and fill
 [the live evidence ledger](SESSION-PERSISTENCE-EVIDENCE.md) on your own test
@@ -34,5 +34,10 @@ provider policy off and every cookie allowlist empty. C8 is deferred; provider
 activation still needs real evidence and G0/G1 decisions. C11 adds the gated
 consent/setup UI, source conversion, credential deletion and leak tests. This
 checkpoint does not expose a working second-account button to public users.
+
+The current user-requested follow-up simplifies the existing UI: fewer repeated
+headings/actions, collapsed advanced filters and service details, and larger
+popup account names. This is separate from **C12**, which has not started.
+See the latest entry in [implementation status](IMPLEMENTATION-STATUS.md).
 
 [Documentation index](README.md) · [Research](COMPETITOR-RESEARCH.md)
