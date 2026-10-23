@@ -1,4 +1,6 @@
 import { browser } from 'wxt/browser';
+import { cleanupVaultRules } from './vault-transport';
+import { setHostLockStartup } from './host-lock';
 import { PROVIDER_IDS, type ProviderId } from '../core/model';
 import { AccountSchema, SettingsSchema } from '../core/schema';
 import { badge, collectAlerts, recordObservation,markConnection } from '../core/engine';
@@ -370,6 +372,8 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
 }
 
 export function startController(): void {
+  setHostLockStartup(__MYLIMITS_BROWSER__==='firefox'?Promise.resolve():cleanupVaultRules({dnr:browser.declarativeNetRequest,
+    permitted:()=>browser.permissions.contains({permissions:['declarativeNetRequestWithHostAccess']})}));
   let stopSessionCookies=()=>{};
   const listenSessionCookies=()=>{stopSessionCookies();stopSessionCookies=sessionCookies.listenSessionCookies(provider=>refreshConnection(websiteId(provider),false,'cookie'));};
   listenSessionCookies();

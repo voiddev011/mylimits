@@ -559,3 +559,41 @@ The pure retry helper supports a verified-absent auth state (null retry deadline
 for later evidence-backed configuration; tests of that branch are simulated.
 Request diagnostics include only recognized names/presence, never values.
 All existing accounts/IDs/history and the Desktop authorization route remain.
+
+## C9 — dormant saved-session storage and transport
+
+The user deferred intermediate live gates for C9 coding. This does not activate
+saved connections: vault-policy.ts sets every provider off and every allowlist
+empty. There is no capture command, login window, runtime secret message or UI
+entry added by C9. C10/C11 supply the separate sign-in/refresh/UI integration.
+
+createVault receives storage, WebCrypto, key storage, clock, policy/allowlist and
+an exclusive cross-writer lock. A future runtime must use one worker-owned vault
+and a shared lock (e.g. injected Web Locks); no uncoordinated storage writers.
+It uses mylimits:vault:v1, never the account Store, history, sync or exports.
+AES-GCM-256 uses slot|provider AAD, a fresh 96-bit nonce and a non-extractable key
+persisted by createIndexedDBVaultKeys in mylimits-vault-key. The IndexedDB
+read/write transaction selects one key across racing contexts. Key loss/corruption
+fails closed rather than replacing the key over existing ciphertext.
+
+Payloads are strict origin/name/value/optional-expiry cookie records, with an
+evidence-supplied allowlist and 16KB serialized cap. Tokens/other fields are not
+accepted before the E7-dependent work. Metadata/list results exclude values,
+nonce and ciphertext. notAfter is the earliest supplied cookie expiry, not a
+guarantee of session validity or a successful quota observation. Storage protection
+must succeed with TRUSTED_CONTEXTS before access. Deletion is explicit per slot.
+
+createVaultTransport receives the validated vault getter, permissions, DNR,
+fetch, shared host lock, provider waits and the same one-time startup readiness
+barrier. Only existing fixed quota/account endpoints are allowed. Cookie headers
+omit expired entries; browser credentials are omitted, redirects rejected, and
+rules always include exact host, extension initiator and tabIds [-1]. Rules use
+930001–930099, distinct from C6's diagnostic range, and are removed in finally.
+Different providers have different IDs; same-host requests share the C5 lock.
+
+The ordinary controller installs startup cleanup as a shared HTTP barrier before
+registering events. Cleanup removes only the vault range when DNR access exists;
+normal builds add no DNR permission. A cleanup failure blocks HTTP; a failed final
+removal poisons the host, including queued ambient requests. Firefox bypasses the
+Chromium-only startup step. This is defensive plumbing, not enabled saved tracking.
+Live E3 scoping, E4 logout, E6 rotation and E7 token behavior remain unverified.
