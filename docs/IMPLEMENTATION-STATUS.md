@@ -563,8 +563,8 @@ automated tests, live verification and blocked/unverified work.
   No production provider is marked verified. Missing candidates therefore remain
   UNKNOWN; the implemented signed-out + verified-absent => null-deadline rule is
   tested with fixtures but is not enabled from an unverified name assumption.
-  Spike evidence at C6/G0 must establish names/partition behavior before enabling
-  domain/path/partition applicability before enabling absence inference. This
+  Spike evidence at C6/G0 must establish names and domain/path/partition
+  applicability before enabling absence inference. This
   conservative decision prevents premature parked sources.
 - The future spike package check must preserve C3's optional cookies permission
   in ordinary builds; only debug entrypoints/extra experimental permissions are
