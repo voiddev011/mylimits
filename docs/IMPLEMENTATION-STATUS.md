@@ -434,3 +434,22 @@ automated tests, live verification and blocked/unverified work.
   and historical verification evidence remain.
 - Updated README/START-HERE and affected documentation links. Documentation-only
   change; no provider or authentication implementation was changed.
+
+## Persistent accounts execution — 23 October 2026
+
+- User authorized starting the retained R2 plan. Main baseline is f755671,
+  version 3.4, including the merged Desktop service; it is not the plan's old
+  77f9537/2.2 snapshot. Existing Desktop code stays intact.
+- Bootstrap on feat/persistent-accounts; individual code groups use codex/c<N>
+  and review against the integration branch. Main stays untouched. This keeps
+  setup off main rather than publishing or merging it as part of this task.
+- Root AGENTS.md follows plan §11.4, with its plan path corrected to the actual
+  existing filename. The original user plan is unchanged; no duplicate copy.
+- Current historical handoff is DESKTOP-ACCOUNTS-HANDOFF.md; old compact/phase
+  handoffs and the deleted Desktop feature branch are historical references.
+- C0: repository instructions and baseline routing recorded. C1: next, request
+  diagnostics only. No scheduler, login, permissions, cookie collection, vault or
+  provider-quota behavior changes are part of C1. Cookie state stays unknown
+  without optional cookies access (C3); do not guess cookie names or values.
+- G0/G1, browser isolation, logout survival and actual multi-account freshness
+  remain unverified. No simulated test may satisfy those live gates.
