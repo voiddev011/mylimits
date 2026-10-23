@@ -31,6 +31,9 @@ import { isNormalTab } from '../core/browser-tabs';
 import { applySyncedSettings } from '../core/sync-contracts';
 import { createConnectionRefresh } from './connection-refresh';
 import { websiteId } from '../core/connection-id';
+import { EXPIRY_ALARM } from '../core/signin-expiry';
+import { vaultEnabled } from '../core/vault-policy';
+import { createExpiryWatchdog } from './expiry-watchdog';
 
 const coordinator = new RefreshCoordinator(2);
 const requestDiagnostics = createRequestDiagnostics({ storage: browser.storage.session });
@@ -41,6 +44,9 @@ const observedProviders: readonly ProviderId[] = ['gemini', 'grok', 'perplexity'
 const REFRESH_ALARM = 'mylimits:refresh';
 const COMPANION_ALARM = 'mylimits:companion';
 const SYNC_ALARM='mylimits:sync';
+const expiryWatchdog=createExpiryWatchdog({readStore,updateStore,now:()=>Date.now(),enabled:p=>__MYLIMITS_BROWSER__!=='firefox'&&vaultEnabled(p),
+  alarms:browser.alarms,permitted:()=>browser.permissions.contains({permissions:['notifications']}),
+  notify:alert=>browser.notifications.create(alert.id,{type:'basic',iconUrl:browser.runtime.getURL('/icon/128.png'),title:alert.title,message:alert.message})});
 const savedSessions=createSavedSessions({browser,crypto,indexedDB,locks:navigator.locks,supported:__MYLIMITS_BROWSER__!=='firefox',dnr:browser.declarativeNetRequest,
   request:(url,options)=>fetch(url,options),readStore,updateStore,accepted:async(id,source)=>{await saveAcceptedHistory(id,source);await renderBadge();await sendAlerts();},
   lock:withHostLock,ready:hostLockStartup,blockHost,cancelRefresh:id=>coordinator.cancel(id),now:()=>Date.now(),uuid:()=>crypto.randomUUID(),trace:{lastSuccessAt:null,record:input=>requestDiagnostics.record(input)}});
@@ -53,6 +59,7 @@ async function renderBadge(): Promise<void> {
 }
 
 async function sendAlerts(): Promise<void> {
+  await expiryWatchdog.check().catch(()=>{});
   if (!await browser.permissions.contains({ permissions: ['notifications'] })) return;
   // Serialize the decision and delivery, so overlapping refreshes cannot alert twice.
   await updateStore(async store => {
@@ -136,6 +143,7 @@ export async function refreshProvider(provider:ProviderId,manual=false,reason:Re
   await Promise.allSettled(connections.map(c=>refreshConnection(c.id,manual,reason)));
 }
 async function refreshAll(manual=false,reason:RefreshReason=manual?'manual':'scheduled'):Promise<void>{
+  await expiryWatchdog.check().catch(()=>{});
   // Discovery must not hold website collection behind an unavailable helper/API.
   const discovery=Promise.allSettled([refreshCompanion(),refreshHosted()]);
   const connections=(await readStore()).connections.filter(c=>c.enabled);
@@ -392,6 +400,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
     case 'clear-history': await updateStore(async store=>{await clearHistory(command.accountId);return {store:{...store,historyIssue:null},value:undefined}}); break;
 
   }
+  if(['settings','disconnect','forget','account-settings','account-preferences'].includes(command.type))await expiryWatchdog.check().catch(()=>{});
   return publicStore();
 }
 
@@ -424,7 +433,7 @@ export function startController(): void {
       ...(parsed.data.type.startsWith('vault-signin-')&&error instanceof VaultError?{code:error.code}:{}) }));
     return true;
   });
-  browser.alarms.onAlarm.addListener(alarm => {if(alarm.name===PRIVATE_ALARM)void savedSessions.expire().catch(()=>{});if(alarm.name===SYNC_ALARM)void snapshotSync.run().catch(()=>{});if (alarm.name === COMPANION_ALARM) void refreshCompanion().catch(() => {}); if (alarm.name === REFRESH_ALARM) void refreshAll().catch(() => undefined); });
+  browser.alarms.onAlarm.addListener(alarm => {if(alarm.name===EXPIRY_ALARM)void expiryWatchdog.check().catch(()=>{});if(alarm.name===PRIVATE_ALARM)void savedSessions.expire().catch(()=>{});if(alarm.name===SYNC_ALARM)void snapshotSync.run().catch(()=>{});if (alarm.name === COMPANION_ALARM) void refreshCompanion().catch(() => {}); if (alarm.name === REFRESH_ALARM) void refreshAll().catch(() => undefined); });
   browser.permissions.onRemoved.addListener(permissions => {
     listenSessionCookies();
     void (async () => {
@@ -432,6 +441,7 @@ export function startController(): void {
       if((permissions as {data_collection?:string[]}).data_collection?.length)await snapshotSync.enable(false);
       if (permissions.permissions?.includes('nativeMessaging')) await enableCompanion(false);
       if (permissions.permissions?.includes('notifications')) await updateStore(store => ({ store: { ...store, settings: { ...store.settings, desktopAlerts: false } }, value: undefined }));
+      await expiryWatchdog.check().catch(()=>{});
       const widgets=await widgetSettings();const kept:ProviderId[]=[];for(const provider of widgets.providers)if(await browser.permissions.contains({origins:[providers[provider].origin]}))kept.push(provider);await updateWidgetSettings(s=>({...s,providers:kept}));
       for (const provider of PROVIDER_IDS) {
         const store = await readStore();

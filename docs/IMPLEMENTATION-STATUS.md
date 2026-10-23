@@ -1,7 +1,7 @@
 # Current implementation status — Desktop + extension
 
-Updated 23 October 2026. Current task: user-requested minimal UI polish on
-`codex/minimal-ui`. C1–C7 and C9–C11 are merged into main;
+Updated 23 October 2026. Latest coded task: C12 expiry watchdog and final persistence
+documentation on `codex/c12`. C1–C7, C9–C11 and the minimal UI polish are merged into main;
 C7's G0 evidence assessment remains HOLD. Desktop was implemented on
 `feature/desktop-independent-accounts`, created from clean
 `docs/desktop-accounts-execution-plan` (`3f218f6` locally).
@@ -85,9 +85,10 @@ hosted route is deferred. It was not completed by earlier infrastructure work.
 
 ## Next action
 
-The minimal UI follow-up has passed local checks; its PR handoff records CI and
-the authorized merge/branch cleanup. C11 was merged through PRs #15/#16.
-C12 is the next separate group; it is not started here. Before activating
+C12's coding and automated checks are complete behind off provider policies;
+the PR handoff records CI, packaging and the authorized integration/main merge.
+C11 and the minimal UI checkpoint merged through PRs #15–#18. C13 is optional
+and not started. Before activating
 providers, run the live experiments, record sanitized results and obtain G0/G1.
 The [manual trial](INSTALL.md#persistent-accounts-checkpoint-a-c1c4) is pending;
 keep all private-session/vault implementation gated by G0/G1. For the separate Desktop path, real-account
@@ -1175,3 +1176,64 @@ automated tests, live verification and blocked/unverified work.
   main under existing user authorization and prune the merged task branch. No
   release or provider activation. Next separate group remains C12; live gates,
   provider/logout/other-device acceptance and the 3–4 day trial stay pending.
+
+### C12 — expiry watchdog and final persistence documentation
+
+- Created `codex/c12` from the latest integration tree, identical to main after
+  the UI merge. Worktree was clean; no user edits to preserve. Scope is T4.1 and
+  T4.3 only. E5 remains pending: expiry is supplied cookie metadata, never an
+  assumed provider lifetime. All provider policies stay off and allowlists empty.
+- Added pure expiry selection/48h/24h warning decisions and an injected watchdog.
+  It reuses notification permission, quiet hours, account mute/snooze and privacy
+  labels. Only valid enabled saved sources with known future expiry qualify.
+  Unknown, expired, rejected, wrong-bound or off-policy sources cannot alert.
+- Reuses the existing bounded local alert ledger; no Store schema/version change.
+  Warnings deduplicate by source/expiry, survive reload, and rearm when the supplied
+  expiry changes. Late wake sends only the urgent warning. Failed delivery restores
+  its ledger entry for retry. A daily alarm is installed only when needed, retained
+  across repeat checks and removed after last-source/permission/policy removal.
+- Controller checks on startup/open/regular refresh, successful source reads,
+  relevant settings/deletion changes and the daily alarm. Rechecking after quiet
+  hours needs no new alarm/grant. In-flight checks coalesce with a trailing pass
+  for changed settings/disconnect; final decisions use serialized current Store.
+  This path never decrypts credentials, opens provider tabs or sends HTTP.
+- TypeScript and core tests pass while developing. Initial new-test failures
+  exposed test round-trip defaults/undefined properties, not changed account data;
+  canonicalized the fixture and compare the complete serialized public projection.
+  No pre-existing assertion weakened. Full checks/browser/package results follow.
+- Added the required `SESSION-PERSISTENCE.md` summary and updated architecture,
+  privacy, docs README, install/start links and evidence/browser ledgers. The
+  README update is directly in docs per the user's Markdown-location rule.
+  G0's historical implementation table is explicitly dated; its HOLD remains.
+  No experiment, trial, OS notification or provider acceptance was marked PASS.
+- Final npm run check passes: **255 core, 20 native, 24 connection and four
+  transport/runtime tests**, TypeScript and Chrome build. Twelve new core/platform
+  cases cover expiry bounds, delivery/restart/ledger, metadata/privacy, alarm
+  ownership, concurrent disconnect, quiet hours and the supplied cookie timestamp.
+- First complete browser run: 55 pass, one new-fixture failure before application
+  assertions (optional notifications namespace was absent). Defined only that
+  fictional API in the fixture; focused rerun passes **1/1**. Production code and
+  permissions were not loosened. Final full browser and package verification follow.
+- Final complete browser suite passes **56/56** on the frozen C12 source. The new
+  production fixture verifies that even a granted notification port and supplied
+  expiry cannot arm a production-off provider; the UI shows 1 day, removes unknown
+  expiry labels and preserves the last reading time. The injected watchdog fixture
+  uses actual browser storage/alarms with fictional clock/account/notification
+  delivery, verifying persisted 48h/24h decisions and last-source alarm cleanup.
+- C12 code and documentation are implemented; provider policies/allowlists, E1–E8,
+  G0/G1 and the 3–4 day trial are unchanged. T4.4 real Chrome/Edge/Brave and real
+  OS-delivery/lifetime checks remain pending. C8, conditional T4.2/E6 work and
+  optional C13 are not implemented or activated by this checkpoint. Original R2
+  proposal unchanged; 82 local documentation targets checked, none missing.
+- Chrome/Edge/Firefox builds and directory guards pass. Normal Chrome/Firefox
+  ZIPs pass actual archive guards; C12 fixture-only keys/names/failure markers
+  are absent. Checksums generated; no version/dependency/manifest/policy changes.
+  Local ZIPs (CI timestamps can change hashes):
+  - Chrome **326309 bytes**, SHA-256
+    `b967c8c77d54aa8c0ff9f805c922e22e17d6d4ed584478d65e7a085167c98052`.
+  - Firefox **324269 bytes**, SHA-256
+    `513d0e7bf5af165272476d32619c2e7847dac0b60073f0f89167762cfea201e1`.
+- Publish C12's §11.3 PR handoff with exact file +/− counts and actual CI results,
+  then use the existing authorization to merge the validated checkpoint through
+  integration to main and prune only its merged task branch. No release or
+  provider activation; no next group started.

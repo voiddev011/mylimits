@@ -408,3 +408,26 @@ do not explicitly log out inside that window before saving.
 Source, encryption and injected-browser tests are not proof of live provider
 authorization, request scoping, logout survival or cross-device usage. Those
 findings and G0/G1 decisions remain pending.
+
+## C12 expiry notifications (gated)
+
+No current production provider is enabled for saved-sign-in expiry warnings.
+For a future approved provider, the watchdog reads supplied expiry and source
+metadata only; it never decrypts a cookie, requests a provider endpoint or uploads
+expiry records. A cookie expiry does not prove that the session remains valid.
+Unknown expiry stays unknown and relies on the existing authentication-failure
+path, not an invented lifetime.
+
+Warnings use the existing optional Desktop alerts permission, quiet hours,
+account mute/snooze and Privacy mode. Without Privacy mode, an OS notification
+can display the account nickname; Privacy mode uses Account N. Local notification
+IDs/ledger contain pseudonymous account/source identifiers, expiry timestamps and
+48/24h thresholds, never credential material. The ledger remains in the existing
+bounded account Store and is omitted from public UI messages, exports, history,
+diagnostics and sync. Forget removes that account's notification ledger.
+
+No additional permission, backend connection, analytics or cookie rotation capture
+is introduced. Delayed alarms, sleeping/closed browsers and notification/storage
+failures can delay or repeat delivery. The watchdog does not log users out,
+renew sessions, alter readings or claim provider revocation. See
+[session persistence](SESSION-PERSISTENCE.md) for current evidence and limitations.

@@ -268,6 +268,29 @@ test('preferences persist and account warnings remain separately configurable', 
   await expect.poll(async () => worker.evaluate(async () => ((await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store).accounts.find((account: { id: string }) => account.id === 'demo-claude-work')!.alertRemaining)).toBe(15);
 });
 
+test('production-off expiry metadata shows honest labels but cannot arm warnings or change reading timestamps',async({context,worker,extensionId})=>{
+ const fixture=emptyStore('production-expiry-off'),now=Date.now(),slot='10000000-0000-4000-8000-000000000001',id=`vault:chatgpt:${slot}`;
+ const account={...demoState(now).accounts[1]!,meters:[]};fixture.accounts=[account];
+ fixture.connections.push({...fixture.connections.find(c=>c.provider==='chatgpt')!,id,kind:'vault',profileId:slot,accountId:account.id,enabled:true,status:'active',savedSignIn:{method:'private',notAfter:now+20*3600000}});
+ fixture.settings.desktopAlerts=true;
+ await worker.evaluate(async s=>{
+  const scope=globalThis as typeof globalThis&{expiryNotifications:number};scope.expiryNotifications=0;
+  const contains=chrome.permissions.contains.bind(chrome.permissions);chrome.permissions.contains=async p=>p.permissions?.includes('notifications')?true:contains(p);
+  Object.defineProperty(chrome,'notifications',{configurable:true,value:{create:async()=>{scope.expiryNotifications++;return 'fictional-notification'}}});
+  await chrome.storage.local.set({'mylimits:state:v2':s});
+ },fixture);
+ const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
+ await page.getByRole('button',{name:'Details for GPT Work',exact:true}).click();
+ await expect(page.getByText('Sign-in expires in 1 day',{exact:true})).toBeVisible();
+ expect((await page.evaluate(async settings=>chrome.runtime.sendMessage({type:'settings',settings}),fixture.settings)).ok).toBe(true);
+ expect(await worker.evaluate(()=>chrome.alarms.get('mylimits:signin-expiry'))).toBeUndefined();
+ expect(await worker.evaluate(()=>(globalThis as typeof globalThis&{expiryNotifications:number}).expiryNotifications)).toBe(0);
+ const saved=await worker.evaluate(async()=>(await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);
+ expect(saved.accounts[0]!.updatedAt).toBe(account.updatedAt);expect(saved.alertLedger).toEqual({});
+ await worker.evaluate(async()=>{const s=(await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store;s.connections.find(c=>c.kind==='vault')!.savedSignIn!.notAfter=null;await chrome.storage.local.set({'mylimits:state:v2':s})});
+ await expect(page.getByText('Sign-in expires in 1 day',{exact:true})).toHaveCount(0);
+});
+
 test('denying website permission creates no account and popup fits its viewport', async ({ context, worker, extensionId }) => {
   const page = await context.newPage();
   await page.setViewportSize({ width: 440, height: 560 });

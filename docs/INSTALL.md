@@ -321,3 +321,27 @@ permission guards; the current guards intentionally reject diagnostic DNR grants
 For a saved source, **Remove saved sign-in** deletes credentials while retaining
 dated readings/history. **Forget saved account** removes both. If removal fails,
 use its retry action; the disabled source remains until deletion succeeds.
+
+## C12 expiry warnings — disabled pending provider evidence
+
+Current normal builds do not activate saved-sign-in providers, so they will not
+show saved-sign-in expiry notifications. Existing website tracking/Desktop and
+quota alerts keep their existing setup. No new installation, permission or toggle
+is required by C12.
+
+After a provider is approved and enabled, Settings → Desktop alerts grants the
+existing notification permission. Saved sources with a supplied expiry can warn
+within 48 and 24 hours, respecting quiet hours, mute/snooze and Privacy mode.
+Browser sleep/closure may delay or miss a warning. Unknown expiry has no countdown.
+Details show the supplied date in days; this does not prove the session is valid.
+
+To replace an expired saved sign-in, use Overview → account details → Remove
+saved sign-in, then provider + → Private sign-in and verify the intended identity
+again. Removal retains dated readings/history and the verified account's nickname.
+Do not choose Forget unless you want those deleted as well. These instructions
+are for an eventual activated provider, not a request to edit policy/allowlists.
+
+C12 adds no cookie-rotation capture. E5/E6 and Chrome/Brave/Edge real-account/OS
+notification checks remain pending in [the evidence ledger](SESSION-PERSISTENCE-EVIDENCE.md).
+The [persistence summary](SESSION-PERSISTENCE.md) separates implemented behavior
+from those pending findings. C13 is optional and not started.
