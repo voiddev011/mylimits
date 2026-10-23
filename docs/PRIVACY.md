@@ -264,3 +264,19 @@ Existing local retention controls continue. Global data deletion includes hosted
 attempts, jobs, readings, credentials and connections. Operator backups require
 separate retention/deletion handling; deleting active DB records does not rewrite
 old backups. Public hosting and actual provider renewal/logout remain unverified.
+
+## Experimental request diagnostics (persistent-accounts C1)
+
+Settings → Copy safe diagnostics includes up to 200 recent website-request
+results from this browser session. Entries contain provider, redacted endpoint
+path, timestamp, transport, HTTP status, normalized response type/challenge/retry
+metadata, page-fallback/tab availability and elapsed time since a successful
+reading. Organization identifiers and URL queries are removed. Response bodies,
+request headers, credentials, account names and quota values are not collected.
+Cookie state is unknown and cookie-name lists are empty until optional cookie
+access is introduced in a later task.
+
+The buffer uses extension session storage, or bounded memory when unavailable.
+It is not part of account storage, reading exports, analytics or snapshot sync.
+The copy button copies the sanitized report to your clipboard only when clicked;
+it does not send the report anywhere. Browser exit clears the session buffer.

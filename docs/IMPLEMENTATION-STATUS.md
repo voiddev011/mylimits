@@ -453,3 +453,47 @@ automated tests, live verification and blocked/unverified work.
   without optional cookies access (C3); do not guess cookie names or values.
 - G0/G1, browser isolation, logout survival and actual multi-account freshness
   remain unverified. No simulated test may satisfy those live gates.
+
+### C1 — redacted request diagnostics
+
+- Implemented on codex/c1 from feat/persistent-accounts. Only C1 application
+  work is included. Setup is committed on the integration branch; main was not
+  merged or changed. Original R2 plan content remains byte-for-byte unchanged.
+- Changed: src/platform/diagnostics.ts (+ unit tests and run-tests registration),
+  provider adapters, controller/messages, SupportSettings, and browser fixtures.
+  Both background requests and injected page requests emit strictly allowlisted
+  metadata, including original HTTP status even when JSON parsing fails.
+- Last 200 entries use storage.session, serialized across concurrent requests.
+  Missing/failed session storage uses bounded memory only. Persisted entries are
+  sanitized again on read. No diagnostics are written to account state, local
+  storage, exports or sync. Dashboard-only command returns sanitized entries.
+- Endpoint queries and organization IDs are removed; arbitrary paths, MIME/header
+  values, cookie names, response bodies, tokens and free-form errors are excluded.
+  Cookie names/state remain empty/unknown in this build: C3 will introduce the
+  optional cookies permission; C1 does not collect cookies or add permissions.
+- Settings → Copy safe diagnostics now includes request results with existing
+  safe connection counts/states. No login, scheduler, cooldown or quota rules
+  were changed. No vault, private-login feature or saved-account behavior exists
+  from this task.
+- Actual checks: npm run typecheck passed. npm test: 115 passed, including six new
+  diagnostics tests. npm run check passed (115 core, 20 native, 24 connection and
+  4 transport/runtime tests, plus Chrome build). git diff --check passed.
+- Browser check: CHROMIUM_PATH=/usr/bin/chromium could not load the extension;
+  aborted after observing the worker-load timeout. npx playwright install chromium
+  succeeded, then npm run test:browser passed 33/33 using Playwright Chromium,
+  including two new no-tab rejection/page-fallback/clipboard/access-boundary tests.
+  All provider data was fictional; all external HTTP was blocked or fixture-routed.
+- No existing test assertions were weakened or changed. Existing IDs, aliases,
+  store schema and account history were preserved. No new dependencies.
+- Live status: no real OpenAI/Claude traffic, private-session experiments or Windows
+  acceptance. Cookie visibility, DNR scoping, incognito sharing, session rotation
+  and logout survival remain UNVERIFIED. No gate is marked passed.
+- Manual C1 check: build/load this branch in a test Chrome/Brave profile, refresh
+  a website source, then Full dashboard → Settings → Copy safe diagnostics.
+  Verify requests.entries contains statuses and path templates, with no names,
+  bodies or credentials. Entries reset on browser shutdown, not account state.
+- Packaging: npm run zip passed. Chrome ZIP is 308640 bytes, SHA-256
+  3baddc0c9cc7dd7031ca1c8e5940b3de0d49777d2812ddb35435434d51a90ec6.
+  Local documentation links passed; original R2 plan is unchanged.
+- Next task group is C2 (scheduler backoff), after review/integration of C1.
+  Do not begin C2 as part of this PR. Human checkpoints A/B and G0/G1 remain.

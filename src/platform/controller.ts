@@ -19,8 +19,10 @@ import { snapshotSync } from './sync';
 import { refreshHosted,hostedStatus,startHosted,hostedAttempt,hostedAction } from './hosted';
 import { remoteHostedId } from '../core/hosted';
 import { startAccountSetup, saveAccountSetup } from '../core/account-setup';
+import { createRequestDiagnostics } from './diagnostics';
 
 const coordinator = new RefreshCoordinator(2);
+const requestDiagnostics = createRequestDiagnostics({ storage: browser.storage.session });
 const observedProviders: readonly ProviderId[] = ['gemini', 'grok', 'perplexity'];
 const REFRESH_ALARM = 'mylimits:refresh';
 const COMPANION_ALARM = 'mylimits:companion';
@@ -81,7 +83,8 @@ export async function refreshProvider(provider: ProviderId, manual = false, reas
       // Another account can have different workspaces. Do not carry the old selection through setup.
       const switchingAccount=before.accountSetup?.provider===provider;
       const selected = switchingAccount?undefined:before.workspaces.find(w => w.id === connection.workspaceId);
-      const snapshot = await readProvider(provider, { workspaceRemoteId: selected?.remoteId,readingMode:before.providers[provider].readingMode }, signal);
+      const snapshot = await readProvider(provider, { workspaceRemoteId: selected?.remoteId,readingMode:before.providers[provider].readingMode }, signal,
+        { record: requestDiagnostics.record, lastSuccessAt: connection.lastSuccessAt });
       const meters = snapshot.meters.map(m => MeterSchema.parse(m));
       const id = await accountId(provider, snapshot.identity, before.installSalt);
       const choices = await Promise.all((snapshot.workspaces ?? []).map(async w => ({ id:await accountId(provider,`workspace:${w.identity}`,before.installSalt),provider,remoteId:w.identity,name:w.name })));
@@ -215,6 +218,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
   switch (command.type) {
     case 'widget-settings': return command.settings?updateWidgetSettings(()=>command.settings!):widgetSettings();
     case 'state': return publicStore();
+    case 'request-diagnostics': return { version: 1, entries: await requestDiagnostics.list() };
     case 'hosted-status': return hostedStatus();
     case 'hosted-link': return command.action==='start'?snapshotSync.start('MyLimits hosted accounts'):snapshotSync.poll(false);
     case 'hosted-start': return startHosted(command.provider,command.reconnectId);
