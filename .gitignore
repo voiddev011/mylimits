@@ -1,6 +1,7 @@
 node_modules/
 .wxt/
 .output/
+.output-spike/
 artifacts/
 playwright-report/
 test-results/

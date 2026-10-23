@@ -16,6 +16,7 @@ work remains gated by real-provider evidence. See [preview testing](INSTALL.md#p
 - [Start here](START-HERE.md)
 - [Current status](IMPLEMENTATION-STATUS.md)
 - [Proposed persistent-accounts plan v2](MYLIMITS-PERSISTENT-ACCOUNTS-PLAN-v2.md)
+- [Live session-persistence evidence ledger (pending)](SESSION-PERSISTENCE-EVIDENCE.md)
 - [Provider support and manual acceptance](PROVIDER-CAPABILITIES.md)
 - [Desktop delivery and pending live acceptance](DESKTOP-ACCOUNTS-HANDOFF.md)
 - [Historical evidence and consolidated checkpoints](IMPLEMENTATION-HISTORY.md)

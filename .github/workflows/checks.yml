@@ -49,6 +49,16 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Browser tests
         run: npm run test:browser
+      - name: Isolated spike build and redaction fixtures (no provider traffic)
+        run: npm run test:spike
+      - name: Package separate evidence spike
+        run: npm run zip:spike
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mylimits-evidence-spike-not-for-release
+          path: .output-spike/*.zip
+          include-hidden-files: true
+          if-no-files-found: error
       - name: Browser variant builds and package contracts
         run: |
           npm run build:edge

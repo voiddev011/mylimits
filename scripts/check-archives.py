@@ -12,6 +12,10 @@ for target in ['chrome','firefox']:
         assert manifest['version']==version
         assert all('providers/'+name in names for name in ['claude.svg','chatgpt.svg','gemini.png','grok.svg','perplexity.svg','cursor.svg'])
         bundled=''.join(archive.read(n).decode('utf-8') for n in names if n.endswith('.js'))
+        assert not any('spike' in n.lower() for n in names), 'Release ZIP contains spike files'
+        assert 'MYLIMITS_PRIVATE_SESSION_SPIKE' not in bundled and 'mylimits-spike-v1' not in bundled
+        assert not any(p in manifest.get('permissions',[]) for p in ['cookies','declarativeNetRequestWithHostAccess','webRequest'])
+        assert not any(p in manifest.get('optional_permissions',[]) for p in ['declarativeNetRequestWithHostAccess','webRequest','declarativeNetRequestFeedback'])
         assert 'Prompt template and local review' not in bundled
         assert 'Prepare a handoff' not in bundled
         assert not manifest.get('host_permissions')

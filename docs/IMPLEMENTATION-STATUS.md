@@ -1,8 +1,8 @@
 # Current implementation status — Desktop + extension
 
-Updated 23 October 2026. Active work: `codex/c5`, targeting
-`feat/persistent-accounts`. C1–C4 are integrated; C5 connection-scoped refresh
-passed local validation and is ready for Checkpoint B review. Main is unchanged. Desktop was implemented on
+Updated 23 October 2026. Active work: `codex/c6`, targeting
+`feat/persistent-accounts`. C1–C5 are integrated; C6's isolated diagnostic build
+has passed local validation and is ready for review. Main is unchanged. Desktop was implemented on
 `feature/desktop-independent-accounts`, created from clean
 `docs/desktop-accounts-execution-plan` (`3f218f6` locally).
 
@@ -10,10 +10,10 @@ passed local validation and is ready for Checkpoint B review. Main is unchanged.
 
 The active persistent-accounts plan is
 [the unchanged R2 proposal](MYLIMITS-PERSISTENT-ACCOUNTS-PLAN-v2.md).
-The user authorized continuing code work after the C4 review handoff. C5's next
-major boundary is Checkpoint B review. The Checkpoint A 3–4 day live trial remains
-PENDING; no main merge or trial result is inferred from the instruction to continue.
-No saved-session vault or browser-only independent login exists from C1–C5.
+The user explicitly authorized task group C6 only. The next action after C6 is
+human live experiments E1–E8, not another implementation group. The Checkpoint A
+3–4 day live trial remains PENDING; no main merge or trial result is inferred.
+No saved-session vault or browser-only independent login exists from C1–C6.
 Historical Desktop acceptance remains pending.
 
 The implemented direction is a desktop app alongside the extension. See
@@ -76,7 +76,8 @@ hosted route is deferred. It was not completed by earlier infrastructure work.
 
 ## Next action
 
-Review the C5 PR, then stop at Checkpoint B for user review.
+Review the C6 PR, then run human experiments E1–E8 with its separate spike build.
+Do not begin C7 or infer a G0/G1 decision from automated fixtures.
 The [manual trial](INSTALL.md#persistent-accounts-checkpoint-a-c1c4) is pending;
 keep all private-session/vault implementation gated by G0/G1. For the separate Desktop path, real-account
 acceptance in DESKTOP-ACCOUNTS-HANDOFF.md remains pending for both providers.
@@ -745,3 +746,97 @@ automated tests, live verification and blocked/unverified work.
   tested source tree exactly. GitHub CI results remain pending; local results are
   above. Stop at Checkpoint B. No main merge, C6 spike, G0/G1 approval, production
   saved-account login or live provider result is claimed.
+
+### C6 — isolated evidence spike (T0.2 only)
+
+- Read AGENTS and the entire unchanged R2 plan; corrected the prompt's repeated
+  docs/.md path to the actual existing file. Started from a clean worktree.
+  C5's complete push CI run 39918937787 passed all six jobs. Its duplicate PR
+  run was still installing Chromium when inspected; no failure was hidden.
+  Integrated C5 PR #6 only into feat/persistent-accounts as 9234c86, then created
+  codex/c6 from that latest baseline. Main remains f755671. No agents were spawned.
+- Added a flag-only entrypoint/runtime, isolated .output-spike output and clear
+  diagnostic manifest/options/toolbar naming. Without the flag, the entrypoint,
+  dynamic runtime and required cookies/DNR/webRequest grants are excluded.
+  Normal C3 optional cookies remain, following the previously recorded baseline
+  adaptation. Package directory/ZIP guards enforce both boundaries.
+- A–F are implemented: names/flags across stores; explicit in-memory consent
+  capture; three reader transports; decoded exp and Bearer checks; name-only
+  response observation; owned private-window dry run; and F status-only usage
+  with credentials omitted and no DNR rule. No prompts/model generations.
+  Diagnostics do not print bodies, account IDs, headers, tokens or cookie values.
+- Spike mode deliberately does not start automatic production collection, so
+  ordinary account storage/aliases/history are untouched and no background jobs
+  compete with an experiment. Existing normal entrypoints remain buildable;
+  toolbar/options open the evidence page. Spike support is Chromium-only.
+- Temporary rules require exact host, tabIds [-1] and initiatorDomains [runtime.id].
+  Each request uses C5's host lock and finally cleanup; stale spike rules are
+  cleared on startup. Unsupported scoping is never relaxed. Feedback unavailable
+  remains unverified even when a request succeeds. Cleanup failure blocks probes.
+- Only the exact normal same-extension spike page can own a diagnostic port.
+  Inputs are strict; website/private/extra-field/credential-bearing commands are
+  rejected. Closure cancels work, waits for cleanup, drops capture/token memory,
+  removes observation listeners and closes only its owned private window.
+  Captures are never written to Store, local storage, IndexedDB, logs or sync.
+- Retry-After/429 and per-provider 15s test waits persist in session metadata.
+  Memory retains waits if persistence fails; failed/corrupt storage blocks further
+  traffic. Capture enforces expiry/path/domain/partition and 16KB limits. D stops
+  after 60s; existing private windows prevent automatic creation of another.
+- Initial typecheck found closure narrowing and WebRequest callback typing;
+  fixed with explicit never/undefined signatures and root-relative URL construction.
+  An early spike-only entrypoint filter regenerated incomplete WXT types; retained
+  normal entrypoints in the diagnostic build and restore normal generated types
+  in build/test scripts. Node strip-only tests required an explicit error property
+  instead of a TypeScript parameter property. No test assertions were weakened.
+- First fast checks passed 171 then 172 unit tests as coverage expanded. Separate
+  spike Chromium suite passed 3/3, using a temporary fixture site grant, simulated
+  provider responses and no external provider HTTP. The normal full suite passed
+  42/42. Final safety review added cancellation/disposal, failed persistence and
+  malformed-message coverage; final full/package results follow below.
+- Changed: wxt/env/background flagging; new core spike contracts/tests, injected
+  platform spike/runtime/tests, A–F page/styles, build/test scripts and release
+  directory/archive guards; test registration/CI; status/start/index/install/
+  architecture/privacy and the new live evidence ledger. No dependencies or
+  writable account-schema changes; original plan untouched.
+- Added SESSION-PERSISTENCE-EVIDENCE.md with E1–E8 and scenario rows all PENDING.
+  It is a blank live ledger, not a C7/G0 report. Installation gives exact clicks,
+  empty-jar testing, memory/lifetime limits and the distinction between success
+  and rule-match feedback. No real provider, logout, rotation, private browser
+  or independent-account result has been established. Stop before C7.
+- Final lifecycle review added late capture/window regressions. The first late
+  capture test failed (176 pass / 1 fail): Clear waited for initialization before
+  cancelling, allowing a late credential assignment. Cancellation now happens
+  before that await and after every capture callback; the regression passes.
+  Late-created owned windows are closed, and Clear can retry failed rule cleanup.
+  No existing assertions were changed or weakened.
+- Toolbar popups close when a private sign-in window receives focus. The spike
+  toolbar action now promotes to a persistent extension tab before opening a
+  diagnostic port. A separate Chromium fixture covers this bootstrap; the normal
+  compact popup is unchanged. This is not proof of a real private login.
+- Final frozen-source validation passed: npm run check (**178 core, 20 native,
+  24 connection, 4 transport/runtime tests**, TypeScript, Chrome build), followed
+  by npm run test:browser (**42/42**) and npm run test:spike (**4/4**).
+  The spike tests use fictional responses, fake worker HTTP and a temporary
+  fixture host grant; actual provider HTTP and real DNR header effects were not
+  tested. Real DNR API installation/removal is exercised in Chromium.
+- Server typecheck, Edge/Firefox builds, scripts/check-packages.mjs,
+  npm run zip, npm run zip:firefox, scripts/package-checksums.mjs and
+  scripts/check-archives.py passed. npm run zip:spike passed separately and
+  restored normal WXT generated types. Release archives contain no spike files,
+  runtime marker or diagnostic required grants. No new dependencies, account
+  schema migration or Windows installer is needed for C6.
+- Local artifacts (ZIP timestamps mean CI checksums can differ):
+  - .output-spike/mylimits-3.4.0-chrome-spike.zip: **315762 bytes**, SHA-256
+    `417d23bb7778a0d1614989f44e14548de05a419ebff4d84447918cd9f9409bdc`.
+  - .output/mylimits-3.4.0-chrome.zip: **314271 bytes**, SHA-256
+    `96d8e0597ec4e16ef191adf3470153bed9b3e382202410f4bf6b7e5112b3f42e`.
+  - .output/mylimits-3.4.0-firefox.zip: **312216 bytes**, SHA-256
+    `fc4c3ddb40cbdd7df0479079c9fba5e15b0a22d7ede516133881d4cf4dc8683c`.
+- Both C5 GitHub workflows have now completed all six checks successfully.
+  Whitespace and 62 relative documentation links passed; the unchanged original
+  proposal's archived links are excluded from that link check. The separate
+  spike ZIP also passed manifest/archive hygiene inspection.
+  C6 publication/CI status will be recorded after pushing. Human E1–E8,
+  Checkpoint A's trial and real account/logout/rotation/isolation remain PENDING.
+  Next action: review C6, collect evidence using INSTALL.md, then stop for the
+  separately authorized C7/G0 task. No gate decision or next group was executed.

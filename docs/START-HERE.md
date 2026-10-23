@@ -21,11 +21,12 @@ Read root AGENTS.md, the proposal and the current status before coding.
 Real-session gates G0/G1 remain required; no saved-session feature is enabled yet.
 Keep project Markdown directly in docs/.
 
-The current persistent-accounts task is **C5 / connection-scoped refresh** on
-`codex/c5`. C1–C4 are integrated into `feat/persistent-accounts`. The user
-authorized continuing code work after the C4 review handoff; the 3–4 day live
-trial is still pending and main has not been merged. Review C5 at Checkpoint B
-before continuing to C6. No session vault or browser-only independent login has
-been delivered; G0/G1 are still required before enabling private sign-in.
+The current persistent-accounts task is **C6 / evidence spike** on `codex/c6`.
+C1–C5 are integrated into `feat/persistent-accounts`; main is unchanged. The
+user explicitly authorized C6 only. The 3–4 day live trial remains pending.
+Read [spike setup](INSTALL.md#c6-evidence-spike-test-accounts-only) and fill
+[the live evidence ledger](SESSION-PERSISTENCE-EVIDENCE.md) on your own test
+accounts. No session vault or browser-only independent login has been delivered.
+Stop before C7; G0/G1 remain required before enabling private sign-in.
 
 [Documentation index](README.md) · [Research](COMPETITOR-RESEARCH.md)
