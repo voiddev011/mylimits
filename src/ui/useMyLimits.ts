@@ -28,7 +28,7 @@ export function useMyLimits() {
   useEffect(() => { if (!toast) return; const timer = setTimeout(() => notify(''), 5000); return () => clearTimeout(timer); }, [toast]);
   useEffect(() => { document.documentElement.dataset.theme = store?.settings.theme ?? 'system'; }, [store?.settings.theme]);
   useEffect(() => { document.documentElement.dataset.textSize = store?.settings.textSize ?? 'standard'; }, [store?.settings.textSize]);
-  async function run(action: Command): Promise<boolean> {
+  async function run(action: Command,onError?:(error:unknown)=>void): Promise<boolean> {
     if (demo) {
       setStore(current => {
         if (!current) return current;
@@ -42,7 +42,7 @@ export function useMyLimits() {
     }
     setBusy(true); setError('');
     try { setStore(await command(action)); return true; }
-    catch (e) { setError(e instanceof Error ? e.message : 'Action could not be completed.'); return false; }
+    catch (e) { if(onError)onError(e);else setError(e instanceof Error ? e.message : 'Action could not be completed.'); return false; }
     finally { setBusy(false); }
   }
   return { store: store?.settings.privacyMode ? privatePresentation(store) : store, demo, setDemo, busy, error, setError, toast, notify, now, run };

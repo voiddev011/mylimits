@@ -2,6 +2,9 @@ import { defineConfig } from 'wxt';
 import tailwindcss from '@tailwindcss/vite';
 import { SYNC_DATA_TYPES } from './src/core/browser-capabilities';
 import { validateSyncOrigin,syncPermission } from './src/core/sync-origin';
+import { vaultEnabled } from './src/core/vault-policy';
+import { PROVIDER_IDS } from './src/core/model';
+const savedSignIn=PROVIDER_IDS.some(vaultEnabled);
 const syncOrigin=validateSyncOrigin(process.env.MYLIMITS_SYNC_ORIGIN??'');
 const desktopSetupURL=process.env.MYLIMITS_DESKTOP_SETUP_URL??'';
 const spike=process.env.MYLIMITS_SPIKE==='1';
@@ -20,7 +23,7 @@ export default defineConfig({
     version_name: spike?'3.4 Evidence spike - not for release':'3.4 Desktop accounts preview',
     description: 'Keep your AI accounts, usage limits, and reset times in one place.',
     permissions: ['storage', 'alarms', 'scripting','idle',...(spike?['cookies','declarativeNetRequestWithHostAccess','webRequest']:[]),...(browser==='firefox'?[]:['sidePanel'])],
-    optional_permissions: ['notifications',...(spike?[]:['cookies']),...(browser==='firefox'?[]:['nativeMessaging'])],
+    optional_permissions: ['notifications',...(spike?[]:['cookies',...(savedSignIn&&browser!=='firefox'?['declarativeNetRequestWithHostAccess']:[])]),...(browser==='firefox'?[]:['nativeMessaging'])],
     ...(spike?{options_ui:{page:'spike.html',open_in_tab:true}}:{}),
     optional_host_permissions: [
       'https://claude.ai/*',

@@ -124,6 +124,7 @@ export interface ConnectionRecord {
   lastSuccessAt: number | null; nextRetryAt: number | null; failures: number;
   message: string | null; profileId?: string; independent?: IndependentMetadata;
   authFailures?:number;
+  savedSignIn?:{method:'private'|'current';notAfter:number|null};
 }
 export interface Workspace { id: string; provider: ProviderId; remoteId: string; name: string; }
 export interface UsageSnapshot {

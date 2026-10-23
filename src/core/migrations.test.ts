@@ -45,3 +45,9 @@ test('C10 V2 fields preserve identities, aliases and snapshots and default old a
  parsed.accountSetup={id:'9696d962-eac8-41fa-a15c-a04e7c015c0d',provider:'claude',mode:'detect',nickname:'Personal',previousAccountId:null,startedAt:1,method:'private',slotId:slot,captureMethod:'private',phase:'awaiting-confirmation',candidate:{accountId:'verified-hash',name:'Fictional',plan:null,verifiedAt:2}};
  const next=StoreSchema.parse(parsed);assert.deepEqual(next.accountSetup,parsed.accountSetup);assert.deepEqual(next.snapshots,old.snapshots);assert.deepEqual(next.accounts,old.accounts);
 });
+test('C11 saved-sign-in metadata is additive and exposes only method/expiry while preserving history and aliases',()=>{
+ const old=migrateV1(legacy()),parsed=StoreSchema.parse(old);assert.equal(parsed.version,2);assert.deepEqual(parsed.accounts,old.accounts);assert.deepEqual(parsed.snapshots,old.snapshots);assert.equal(parsed.connections[0]!.savedSignIn,undefined);
+ parsed.connections[0]!.savedSignIn={method:'private',notAfter:1800000000000};const next=StoreSchema.parse(parsed);
+ assert.deepEqual(next.accounts,old.accounts);assert.deepEqual(next.snapshots,old.snapshots);assert.deepEqual(toPublicState(next).connections[0]!.savedSignIn,{method:'private',notAfter:1800000000000});
+ assert.equal(StoreSchema.safeParse({...parsed,connections:[{...parsed.connections[0],savedSignIn:{method:'private',notAfter:null,cookie:'FAKE_SECRET'}}]}).success,false);
+});

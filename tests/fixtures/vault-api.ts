@@ -2,3 +2,4 @@
 export { createIndexedDBVaultKeys } from '../../src/platform/vault-key-store';
 export { createVault } from '../../src/platform/vault';
 export { privateFlow } from './private-flow';
+export { mountPrivateUI } from './private-ui';
