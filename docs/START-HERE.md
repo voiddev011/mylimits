@@ -21,17 +21,18 @@ Read root AGENTS.md, the proposal and the current status before coding.
 Real-session gates G0/G1 remain required; no saved-session feature is enabled yet.
 Keep project Markdown directly in docs/.
 
-The current persistent-accounts task is **C9 / disabled vault foundation**.
-C1–C7 are merged into main through PRs #8 and #10. The user authorized merging validated
+The current persistent-accounts task is **C10 / disabled private sign-in and saved-source refresh**.
+C1–C7 and C9 are merged into main through PRs #8, #10 and #12. The user authorized merging validated
 checkpoints and pruning merged branches. The 3–4 day live trial remains pending.
 Read [spike setup](INSTALL.md#c6-evidence-spike-test-accounts-only) and fill
 [the live evidence ledger](SESSION-PERSISTENCE-EVIDENCE.md) on your own test
 accounts. No enabled saved-session connection or browser-only independent login
-has been delivered; C9's dormant components are the current coding task.
+has been delivered; C10 builds on C9's dormant components.
 The [C7 gate report](G0-GATE-REPORT.md) still records **HOLD**: all E1–E8 are pending.
-The latest user instruction permits C9 coding before those checks. Keep every
+The latest user instructions permit continuing disabled coding before those checks. Keep every
 provider policy off and every cookie allowlist empty. C8 is deferred; provider
-activation still needs real evidence and G0/G1 decisions. C10/C11's sign-in,
-refresh and UI work is separate; C9 alone does not connect another account.
+activation still needs real evidence and G0/G1 decisions. C10 codes sign-in and
+refresh; C11's consent/setup UI and credential deletion remain separate. This
+checkpoint does not expose a working second-account button to public users.
 
 [Documentation index](README.md) · [Research](COMPETITOR-RESEARCH.md)

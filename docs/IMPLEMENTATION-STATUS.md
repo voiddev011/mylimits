@@ -1,7 +1,7 @@
 # Current implementation status — Desktop + extension
 
-Updated 23 October 2026. Current checkpoint: C9's disabled vault/transport
-foundation, prepared on `codex/c9` from the integration branch. C1–C7 are merged into main;
+Updated 23 October 2026. Current checkpoint: C10's disabled private sign-in and
+saved-source refresh on `codex/c10`. C1–C7 and C9 are merged into main;
 C7's G0 evidence assessment remains HOLD. Desktop was implemented on
 `feature/desktop-independent-accounts`, created from clean
 `docs/desktop-accounts-execution-plan` (`3f218f6` locally).
@@ -9,7 +9,7 @@ C7's G0 evidence assessment remains HOLD. Desktop was implemented on
 ## Current decision
 
 The latest user instruction explicitly defers the intermediate tests/decisions
-and permits coding C9 now. This changes the execution order for disabled code,
+and permits continuing disabled coding. This changes the execution order for disabled code,
 not the truth of the missing evidence or provider activation. All vault providers
 remain off and their cookie allowlists empty; no G0/G1 PASS is inferred.
 Validated checkpoints may merge into main; merged task branches are pruned.
@@ -19,7 +19,7 @@ The active persistent-accounts plan is
 [the unchanged R2 proposal](MYLIMITS-PERSISTENT-ACCOUNTS-PLAN-v2.md).
 The user authorized completing tasks in order and merging validated checkpoints.
 C7's report cannot approve G0 because human live experiments E1–E8 are absent.
-The user now permits C9 foundation work before those gates; actual provider
+The user now permits continuing coding before those gates; actual provider
 activation still needs evidence and G0/G1 decisions. C8 remains deferred. The Checkpoint A
 3–4 day live trial remains PENDING; authorized main merges do not prove the trial.
 No saved-session vault or browser-only independent login exists from C1–C6.
@@ -85,8 +85,9 @@ hosted route is deferred. It was not completed by earlier infrastructure work.
 
 ## Next action
 
-Review C9's checked disabled storage/transport foundation. C10's private sign-in/
-refresh wiring and C11's UI remain separate work. Before activating
+Merge C10's validated disabled checkpoint under the user's existing authorization,
+then continue with C11's UI, consent controls and forget/disconnect credential
+deletion as the next separate task group. Before activating
 providers, run the live experiments, record sanitized results and obtain G0/G1.
 The [manual trial](INSTALL.md#persistent-accounts-checkpoint-a-c1c4) is pending;
 keep all private-session/vault implementation gated by G0/G1. For the separate Desktop path, real-account
@@ -978,3 +979,79 @@ automated tests, live verification and blocked/unverified work.
   is implemented. Production provider activation, live request/header effects,
   actual private login, identity proof, logout survival and other-device refresh
   remain UNVERIFIED. No G0/G1 or inferred E6/E7 decision was made.
+
+### C10 — private sign-in and saved-source refresh (in progress)
+
+- Baseline: C9 PR #11 merged into the integration branch; PR #12 merged into
+  main (`9b1c6a3`). Both six-job workflows passed. Created `codex/c10` from
+  the latest integration branch. No user edits were present at inspection.
+- Implementing T3.3/T3.4/T3.5 only. All production policies remain off,
+  allowlists empty, and the normal manifest has no new required grants. C8,
+  G0/G1, E1–E8 and the live trial are still deferred/PENDING.
+- Added injected private/current-store capture, metadata-only restart journal,
+  ten-minute timeout, strict dashboard-only commands, consent before encryption,
+  identity confirmation, pending-source isolation and cleanup. Normal browser
+  credentials are never substituted for a saved source. C11's UI is not included.
+- Wired the C9 vault/transport into source-bound refresh with persistent provider
+  waits and three-consecutive-401 parking. Challenge errors never use the
+  ambient tab ladder. No E7 Bearer cache or E6 rotation is inferred.
+- Initial typecheck found an inferred empty-record index type in persisted waits;
+  corrected the return type. First registered unit run passed 214/215: the new
+  disabled-policy fixture expected null instead of the old optional undefined
+  setup; corrected that fixture. Existing expectations were not weakened.
+- Changed areas: core setup/schema/connections/scheduler; new private-sign-in
+  contracts and platform flow; saved-session runtime; controller/messages/shared
+  lock wiring; focused unit/browser fixtures and this status/start documentation.
+  Final commands, results, file counts and next action follow after validation.
+- Focused regression suite now passes 227/227: 17 injected sign-in cases,
+  three strict-command/sender/journal cases, migration preservation, vault retry
+  scheduling and two consecutive-401 collector cases. Tests cover cancellation
+  both before encryption finishes and after the accepted Store write begins.
+- First full check passed (224 then-current core tests, 20 native, 24 connection,
+  four transport/runtime, TypeScript and Chrome build). The first full browser
+  run passed 47/48; the new composed sign-in fixture found CSP-sensitive snapshot
+  validation. Explicit jitless parsing fixed that path. Its next run exposed a
+  real persisted-cooldown schema bug: z.record(enum, ...) demanded all providers.
+  Changed it to z.partialRecord; all six focused Chromium vault fixtures now pass.
+- The browser fixture uses actual encryption, IndexedDB, local/session storage,
+  Web Locks, private-sign-in runtime and quota reader, with injected fictional
+  window/cookie/DNR/HTTP APIs. It connects B/C without reading normal A, confirms
+  aliases and distinct identities, reloads the runtime, refreshes from both slots,
+  rejects a duplicate, and verifies HTTP401/challenge classification. This is
+  simulated provider evidence, not proof of live DNR or provider/login behavior.
+- Temporary debugging emitted only error class/code and stack locations; it was
+  removed. No credential value or raw provider error was logged. Actual HTTP401
+  rejections now have a saved-source-only code, so missing identity fields cannot
+  be miscounted as three real HTTP401s. Existing website error codes are unchanged.
+- Full validation before final lifecycle review: npm run check passed (**226 core, 20 native,
+  24 connection, four transport/runtime** tests, TypeScript and Chrome build),
+  followed by npm run test:browser **48/48**. npm run test:spike **4/4**, server
+  typecheck, Edge/Firefox builds and three package-directory checks passed.
+  No existing assertion was weakened. New fixtures exercise fictional providers;
+  all E1–E8/live browser/logout/other-device checks remain PENDING.
+- Built both normal ZIPs plus the separate spike. Actual archive inspection and
+  checksum generation passed; normal ZIPs exclude spike code/grants, private-flow
+  browser helpers, fictional credential markers and temporary debugging. Checked
+  68 relative documentation links, whitespace and the unchanged original R2 plan.
+  No new dependencies or production permissions, version bump or release.
+- Local artifacts (CI timestamps may change hashes): Chrome **322422 bytes**,
+  SHA-256 `e1fd9577819c548591584eb7ef6d8ca6560970f6b0b814a5407b21c248523591`;
+  Firefox **320283 bytes**, SHA-256
+  `81fb1a3dec7e3e5cfa290a525f6ca93eb00e74080fc57c00efb98e63788a2d39`.
+- C10 is implemented and locally validated as dormant code. Publication/CI and
+  the authorized main merge follow this checkpoint; the PR handoff supplies the
+  per-file +/− counts. The next group is C11, not activation. No new second-account
+  user setup is exposed yet, and no real provider/logout behavior is claimed.
+- Final lifecycle review added a serialized guard against website setup replacing
+  a pending private flow. It also closed browser-exit recovery: when session storage
+  loses the journal, remove orphaned unconfirmed metadata/slot without closing
+  unowned windows. Retain already accepted accounts, aliases, history and slots,
+  even if that source was later disabled. The new restart regression passes.
+  Final corrected-source checks pass: 227 core, 20 native, 24 connection and four
+  transport/runtime tests; Chrome build and the complete 48-test browser suite.
+  Edge/Firefox builds, directory/ZIP guards and refreshed packaging pass too.
+- Saved-sign-in error codes now cross the runtime message boundary as a bounded
+  VaultError code; the UI command helper retains it. C11 can distinguish incognito
+  access denial, policy off, consent and recovery errors without parsing sentences.
+  Website errors retain their existing messages and shape. The production-disabled
+  Chromium fixture checks the structured disabled response as well.

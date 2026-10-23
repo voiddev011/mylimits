@@ -71,3 +71,11 @@ test('idle is scheduled work and exponential backoff remains capped independentl
  assert.equal(nextRetry(now,20,5,now+2*3600000),now+2*3600000);
  assert.equal(nextRetry(now,20,5,now+48*3600000),now+24*3600000);
 });
+test('vault authentication cooldown and terminal re-sign-in state cannot be bypassed by ambient signals',()=>{
+ const c={...websiteConnection('chatgpt'),kind:'vault' as const,enabled:true,status:'needs-auth' as const,lastAttemptAt:now};
+ for(const reason of ['manual','tab','cookie','scheduled','open','startup','idle'] as const){
+  assert.equal(shouldRefresh({...c,nextRetryAt:now+60000},reason,now+59999,5),false);
+  assert.equal(shouldRefresh({...c,nextRetryAt:now+60000},reason,now+60000,5),true);
+  assert.equal(shouldRefresh({...c,nextRetryAt:null},reason,now+86400000,5),false);
+ }
+});

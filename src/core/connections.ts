@@ -23,7 +23,7 @@ export function projectAccounts(store: Store): Store {
   return { ...store, accounts };
 }
 export function acceptSnapshot(store: Store, raw: UsageSnapshot, generation: number, now: number): { store: Store; accepted: boolean } {
-  const snapshot = UsageSnapshotSchema.parse(raw);
+  const snapshot = UsageSnapshotSchema.parse(raw,{jitless:true});
   const conn = store.connections.find(c => c.id === snapshot.connectionId);
   if (!conn?.enabled || conn.generation !== generation || conn.provider !== snapshot.providerId
     || snapshot.observedAt > now + 60_000 || snapshot.receivedAt > now + 60_000
@@ -32,7 +32,7 @@ export function acceptSnapshot(store: Store, raw: UsageSnapshot, generation: num
   if (old && old.observedAt >= snapshot.observedAt) return { store, accepted: false };
   const next: Store = { ...store, snapshots: [...store.snapshots.filter(s => s !== old), snapshot].slice(-400),
     connections: store.connections.map(c => c.id === conn.id ? { ...c, accountId: snapshot.accountId, workspaceId: snapshot.workspaceId,
-      status: 'active', lastSuccessAt: snapshot.observedAt, nextRetryAt: null, failures: 0, message: null,
+      status: 'active', lastSuccessAt: snapshot.observedAt, nextRetryAt: null, failures: 0, authFailures:0, message: null,
       generation: c.accountId && c.accountId !== snapshot.accountId ? c.generation + 1 : c.generation } : c) };
   // A website rebind leaves prior readings remembered, while other independent sources remain active.
   return { store: projectAccounts(next), accepted: true };

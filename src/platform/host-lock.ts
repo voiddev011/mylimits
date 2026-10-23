@@ -31,6 +31,7 @@ export function createHostLock(ready:()=>Promise<void>=()=>Promise.resolve(),blo
 let startup:Promise<void>=Promise.resolve();
 /** Install synchronously before registering controller events; failure blocks HTTP. */
 export function setHostLockStartup(ready:Promise<void>){startup=ready;void ready.catch(()=>{});}
+export function hostLockStartup(){return startup;}
 const blockedHosts=new Set<string>();
 export function blockHost(host:string){blockedHosts.add(host.toLowerCase());}
 export const withHostLock=createHostLock(()=>startup,host=>blockedHosts.has(host));

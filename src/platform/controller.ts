@@ -1,6 +1,9 @@
 import { browser } from 'wxt/browser';
 import { cleanupVaultRules } from './vault-transport';
-import { setHostLockStartup } from './host-lock';
+import { setHostLockStartup,hostLockStartup,withHostLock,blockHost } from './host-lock';
+import { createSavedSessions } from './saved-sessions';
+import { PRIVATE_ALARM,privateSenderAllowed } from '../core/private-signin';
+import { VaultError } from '../core/vault-contracts';
 import { PROVIDER_IDS, type ProviderId } from '../core/model';
 import { AccountSchema, SettingsSchema } from '../core/schema';
 import { badge, collectAlerts, recordObservation,markConnection } from '../core/engine';
@@ -38,6 +41,9 @@ const observedProviders: readonly ProviderId[] = ['gemini', 'grok', 'perplexity'
 const REFRESH_ALARM = 'mylimits:refresh';
 const COMPANION_ALARM = 'mylimits:companion';
 const SYNC_ALARM='mylimits:sync';
+const savedSessions=createSavedSessions({browser,crypto,indexedDB,locks:navigator.locks,supported:__MYLIMITS_BROWSER__!=='firefox',dnr:browser.declarativeNetRequest,
+  request:(url,options)=>fetch(url,options),readStore,updateStore,accepted:async(id,source)=>{await saveAcceptedHistory(id,source);await renderBadge();await sendAlerts();},
+  lock:withHostLock,ready:hostLockStartup,blockHost,now:()=>Date.now(),uuid:()=>crypto.randomUUID(),trace:{lastSuccessAt:null,record:input=>requestDiagnostics.record(input)}});
 
 async function renderBadge(): Promise<void> {
   const value = badge(await readStore(), Date.now());
@@ -87,8 +93,8 @@ const collectConnection=createConnectionRefresh({readStore,updateStore,coordinat
     else await updateStore(store=>({store:changeConnection(store,connection.id,{enabled:false,status:'disabled',message:'Allow site access before reconnecting this source.'},true),value:undefined}));
   },
   read:async(connection,options,signal,onRecoveryStart)=>{
-    // C5 adds routing only. Never substitute ambient login for a missing saved driver.
-    if(connection.kind!=='website')throw new AdapterError('unavailable','Saved sign-in is not available. Provider evidence and setup are still required.',null,'saved-transport-unavailable');
+    if(connection.kind==='vault')return savedSessions.readConnection(connection,options,signal,{lastSuccessAt:connection.lastSuccessAt,record:input=>requestDiagnostics.record(input)});
+    if(connection.kind!=='website')throw new AdapterError('unavailable','This connection has no usage reader.');
     await tabRecovery.initialize();
     const sessionInfo=await sessionCookies.inspect(connection.provider);
     return readProvider(connection.provider,options,signal,ambientTransport(connection.provider,signal,
@@ -210,7 +216,7 @@ async function injectObserver(provider: ProviderId, tabId: number, channel: stri
   });
 }
 
-async function handle(command: Command, sender: { id?: string; url?: string; tab?: { id?: number };frameId?:number }): Promise<unknown> {
+async function handle(command: Command, sender: { id?: string; url?: string; tab?: { id?: number;incognito?:boolean };frameId?:number }): Promise<unknown> {
   if (sender.id !== browser.runtime.id) throw new Error('Unrecognised message sender.');
   if(command.type==='widget-state'||command.type==='widget-action'){
     if(!sender.url||providerForUrl(sender.url)!==command.provider||!sender.tab?.id||sender.frameId!==0)throw new Error('Widget sender does not match its website.');
@@ -232,6 +238,14 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
     return null;
   }
   if (!sender.url?.startsWith(browser.runtime.getURL('/'))) throw new Error('This action must come from the MyLimits dashboard.');
+  if(command.type.startsWith('vault-signin-')){
+    if(!privateSenderAllowed(sender,browser.runtime.id,browser.runtime.getURL('/')))throw new Error('Saved sign-in actions require the normal MyLimits dashboard.');
+    if(command.type==='vault-signin-start')await savedSessions.start(command.provider,command.method,command.nickname);
+    else if(command.type==='vault-signin-save')await savedSessions.save(command.setupId,command.accountId,command.consent);
+    else if(command.type==='vault-signin-cancel')await savedSessions.cancel(command.setupId);
+    else if(command.type==='vault-signin-check')await savedSessions.check(command.setupId);
+    return publicStore();
+  }
   switch (command.type) {
     case 'widget-settings': return command.settings?updateWidgetSettings(()=>command.settings!):widgetSettings();
     case 'state': return publicStore();
@@ -243,6 +257,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
     case 'hosted-list': await refreshHosted();return publicStore();
     case 'hosted-action': await hostedAction(command.id,command.action,command.alias);return publicStore();
     case 'account-setup-start': {
+      if((await readStore()).accountSetup?.method==='private')throw new Error('Finish or cancel saved sign-in setup first.');
       if (!await browser.permissions.contains({origins:[providers[command.provider].origin]})) throw new Error('Allow site access before detecting an account.');
       await updateStore(store => ({store:startAccountSetup(store,command.provider,command.mode,command.nickname,crypto.randomUUID(),Date.now()),value:undefined}));
       const state = await readStore();
@@ -251,8 +266,10 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
       break;
     }
     case 'account-setup-save':
+      if((await readStore()).accountSetup?.method==='private')throw new Error('Saved sign-in requires explicit confirmation and consent.');
       await updateStore(store => ({store:saveAccountSetup(store,command.setupId,command.accountId),value:undefined})); break;
     case 'account-setup-cancel':
+      if((await readStore()).accountSetup?.method==='private')throw new Error('Use saved sign-in cancellation for this setup.');
       await updateStore(store => ({store:store.accountSetup?.id===command.setupId?{...store,accountSetup:null}:store,value:undefined})); break;
     case 'opened': void refreshAll(false, 'open').catch(() => {}); return publicStore();
     case 'reader-mode': {
@@ -374,10 +391,12 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
 export function startController(): void {
   setHostLockStartup(__MYLIMITS_BROWSER__==='firefox'?Promise.resolve():cleanupVaultRules({dnr:browser.declarativeNetRequest,
     permitted:()=>browser.permissions.contains({permissions:['declarativeNetRequestWithHostAccess']})}));
+  savedSessions.bind();
   let stopSessionCookies=()=>{};
   const listenSessionCookies=()=>{stopSessionCookies();stopSessionCookies=sessionCookies.listenSessionCookies(provider=>refreshConnection(websiteId(provider),false,'cookie'));};
   listenSessionCookies();
   browser.permissions.onAdded.addListener(listenSessionCookies);
+  browser.permissions.onAdded.addListener(()=>savedSessions.bind());
   const storage=browser.storage.local as typeof browser.storage.local&{setAccessLevel?:(options:{accessLevel:'TRUSTED_CONTEXTS'})=>Promise<void>};
   void storage.setAccessLevel?.({accessLevel:'TRUSTED_CONTEXTS'}).catch(()=>{});
   listenCompanion(async profiles => {
@@ -394,13 +413,15 @@ export function startController(): void {
   browser.runtime.onMessage.addListener((raw, sender, sendResponse) => {
     const parsed = CommandSchema.safeParse(raw);
     if (!parsed.success) { sendResponse({ ok: false, error: 'Invalid MyLimits request.' }); return false; }
-    void handle(parsed.data, sender).then(data => sendResponse({ ok: true, data }), error => sendResponse({ ok: false, error: error instanceof Error ? error.message : 'The action could not be completed.' }));
+    void handle(parsed.data, sender).then(data => sendResponse({ ok: true, data }), error => sendResponse({ ok: false, error: error instanceof Error ? error.message : 'The action could not be completed.',
+      ...(parsed.data.type.startsWith('vault-signin-')&&error instanceof VaultError?{code:error.code}:{}) }));
     return true;
   });
-  browser.alarms.onAlarm.addListener(alarm => { if(alarm.name===SYNC_ALARM)void snapshotSync.run().catch(()=>{});if (alarm.name === COMPANION_ALARM) void refreshCompanion().catch(() => {}); if (alarm.name === REFRESH_ALARM) void refreshAll().catch(() => undefined); });
+  browser.alarms.onAlarm.addListener(alarm => {if(alarm.name===PRIVATE_ALARM)void savedSessions.expire().catch(()=>{});if(alarm.name===SYNC_ALARM)void snapshotSync.run().catch(()=>{});if (alarm.name === COMPANION_ALARM) void refreshCompanion().catch(() => {}); if (alarm.name === REFRESH_ALARM) void refreshAll().catch(() => undefined); });
   browser.permissions.onRemoved.addListener(permissions => {
     listenSessionCookies();
     void (async () => {
+      await savedSessions.permissionsChanged();
       if((permissions as {data_collection?:string[]}).data_collection?.length)await snapshotSync.enable(false);
       if (permissions.permissions?.includes('nativeMessaging')) await enableCompanion(false);
       if (permissions.permissions?.includes('notifications')) await updateStore(store => ({ store: { ...store, settings: { ...store.settings, desktopAlerts: false } }, value: undefined }));
@@ -415,6 +436,8 @@ export function startController(): void {
   browser.idle.onStateChanged.addListener(state=>{if(state==='active')void refreshAll(false,'idle').catch(()=>{});});
   browser.tabs.onUpdated.addListener((id, info, tab) => { if(isNormalTab(tab)&&!tabRecovery.owns(id)&&info.status==='complete'&&tab.url){const provider=providerForUrl(tab.url);if(provider)void refreshConnection(websiteId(provider),false,'tab').catch(()=>{});} });
   void (async () => {
+    // A broken saved-setup journal must not stop ordinary website tracking.
+    await savedSessions.initialize().catch(()=>{});
     await tabRecovery.initialize();
     const store = await readStore();
     await browser.alarms.create(REFRESH_ALARM, { periodInMinutes: store.settings.refreshMinutes });
