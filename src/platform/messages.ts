@@ -4,9 +4,11 @@ import type { PublicState } from '../core/public';
 import { WidgetSettingsSchema } from '../core/widget';
 import { ProviderSchema, SettingsSchema } from '../core/schema';
 import type { HistoryPoint } from './history';
+import { PrivateStartSchema,PrivateSaveSchema,PrivateCancelSchema,PrivateCheckSchema } from '../core/private-signin';
 
 const ms = z.number().finite().min(0).max(8.64e15);
 export const CommandSchema = z.discriminatedUnion('type', [
+  PrivateStartSchema,PrivateSaveSchema,PrivateCancelSchema,PrivateCheckSchema,
   z.object({ type: z.literal('state') }),
   z.object({ type: z.literal('request-diagnostics') }).strict(),
   z.object({type:z.literal('hosted-status')}),
@@ -52,11 +54,12 @@ export const CommandSchema = z.discriminatedUnion('type', [
 ]);
 export type Command = z.infer<typeof CommandSchema>;
 export type PublicStore = PublicState;
-export interface Response<T = unknown> { ok: boolean; data?: T; error?: string; }
+export interface Response<T = unknown> { ok: boolean; data?: T; error?: string; code?:string; }
+export class CommandError extends Error {constructor(message:string,readonly code?:string){super(message);}}
 
 export async function command<T = PublicStore>(message: Command): Promise<T> {
   const response = await browser.runtime.sendMessage(message) as Response<T>;
-  if (!response?.ok) throw new Error(response?.error ?? 'MyLimits could not complete that action.');
+  if (!response?.ok) throw new CommandError(response?.error ?? 'MyLimits could not complete that action.',response?.code);
   return response.data as T;
 }
 export async function history(accountId: string): Promise<HistoryPoint[]> {

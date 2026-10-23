@@ -6,6 +6,7 @@ export function shouldRefresh(c:ConnectionRecord,reason:RefreshReason,now:number
  if(c.lastAttemptAt!==null&&now-c.lastAttemptAt<15000)return false;
  // An explicit sign-in signal may retry authentication, but never bypasses the click cooldown.
  if(c.status==='needs-auth'){
+  if(c.kind==='vault')return c.nextRetryAt!==null&&now>=c.nextRetryAt;
   if(AUTH_SIGNALS.includes(reason))return true;
   return c.nextRetryAt!==null&&now>=c.nextRetryAt;
  }

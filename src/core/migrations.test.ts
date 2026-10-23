@@ -37,3 +37,11 @@ test('V2 connection metadata adds vault and ambient setup defaults without expos
  assert.ok(!('profileId' in toPublicState(next).connections.find(c=>c.kind==='vault')!));
  assert.equal(StoreSchema.safeParse({...next,accountSetup:{...next.accountSetup,method:'private'}}).success,false);
 });
+test('C10 V2 fields preserve identities, aliases and snapshots and default old auth counters additively',()=>{
+ const old=migrateV1(legacy()),raw=structuredClone(old);raw.connections.forEach(c=>{delete c.authFailures});
+ const parsed=StoreSchema.parse(raw);assert.equal(parsed.version,2);assert.equal(parsed.installSalt,old.installSalt);assert.deepEqual(parsed.accounts,old.accounts);assert.deepEqual(parsed.snapshots,old.snapshots);
+ assert.ok(parsed.connections.every(c=>c.authFailures===0));assert.equal(parsed.accountSetup,old.accountSetup);
+ const slot='75cc9537-6b43-444a-8fbd-b383606b8d45';
+ parsed.accountSetup={id:'9696d962-eac8-41fa-a15c-a04e7c015c0d',provider:'claude',mode:'detect',nickname:'Personal',previousAccountId:null,startedAt:1,method:'private',slotId:slot,captureMethod:'private',phase:'awaiting-confirmation',candidate:{accountId:'verified-hash',name:'Fictional',plan:null,verifiedAt:2}};
+ const next=StoreSchema.parse(parsed);assert.deepEqual(next.accountSetup,parsed.accountSetup);assert.deepEqual(next.snapshots,old.snapshots);assert.deepEqual(next.accounts,old.accounts);
+});

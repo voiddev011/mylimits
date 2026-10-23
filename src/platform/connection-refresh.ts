@@ -59,13 +59,16 @@ export function createConnectionRefresh(port:ConnectionRefreshPort){
    }catch(error){
     if(signal.aborted)return;
     const status=error instanceof AdapterError?error.status:'error';
-    const message=error instanceof AdapterError?error.message:'The website returned information MyLimits could not verify.';
+    const isVault=connection.kind==='vault';
+    const rejected=isVault&&error instanceof AdapterError&&error.status==='signed-out'&&error.code==='saved-http-401';
+    const message=isVault&&status==='signed-out'?'Saved sign-in was rejected. Re-sign in.':error instanceof AdapterError?error.message:'The website returned information MyLimits could not verify.';
     const cookieState=connection.kind==='website'&&status==='signed-out'?await port.cookieState(connection):'unknown';
     await port.updateStore(store=>{
      const current=valid(store);if(!current)return {store,value:undefined};
      const next=markConnection(store,connectionId,status,message,now());
-     const retry=authRetryDeadline(status,cookieState,now(),current.failures+1,store.settings.refreshMinutes,error instanceof AdapterError?error.retryAt:null);
-     next.connections=next.connections.map(c=>c.id===connectionId?{...c,lastAttemptAt:now(),failures:current.failures+1,nextRetryAt:retry}:c);
+     const authFailures=rejected?(current.authFailures??0)+1:0;
+     const retry=isVault&&status==='signed-out'&&(!rejected||authFailures>=3)?null:authRetryDeadline(status,cookieState,now(),current.failures+1,store.settings.refreshMinutes,error instanceof AdapterError?error.retryAt:null);
+     next.connections=next.connections.map(c=>c.id===connectionId?{...c,lastAttemptAt:now(),failures:current.failures+1,authFailures,nextRetryAt:retry}:c);
      if(connection.kind==='website'){next.providers[provider].failures=current.failures+1;next.providers[provider].nextRetryAt=retry;}
      return {store:next,value:undefined};
     });

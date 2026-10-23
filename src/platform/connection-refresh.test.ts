@@ -12,7 +12,7 @@ const snapshot=(identity:string,used=30)=>({identity,kind:'account' as const,dis
 const settle=()=>new Promise<void>(r=>setImmediate(r));
 function gate(){let resolve!:()=>void;const promise=new Promise<void>(r=>{resolve=r;});return {promise,resolve};}
 async function fixture(){
- let state=emptyStore('isolation-test');const ids=await Promise.all(['A','B'].map(i=>accountId('claude',i,state.installSalt)));
+ let state=emptyStore('isolation-test'),time=now;const ids=await Promise.all(['A','B'].map(i=>accountId('claude',i,state.installSalt)));
  for(let i=0;i<2;i++){
   const id=vaultId('claude',slots[i]!);state.connections.push({...websiteConnection('claude'),id,kind:'vault',profileId:slots[i],enabled:true,status:'active'});
   state=applySnapshot(state,'claude',ids[i]!,snapshot(i===0?'A':'B',90),now-60000,{connectionId:id});
@@ -23,9 +23,9 @@ async function fixture(){
   readStore:async()=>structuredClone(state),updateStore:<T>(mutate:(s:Store)=>{store:Store;value:T})=>{const task=queue.then(()=>{const result=mutate(structuredClone(state));state=result.store;return result.value;});queue=task.catch(()=>{});return task;},
   permitted:async()=>true,permissionMissing:async()=>{throw Error('Unexpected permission failure');},
   read:async c=>{calls.push(c.id);return snapshot(c.profileId===slots[0]?'A':'B',c.profileId===slots[0]?20:40);},
-  cookieState:async()=>'unknown',saveHistory:async(_a,c)=>{history.push(c);},updated:async()=>{},now:()=>now,
+  cookieState:async()=>'unknown',saveHistory:async(_a,c)=>{history.push(c);},updated:async()=>{},now:()=>time,
  };
- return {port,calls,history,ids,read:()=>state,set:(s:Store)=>{state=s;},refresh:createConnectionRefresh(port),connections:slots.map(s=>vaultId('claude',s))};
+ return {port,calls,history,ids,read:()=>state,set:(s:Store)=>{state=s;},setNow:(v:number)=>{time=v},refresh:createConnectionRefresh(port),connections:slots.map(s=>vaultId('claude',s))};
 }
 test('two fictional same-provider connections refresh concurrently with independent IDs, aliases and snapshots',async()=>{
  const f=await fixture(),wait=gate();let running=0,peak=0;const original=f.port.read;
@@ -63,4 +63,23 @@ test('connection refresh respects persisted waits and never sends imported data 
  const f=await fixture();f.read().connections.find(c=>c.id===f.connections[0])!.nextRetryAt=now+60000;
  f.read().connections.find(c=>c.id===f.connections[1])!.kind='snapshot-import';
  await Promise.all(f.connections.map(id=>f.refresh(id,'manual')));assert.equal(f.calls.length,0);
+});
+test('three consecutive saved-source 401s park only that source and retain its original reading time',async()=>{
+ const f=await fixture(),id=f.connections[0]!,before=structuredClone(f.read().accounts),peer=structuredClone(f.read().connections.find(c=>c.id===f.connections[1]));let requests=0;
+ f.port.cookieState=async()=>{throw Error('Vault must never inspect ambient authentication')};
+ f.port.read=async()=>{requests++;throw new AdapterError('signed-out','Fixture 401',null,'saved-http-401')};
+ for(let i=1;i<=3;i++){
+  await f.refresh(id,'manual');const c=f.read().connections.find(c=>c.id===id)!;assert.equal(c.authFailures,i);assert.equal(c.status,'needs-auth');
+  if(i<3){assert.ok(c.nextRetryAt);await f.refresh(id,'cookie');assert.equal(requests,i);f.setNow(c.nextRetryAt!);}else assert.equal(c.nextRetryAt,null);
+ }
+ f.setNow(now+86400000);await f.refresh(id,'startup');await f.refresh(id,'manual');assert.equal(requests,3);assert.equal(f.read().accounts[0]!.updatedAt,before[0]!.updatedAt);assert.deepEqual(f.read().accounts[0]!.meters,before[0]!.meters);assert.match(f.read().connections.find(c=>c.id===id)!.message!,/Re-sign in/);
+ assert.deepEqual(f.read().connections.find(c=>c.id===f.connections[1]),peer);assert.equal(f.history.length,0);
+});
+test('intervening challenge resets consecutive 401 count; successful reads reset all auth failures',async()=>{
+ const f=await fixture(),id=f.connections[0]!,original=f.port.read;
+ for(const code of ['saved-http-401','challenge','saved-http-401']){
+  f.port.read=async()=>{throw new AdapterError(code==='challenge'?'unavailable':'signed-out','Fixture',null,code)};
+  await f.refresh(id,'manual');const c=f.read().connections.find(c=>c.id===id)!;assert.equal(c.authFailures,code==='challenge'?0:1);assert.ok(c.nextRetryAt);f.setNow(c.nextRetryAt!);
+ }
+ f.port.read=original;await f.refresh(id,'manual');const c=f.read().connections.find(c=>c.id===id)!;assert.equal(c.authFailures,0);assert.equal(c.nextRetryAt,null);assert.equal(c.status,'active');assert.equal(f.history.length,1);
 });
