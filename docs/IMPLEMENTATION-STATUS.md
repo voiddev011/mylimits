@@ -378,9 +378,17 @@ automated tests, live verification and blocked/unverified work.
   restoring obsolete plans. No container was deployed or image execution certified.
 - Local `npm run check` passed, server typecheck passed and the merged OIDC config
   regression passed (1 test). Relative documentation links and whitespace passed.
-  Actual Node matrix/browser/Windows/server CI must pass before remote deletion.
+  [CI 39891316967](https://github.com/voiddev011/mylimits/actions/runs/39891316967)
+  passed all six jobs: Node 22/24/26 compatibility, extension/browser verification,
+  Windows logic/installer packaging and connected PostgreSQL/API/transport tests.
+  These checks do not verify live provider account behavior.
 - A verified local all-refs Git bundle and the original SHA map were saved under
   `/tmp/mylimits-branch-cleanup-6sxdoe_l`. Every deletion will additionally require
   ancestor verification and an expected-tip lease, preventing removal of newly
-  pushed work. Next: push merged Desktop history, inspect CI, then remove only
-  the 11 redundant heads and matching merged local branches.
+  pushed work. After CI passed, all 11 redundant remote heads were deleted in
+  one atomic push with expected-tip leases, and their 11 merged local branches
+  were deleted. Only `main` and `feature/desktop-independent-accounts` remain.
+  Local main now follows the unchanged remote stable main; its previous history
+  is preserved in Desktop. All original remote tips are ancestors of the pushed
+  Desktop merge `25dfb4e`. No release was published. Next: continue work on Desktop
+  when requested; provider live acceptance remains pending.
