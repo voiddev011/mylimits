@@ -665,7 +665,10 @@ automated tests, live verification and blocked/unverified work.
   section; architecture and privacy disclose temporary-page traffic and local
   counters/setting. No new Desktop installer is needed for this website checkpoint.
 - Delivery boundary: C4 source/package is ready for review, not live acceptance.
-  Push only codex/c4 and open its PR into feat/persistent-accounts; leave main
-  unchanged. Stop before C5. Human review/integration and the 3–4 day trial are
+  Source checkpoint 81101e2 is pushed on codex/c4 in
+  [PR #5](https://github.com/voiddev011/mylimits/pull/5), targeting
+  feat/persistent-accounts. Rebasing onto C3's integration merge preserved the
+  tested source tree exactly. Remote CI is pending; local results are above.
+  Main is unchanged. Stop before C5. Human review/integration and the 3–4 day trial are
   next; private-session evidence gates, independent browser accounts and logout
   survival remain unimplemented/unverified here.
