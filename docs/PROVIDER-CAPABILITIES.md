@@ -141,3 +141,34 @@ validated numeric fields, explicit evidence/scope, transient authentication,
 generation fencing and sanitized synthetic tests. No source project was copied
 wholesale. Current user/account/plan behavior, tab closure, other-device usage,
 logout and renewal require owner-authorized live tests and remain pending.
+
+
+## Retained website and platform manual acceptance checklist
+
+The checklist below was consolidated from the older support page. Its checks
+remain pending; use INSTALL.md for current setup and the Desktop handoff for
+independent OpenAI/Claude acceptance.
+
+
+No real provider accounts, another physical device or Windows desktop were
+available for this implementation. Do each applicable row separately and record
+plan, workspace, browser/version, connection type, date and sanitized evidence.
+Never include authorization/cookies or raw session responses in screenshots/logs.
+
+| Check | Expected evidence | Current result |
+| --- | --- | --- |
+| Actual Windows Chrome, Brave and Edge popup at normal/high scale | Usable width, six representative rows at normal scale, long-name scroll, keyboard focus | Pending; Linux CSS layout fixtures are not Windows DPI tests |
+| Claude Free/Pro/Max/team membership and workspace changes | Compare returned windows/identity against provider usage screen | Pending |
+| OpenAI supported plans / personal and workspace identity | Compare Work/Codex and code-review pools; ordinary chat stays separate | Pending |
+| Provider tab closed, browser kept open | Reading changes only after a successful permitted background read | Pending per provider/source |
+| Browser close/reopen | Alarm recovery and preserved age before a new successful read | Real-account check pending; synthetic persistent-profile migration passed |
+| Other-device activity | Compare next reading to provider usage screen; record refresh delay | Pending; no real-time guarantee |
+| Website logout | Document whether website source stops; independent native source checked separately | Pending; no universal logout independence |
+| Native collector revoke, global logout and credential expiry | Reconnect required where revoked; do not report remembered data as fresh | Pending |
+| Companion Linux/Windows official sign-in and renewal | Actual native host launch and sanitized quota updates | Pending; fixture/Windows-path logic only |
+| Real desktop notification permission/revocation and local quiet time | One applicable alert, no stale/local warnings | Pending desktop UI acceptance |
+
+Automated tests cover migration/restart, aliases, permissions denial, missing
+native APIs, source independence, six-row fit, keyboard/shared layouts, history,
+exports and stale data. They use fictional data and block real HTTP. They cannot
+promote any row above to live-verified.

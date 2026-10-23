@@ -421,3 +421,16 @@ automated tests, live verification and blocked/unverified work.
 
 - Updated installer/help/sync documentation links and Desktop build lookup to main
   so removing merged branch names does not break in-app setup/help destinations.
+
+## Documentation consolidation — 23 October 2026
+
+- Preserved the newly added MYLIMITS-PERSISTENT-ACCOUNTS-PLAN-v2.md unchanged.
+  This is a proposal, not implemented behavior; it targets an older main snapshot.
+- Removed the obsolete 3.0/3.2 companion setup page, outdated Phase 2 support
+  page and unsent hosted provider-access drafts. Current installation stays in
+  INSTALL.md; manual acceptance checks were retained in PROVIDER-CAPABILITIES.md.
+- Archived provider drafts remain linked from implementation history by immutable
+  commit. Unique research, operational instructions, privacy, assets, diagnostics
+  and historical verification evidence remain.
+- Updated README/START-HERE and affected documentation links. Documentation-only
+  change; no provider or authentication implementation was changed.

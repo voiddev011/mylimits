@@ -92,7 +92,7 @@ unmodified hosted-binary conditions do not establish a permitted automatic
 quota-only hosted product. The manual remote-code fallback differed from the
 requested user experience. No application or provider clarification was submitted.
 
-[Provider access drafts](PROVIDER-ACCESS-REQUESTS.md) and
+[Provider access drafts](https://github.com/voiddev011/mylimits/blob/f3e794f8355d03907eb99df60a49eff6f6ae7618/docs/PROVIDER-ACCESS-REQUESTS.md) and
 [server operations](SERVER-SETUP.md) remain references for future hosted work.
 They are not prerequisites for beginning the local desktop implementation.
 
@@ -107,7 +107,7 @@ It contains no desktop runtime and has no configured production hosted origin.
 ## Documentation consolidation
 
 Removed superseded plan/handoff files after preserving unique conclusions here,
-current commands in ACCOUNT-PROOF/OPENAI-COMPANION/INSTALL, provider scope in
+current commands in ACCOUNT-PROOF/INSTALL, provider scope in
 PROVIDER-CAPABILITIES, and sources in COMPETITOR-RESEARCH. Removed files:
 
 - ACCOUNT-PROOF-HANDOFF.md

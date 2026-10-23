@@ -13,8 +13,11 @@ Read:
 4. [Installation](INSTALL.md) and relevant [architecture](ARCHITECTURE.md).
 
 Completed execution plans and starter prompts were removed on 23 October 2026.
-They remain in Git history. No replacement plan has been agreed yet; follow the
-user's next instructions instead of replaying completed implementation tasks.
+They remain in Git history. The newly added
+[persistent-accounts proposal](MYLIMITS-PERSISTENT-ACCOUNTS-PLAN-v2.md) is retained
+unchanged. It was written against an older baseline and references archived files
+and branches; reconcile it with current code before executing it. This cleanup
+does not implement or approve its proposed credential/session behavior.
 Keep project Markdown directly in docs/.
 
 [Documentation index](README.md) · [Research](COMPETITOR-RESEARCH.md)

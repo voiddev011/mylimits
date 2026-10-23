@@ -123,7 +123,7 @@ Chrome can automatically **launch an already installed and registered** native h
 
 ## 6. MyLimits today compared with the references
 
-Baseline: repository implementation at commit `9d9ad16f637c58dfc38656d9dc2f469fd8a05de0`, before this research document. [README](README.md), [adapters](../src/providers/adapters.ts), [controller](../src/platform/controller.ts), [companion guide](OPENAI-COMPANION.md).
+Baseline: repository implementation at commit `9d9ad16f637c58dfc38656d9dc2f469fd8a05de0`, before this research document. [README](README.md), [adapters](../src/providers/adapters.ts), [controller](../src/platform/controller.ts), [companion guide](INSTALL.md).
 
 | Requirement | Current MyLimits | Useful next step |
 | --- | --- | --- |

@@ -9,6 +9,8 @@ Real two-account freshness/login acceptance remains pending for both providers.
 
 - [Start here](START-HERE.md)
 - [Current status](IMPLEMENTATION-STATUS.md)
+- [Proposed persistent-accounts plan v2](MYLIMITS-PERSISTENT-ACCOUNTS-PLAN-v2.md)
+- [Provider support and manual acceptance](PROVIDER-CAPABILITIES.md)
 - [Desktop delivery and pending live acceptance](DESKTOP-ACCOUNTS-HANDOFF.md)
 - [Historical evidence and consolidated checkpoints](IMPLEMENTATION-HISTORY.md)
 - [Competitor research](COMPETITOR-RESEARCH.md)
@@ -16,10 +18,8 @@ Real two-account freshness/login acceptance remains pending for both providers.
 ## Install and operate
 
 - [Current extension installation](INSTALL.md)
-- [Existing experimental local service](OPENAI-COMPANION.md)
 - [Developer account-proof diagnostic](ACCOUNT-PROOF.md)
 - [Platforms and packaging](PLATFORMS.md)
-- [Provider support and manual acceptance](SUPPORT.md)
 
 ## Contracts and reference
 
@@ -28,7 +28,6 @@ Real two-account freshness/login acceptance remains pending for both providers.
 - [Privacy](PRIVACY.md)
 - [Provider assets](PROVIDER-ASSETS.md)
 - [Optional server operations](SERVER-SETUP.md)
-- [Deferred hosted provider-access drafts](PROVIDER-ACCESS-REQUESTS.md)
 
 Project Markdown lives directly in this folder. Completed execution plans and starter prompts are archived in Git history.
 Older removed plans and phase ledgers remain in Git history; their unique evidence
