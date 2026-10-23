@@ -739,6 +739,9 @@ automated tests, live verification and blocked/unverified work.
   SHA-256 **802cbe9f92cf8de3a68fbd6f578640b892aca4469c07fcd70fa99bd8c991484e**.
   Whitespace and 56 relative documentation links passed. Original R2 plan unchanged.
   C5 installation/manual review is in INSTALL.md, source contracts in ARCHITECTURE.md.
-- Next: push the C5 review branch/PR into feat/persistent-accounts and stop at
-  Checkpoint B. No main merge, C6 spike, G0/G1 approval, production saved-account
-  login or live provider result is claimed. GitHub CI results remain pending.
+- Delivery: source checkpoint 2ea79cd is pushed on codex/c5 in
+  [PR #6](https://github.com/voiddev011/mylimits/pull/6), targeting
+  feat/persistent-accounts. Rebasing onto the C4 integration commit preserved the
+  tested source tree exactly. GitHub CI results remain pending; local results are
+  above. Stop at Checkpoint B. No main merge, C6 spike, G0/G1 approval, production
+  saved-account login or live provider result is claimed.
