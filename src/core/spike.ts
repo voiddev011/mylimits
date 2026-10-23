@@ -61,8 +61,4 @@ export function tokenExpiry(token:string):number|null{
   return typeof payload.exp==='number'&&Number.isSafeInteger(payload.exp)&&payload.exp>0&&payload.exp<8.64e12?payload.exp*1000:null;
  }catch{return null;}
 }
-export function endpointAllowed(provider:ProviderId,path:string):boolean{
- const paths:Partial<Record<ProviderId,string[]>>={chatgpt:['/api/auth/session','/backend-api/wham/usage'],claude:['/api/account','/api/organizations'],
-  grok:['/rest/subscriptions','/rest/rate-limits'],perplexity:['/api/auth/session','/rest/rate-limit/all'],cursor:['/api/auth/me','/api/usage-summary']};
- return paths[provider]?.includes(path)===true||provider==='claude'&&/^\/api\/organizations\/[A-Za-z0-9_-]{1,180}\/usage$/.test(path);
-}
+export { providerEndpointAllowed as endpointAllowed } from './provider-endpoints';

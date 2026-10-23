@@ -351,3 +351,23 @@ and closes only the window created by its private dry run. No logout endpoint or
 cookie deletion is automated. Browser/worker restart loses captures; this is not
 a persistent vault or independent-account feature. Copy sanitized results copies
 the visible metadata report only. Live tests and G0/G1 decisions remain pending.
+
+## C9 dormant vault code
+
+C9 adds storage/transport components but does not enable session capture or an
+independent-account sign-in flow. All production provider policies are off and
+allowlists empty. No new diagnostic/host permission is requested by this change.
+Website tracking and Desktop retain their existing connection methods.
+
+When future evidence-backed wiring activates a provider, the prepared worker
+component encrypts allowlisted cookies with AES-GCM in a separate local vault,
+using a non-extractable key held in IndexedDB. Cookie names and expiry metadata
+are outside the ciphertext; values and ciphertext never enter the account Store,
+history, snapshot sync, exports or diagnostic messages. Encryption does not defend
+against malware, trusted extension code using the key, or whole-profile copying.
+Storage access protection must succeed; missing/corrupt keys are not silently
+replaced over saved entries. Explicit per-slot deletion does not need decryption.
+
+C9 does not store a ChatGPT access token, copy browser cookies, collect passwords,
+run model prompts or promise tracking after logout. Actual provider behavior and
+activation still require G0/G1; fixture data does not establish those findings.
