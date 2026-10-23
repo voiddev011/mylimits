@@ -8,6 +8,12 @@ import type { HistoryPoint } from './history';
 const ms = z.number().finite().min(0).max(8.64e15);
 export const CommandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('state') }),
+  z.object({type:z.literal('hosted-status')}),
+  z.object({type:z.literal('hosted-link'),action:z.enum(['start','poll'])}),
+  z.object({type:z.literal('hosted-start'),provider:z.enum(['openai','claude']),reconnectId:z.string().uuid().optional()}),
+  z.object({type:z.literal('hosted-attempt'),id:z.string().uuid(),cancel:z.boolean().optional()}),
+  z.object({type:z.literal('hosted-list')}),
+  z.object({type:z.literal('hosted-action'),id:z.string().uuid(),action:z.enum(['rename','refresh','disconnect','forget']),alias:z.string().trim().max(60).optional()}),
   z.object({ type: z.literal('account-setup-start'), provider: ProviderSchema, mode: z.enum(['detect','another']), nickname: z.string().trim().max(60) }),
   z.object({ type: z.literal('account-setup-save'), setupId: z.string().uuid(), accountId: z.string().min(1).max(240) }),
   z.object({ type: z.literal('account-setup-cancel'), setupId: z.string().uuid() }),
@@ -31,6 +37,7 @@ export const CommandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('companion-enable'), enabled: z.boolean() }),
   z.object({ type: z.literal('companion-action'), action: z.enum(['setup','cancel','reconnect','disconnect']), profile: z.string().uuid() }),
   z.object({ type: z.literal('companion-add'), provider: z.enum(['openai','claude']).optional(), nickname: z.string().trim().max(60).optional() }),
+  z.object({type:z.literal('companion-confirm'),profile:z.string().uuid(),generation:z.number().int().min(0),alias:z.string().trim().max(60)}),
   z.object({ type: z.literal('companion-remove'), profile: z.string().uuid() }),
   z.object({ type: z.literal('refresh'), provider: ProviderSchema.optional(), connectionId: z.string().min(1).max(240).optional() }),
   z.object({ type: z.literal('enable'), provider: ProviderSchema, enabled: z.boolean() }),

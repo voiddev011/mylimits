@@ -17,13 +17,14 @@ let profiles: NativeProfile[] = [];
 let onSnapshot: (profiles: CompanionProfile[] | null) => Promise<void> = async () => {};
 let delivery = Promise.resolve();
 const pending = new Map<string, { resolve: (value: unknown) => void; reject: (reason: Error) => void; timer: ReturnType<typeof setTimeout> }>();
-const unavailable = () => new Error('Account helper unavailable. Install the current helper, then select Retry helper in Accounts. Website tracking works without it.');
+const unavailable = () => new Error('MyLimits Desktop is unavailable. Open or install Desktop, then retry. Website tracking works without it.');
 const errors: Record<string,string> = {
   cooldown: 'This account must wait before another attempt. Check its retry time.',
   busy: 'This account already has an operation in progress.',
   'provider-unavailable': 'Independent connections for this provider are not available yet.',
   'logout-unconfirmed': 'Sign-out was not confirmed. Credentials and dated readings were retained; retry disconnect.',
-  'service-unavailable': 'Restart the account helper before trying again.',
+  'service-unavailable': 'Reopen MyLimits Desktop setup to repair or update it before trying again.',
+  'stale-confirmation': 'This sign-in changed or expired. Check the account again before confirming.',
 };
 export function listenCompanion(listener: typeof onSnapshot) { onSnapshot = listener; }
 function accept(raw: unknown) {
@@ -52,7 +53,8 @@ export async function companionStatus() {
       else { capabilities = null; issue = 'Update the helper to enable independent account connections.'; }
     } catch { issue = port ? 'Update or restart the helper, then retry.' : unavailable().message; }
   }
-  return { enabled, connected: !!port, compatible: capabilities?.protocol === 2 && !!port, capabilities, profiles, issue };
+  if(capabilities&&!capabilities.identityConfirmation)issue='Update MyLimits Desktop to confirm independent accounts safely.';
+  return { enabled, connected: !!port, compatible: capabilities?.protocol === 2 && capabilities.identityConfirmation===true && !!port, capabilities, profiles, issue };
 }
 export async function connectCompanion() {
   if (port) return;
@@ -79,8 +81,8 @@ export async function connectCompanion() {
     pending.clear(); delivery = delivery.catch(() => {}).then(() => onSnapshot(null));
   });
 }
-export type CompanionMethod = 'status'|'capabilities'|'list'|'start'|'setup'|'cancel'|'reconnect'|'rename'|'disconnect'|'remove'|'refresh';
-export async function companionRequest(method: CompanionMethod, profile?: string, extra: { provider?: 'openai'|'claude'; alias?: string } = {}): Promise<unknown> {
+export type CompanionMethod = 'status'|'capabilities'|'list'|'start'|'setup'|'cancel'|'confirm'|'reconnect'|'rename'|'disconnect'|'remove'|'refresh';
+export async function companionRequest(method: CompanionMethod, profile?: string, extra: { provider?: 'openai'|'claude'; alias?: string; generation?: number } = {}): Promise<unknown> {
   await connectCompanion();
   if (!port) throw unavailable();
   return new Promise((resolve, reject) => {

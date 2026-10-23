@@ -43,6 +43,8 @@ jobs:
         run: npm run test:account-proof
       - name: Hosted transport observation redaction and lifecycle regressions
         run: npm run test:hosted-probe
+      - name: Desktop bootstrapper payload checks
+        run: npm run test:desktop-package
       - name: Install Chromium for browser tests
         run: npx playwright install --with-deps chromium
       - name: Browser tests
@@ -111,14 +113,17 @@ jobs:
         run: ./scripts/test-windows-setup.ps1
       - name: Install NSIS compiler
         run: choco install nsis --no-progress -y
-      - name: Package unsigned optional Windows companion
-        run: npm run package:companion
+      - name: Desktop bootstrapper payload checks
+        run: npm run test:desktop-package
+      - name: Package unsigned Windows Desktop setup
+        run: npm run package:desktop
       - uses: actions/upload-artifact@v4
         with:
-          name: mylimits-companion-windows-unsigned
+          name: mylimits-desktop-windows-x64-unsigned
           path: |
-            artifacts/mylimits-companion-windows-unsigned.exe
-            artifacts/mylimits-companion-windows-unsigned.exe.sha256
+            artifacts/mylimits-desktop-windows-x64-unsigned.exe
+            artifacts/mylimits-desktop-windows-x64-unsigned.exe.sha256
+            artifacts/mylimits-desktop-windows-x64-unsigned.exe.json
           if-no-files-found: error
 
   connected-services:

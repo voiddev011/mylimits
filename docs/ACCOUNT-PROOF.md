@@ -1,12 +1,10 @@
 # Independent-account proof tool
 
-Updated: 17 October 2026. Branch: `v3/account-proof`.
-
-This is the Gate 0/1 developer diagnostic from the
-[independent-account plan](INDEPENDENT-ACCOUNTS-RESEARCH-AND-PLAN.md). It proves
-software invariants with fictional accounts and lets you collect actual results
-locally. It is **not a new extension connection** and does not make independent
-Claude tracking available in the popup. Later integration waits for the live gates.
+Updated 22 October 2026. Developer-only diagnostic; it does not install the
+public Desktop experience. The later 3.2 local account service already reuses
+parts of this proof; see [historical evidence](IMPLEMENTATION-HISTORY.md).
+The [Desktop delivery and pending acceptance](DESKTOP-ACCOUNTS-HANDOFF.md) records the current delivery.
+Neither provider has real two-account acceptance recorded here.
 
 ## Run on your Windows laptop
 
@@ -14,7 +12,7 @@ Inside your existing Git checkout, save or commit your own edits before switchin
 
 ```powershell
 git fetch origin
-git switch v3/account-proof
+git switch docs/desktop-accounts-execution-plan
 npm install --include=optional
 npm run account-proof
 ```
@@ -59,7 +57,7 @@ still requires the simple approved installer described in Gate 5.
    shown locally after a successful read; reports contain no email addresses.
 3. **Add** Claude `Personal` and Claude `Work`. The diagnostic creates separate
    `CLAUDE_CONFIG_DIR` folders. Automatic isolated-browser login for Claude is
-   **not verified**. Its Login action requires typing `manual`, then runs only
+   **not verified by this diagnostic**. Its Login action requires typing `manual`, then runs only
    unmodified `claude auth login` in the selected config directory. The CLI may
    open your default browser. Use the provider's account chooser if available;
    cancel if you cannot choose B without changing the primary session. Record
@@ -145,7 +143,7 @@ acceptance remain pending. This is not an encrypted credential vault claim.
 | Connector | Implemented diagnostic route | Remaining condition |
 | --- | --- | --- |
 | OpenAI/Codex | Official App Server managed sign-in; separate CODEX_HOME; allowlisted account/quota reads; fresh external authorization browser. | Actual two-account Windows sign-in, default-browser preservation, bucket matching, cross-device updates, logout and renewal need live proof. No universal ChatGPT quota API is claimed. |
-| Claude | User-installed, unmodified Claude Code; official auth/status; per-config first-party storage; experimental PTY `/usage` reader. | Automated fresh-browser sign-in, live idle freshness and acceptable monitoring/distribution use remain unresolved. No enabled public independent Claude connector or bundled Claude binary. |
+| Claude | User-installed, unmodified Claude Code; official auth/status; per-config first-party storage; experimental PTY `/usage` reader. | Automated fresh-browser sign-in, live idle freshness and acceptable monitoring/distribution use remain unresolved. The later local service has an experimental router/adapter; real acceptance is pending and no Claude binary is bundled. |
 
 [Anthropic's credential-use conditions](https://code.claude.com/docs/en/legal-and-compliance#authentication-and-credential-use)
 restrict third-party credential collection and distinguish user sign-in to
@@ -174,4 +172,13 @@ isolation, Windows path handling, separate account values, changes over time,
 identity fencing, same-account duplicate hints, cancellation, quota preservation,
 explicit manual evidence and privacy. A real ConPTY fixture run in Windows CI is
 distinct from real Windows provider/browser acceptance. See
-[ACCOUNT-PROOF-HANDOFF.md](ACCOUNT-PROOF-HANDOFF.md) for actual results.
+[the consolidated historical record](IMPLEMENTATION-HISTORY.md) for actual results.
+
+## Later local-service routing evidence
+
+The diagnostic menu deliberately keeps its older manual Claude login guard.
+The production local adapter separately implements the official BROWSER override
+and has unauthenticated Linux/Windows binary routing evidence. Do not use this
+diagnostic's guard as proof that the later router is absent. Real account-B sign-in,
+primary-browser preservation and current remote-device quotas remain pending.
+See [history](IMPLEMENTATION-HISTORY.md) and the current handoff before changing code.

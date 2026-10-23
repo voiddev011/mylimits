@@ -210,10 +210,57 @@ or sent to the extension/backend. Browser-owned profile folders may contain cook
 
 Only normalized /usage panel readings and allowlisted auth/account/organization
 metadata cross Native Messaging. Raw terminal output stays in native memory and
-is discarded. Display email is transient and hidden in privacy mode; salted binding
-and optional organization ID are stored locally. CLI-provided reset times are used
+is discarded. Display email crosses the local native connection for explicit
+confirmation and is hidden in privacy mode. In 3.4 it is also stored in Desktop's
+protected local connection metadata so interrupted confirmation can resume; it is
+not saved in extension account storage or exports. Salted binding and optional
+organization ID are stored locally. CLI-provided reset times are used
 only when actually supplied; unknown resets remain null. Provider observation time
 is not inferred from terminal redraws. Failed reads preserve their previous age.
 Checks wait at least five minutes and back off on failures. First-party onboarding
 may open an official setup terminal once; user trust/terms choices are not automated.
 No model prompts or API inference calls are sent by the adapter.
+
+## Desktop setup and recovery (3.4)
+
+The guided per-user Windows installer reads only extension name/ID/profile metadata
+from Preferences/Secure Preferences to authorize installed MyLimits native clients.
+It does not read website cookies or copy a browser's authenticated session. It
+downloads selected runtimes from official Node/npm sources with pinned integrity
+checks; Claude installation uses official WinGet. Selected downloads are displayed.
+No account metadata is sent to an installer service. Archive cache is removed on
+successful setup. Local size reports contain byte counts and timestamps only.
+
+Owned-process recovery records contain PID, executable path and start time; never
+authorization URLs, environment, stdout or credentials. Process repair validates
+current-user ownership and PID lifetime before stopping owned trees. Runtime rollback
+does not overwrite provider account directories. Uninstall offers keeping/deleting
+local profiles; deletion alone cannot establish remote revocation. Desktop requires
+no MyLimits cloud identity or default backend connection. Optional snapshot sync
+remains a separate explicit choice.
+
+## Hosted foundation preview (3.3)
+
+No hosted OpenAI/Claude provider is enabled by this preview and its default build
+has no service URL. Website tracking needs no MyLimits identity or local helper.
+If a supported hosted service is deployed later, the user must explicitly connect
+MyLimits and authorize each provider. MyLimits identity is separate from provider
+consent. Hosted-only device pairing does not enable uploading website snapshots.
+
+The extension receives normalized account metadata and readings. Provider
+credentials remain server-side in encrypted storage backed by operator-configured
+Vault transit, or an approved runtime's protected credential store when established.
+The extension stores only safe pending-attempt IDs; auth URLs/state/codes/tokens
+are not saved there or sent to dashboard messages. Account-ID confirmation is
+hidden by privacy mode. The MyLimits device bearer remains private background
+storage, as in existing snapshot sync; it is not a provider credential.
+
+Disconnect fences jobs and deletes the account credential locally on the server;
+optional provider revocation is attempted when supported, otherwise unconfirmed.
+It does not sign other accounts out. Forget additionally removes hosted readings
+and attempts. Hosted history is capped at5000 readings/connection and30 days,
+retaining the newest dated reading; completed attempts expire after7 days.
+Existing local retention controls continue. Global data deletion includes hosted
+attempts, jobs, readings, credentials and connections. Operator backups require
+separate retention/deletion handling; deleting active DB records does not rewrite
+old backups. Public hosting and actual provider renewal/logout remain unverified.

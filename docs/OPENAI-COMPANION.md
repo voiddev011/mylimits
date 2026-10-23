@@ -1,8 +1,83 @@
-> Current 3.1 branch: see [MULTI-ACCOUNT-INSTALL.md](MULTI-ACCOUNT-INSTALL.md).
-> The following describes the previous 3.0 helper/release; its package is not
-> compatible with the new independent-account setup.
+# Existing experimental local service — developer reference
 
-# OpenAI companion (Windows and Linux prototype)
+Updated 22 October 2026. **Use [3.4 guided installation](INSTALL.md) for the current
+Desktop preview.** Independent + now uses the local service with explicit account
+confirmation. No real A/B account acceptance has been recorded. The older 3.2
+installation instructions below are historical developer references, not current
+public setup. Do not install an old helper to test the 3.4 confirmation protocol.
+
+Follow [Desktop delivery and pending acceptance](DESKTOP-ACCOUNTS-HANDOFF.md) for the
+upgrade and [current extension install](INSTALL.md) for the current branch.
+Historical 3.2 artifact links and actual test evidence are in
+[IMPLEMENTATION-HISTORY.md](IMPLEMENTATION-HISTORY.md). Older downloads can expire.
+
+## Windows x64: helper, once
+
+Use the **3.2** `mylimits-companion-windows-unsigned.exe` from this branch's build
+artifacts. Older 3.0 helpers cannot perform the new connection protocol. This is
+an unsigned development installer; it is not a published/signed public release.
+
+Run as your normal Windows user. Finish setup, choose the discovered browser and
+MyLimits installation, then Register and start. Node and official Codex are bundled.
+If discovery misses an unpacked extension, the GUI allows choosing the browser
+and entering the ID shown on its Extensions page. This fallback is developer setup,
+not the intended stable store-ID release flow. Do not run as Administrator.
+
+Reopen MyLimits → + → OpenAI → Connect an independent account → Enable helper
+connection. Approve optional browser native access. The UI must say Helper ready.
+If it requests an update, install this branch's 3.2 helper and retry.
+
+## Claude prerequisites
+
+In the helper setup GUI, select Install official Claude Code if it is not already
+installed. It uses the official WinGet package and shows its normal installation
+prompts. Official Claude Code 2.1.301+ and an account eligible for Claude Code are
+required; MyLimits does not grant subscription access. Update the helper so its
+Windows browser launcher and terminal runtime are installed.
+
+## Add Personal and Work
+
+1. Set nickname Personal, choose independent connection and Sign in to OpenAI.
+2. Complete first-party login in the **separate browser profile** it opens. Your
+   ordinary ChatGPT window should remain on its original account; verify this.
+3. Return to the dashboard. The helper verifies identity before reporting success.
+   Check the displayed account locally; privacy mode hides it. Quota may be
+   unavailable even when authentication succeeded.
+4. Add Work with the same flow and sign into your other account.
+5. Both appear in Overview/popup. Rename via account details. Manage sign-in,
+   cancellation, reconnect and disconnect in Accounts.
+
+If both return the same email, MyLimits reports a duplicate hint and does not
+announce a second successful connection. Email cannot establish a distinct
+workspace; profiles are not merged. Disconnect the unintended profile and retry
+with the correct account. Login cancellation does not claim remote revocation;
+Disconnect requests official CLI logout.
+
+Checks wait at least two minutes per account, including failures; retries back off.
+Only returned Codex/Work quota windows are displayed. Ordinary ChatGPT message,
+image and voice allowances are separate. Unknown quotas stay unknown. Failed
+checks retain visibly dated readings; opening the extension requests eligible
+refreshes. Neither the UI nor these intervals guarantee real-time provider data.
+
+For Claude, + → Claude → Connect an independent account → Enable helper
+connection → Sign in to Claude. Each gets a separate official CLI profile and
+browser sign-in. If prompted, select Finish Claude setup, complete the official
+first-run prompts, then close that window. Do not send a model prompt. Select
+Check setup after the displayed cooldown. Setup/trust/terms are never auto-accepted.
+Subsequent reads run from the extension; no recurring terminal commands are needed.
+Claude checks wait at least five minutes per account. A new panel read is not
+proof of immediate upstream/other-device freshness; validate this with your accounts.
+
+Linux requires the official CLI and xterm for first-party onboarding. Firefox
+continues website tracking; its native host registration is not supplied.
+
+
+## Legacy OpenAI setup and troubleshooting
+
+The following retains earlier source-install/Linux/cleanup details. Versioned
+release references are historical and do not describe the active Desktop upgrade.
+
+## OpenAI companion (Windows and Linux prototype)
 
 This optional local service connects through the official Codex App Server. It
 reads the quota buckets OpenAI exposes without relying on ChatGPT website cookies.
@@ -11,7 +86,7 @@ but **not yet verified with a real signed-in account**, ordinary website logout,
 other-device usage, or token renewal. These are acceptance tests, not guarantees.
 Ordinary ChatGPT chat limits are not established by the returned Codex buckets.
 
-## Optional Windows setup GUI (3.0)
+### Optional Windows setup GUI (3.0)
 
 The unsigned per-user installer adds Start-menu Setup and Uninstall entries.
 It discovers the MyLimits extension from browser metadata, with a manual ID fallback.
@@ -23,7 +98,7 @@ acceptance](PLATFORMS.md) for the artifact, setup and deletion behavior. No real
 Windows/native/provider verification is claimed. Basic extension tracking never
 requires this installer.
 
-## Manual Windows setup (Chrome, Brave or Edge)
+### Manual Windows setup (Chrome, Brave or Edge)
 
 The Windows installer and API fallback are implemented, but Windows Task Scheduler,
 registry registration, native host launch and real OpenAI sign-in still need a live
@@ -75,7 +150,7 @@ first disconnect accounts in MyLimits, then stop/remove the task and remove the
 `com.mylimits.openai` key from your browser's **HKCU** NativeMessagingHosts registry
 branch. Do not delete credential files as a substitute for disconnecting access.
 
-## Install on your Linux computer
+### Install on your Linux computer
 
 Use desktop Chrome, Chromium, or Brave on a normal Linux installation. Snap/Flatpak
 browser isolation can prevent native messaging. Windows setup is above. macOS and Firefox are not supported. Node.js 24+ is required.
@@ -126,7 +201,7 @@ If a website-based ChatGPT record is also enabled, it remains a separate record.
 Disable that website reader if you want only the companion connection. The companion
 never guesses that two separately authorized profiles are the same account.
 
-## What updates and when
+### What updates and when
 
 - The daemon asks `account/rateLimits/read` about once every 60 seconds and reacts
   to `account/rateLimits/updated` by requesting a fresh authoritative reading.
@@ -146,7 +221,7 @@ never guesses that two separately authorized profiles are the same account.
   confirmed with your account. A global logout, revocation, or security check can
   end access. This is not a permanent authorization promise.
 
-## Credentials and local boundaries
+### Credentials and local boundaries
 
 Each profile has a separate `CODEX_HOME` under
 `~/.local/share/mylimits-companion/accounts/<profile-id>` on Linux, or
@@ -182,7 +257,7 @@ while the service is running. Then stop the service and remove its user unit and
 Do not assume deleting a file remotely revokes credentials. Do not share the data
 directory, authorization URLs, or credential files in bug reports.
 
-## Troubleshooting
+### Troubleshooting
 
 ```sh
 systemctl --user status mylimits-companion.service
@@ -199,7 +274,7 @@ journalctl --user -u mylimits-companion.service -n 30
 - **Reconnect needed:** provider authorization can expire or be revoked independently
   of a website tab. Complete the official sign-in again.
 
-## Required live acceptance test
+### Required live acceptance test
 
 1. Connect, confirm a real reading and match its window to OpenAI's usage page.
 2. Sign out of the ChatGPT website only; confirm the companion can still read.
@@ -210,7 +285,7 @@ journalctl --user -u mylimits-companion.service -n 30
 7. Disconnect/revoke access; verify reads stop and reconnect is required.
 8. Connect two different accounts and confirm no identity or quota mixing.
 
-## Main implementation
+### Main implementation
 
 - `companion/app-server.mjs`: bounded JSON-RPC transport; initialize, correlate
   requests, time out, handle process failure, reject tool requests, hide raw errors.
@@ -227,7 +302,7 @@ journalctl --user -u mylimits-companion.service -n 30
 References: [App Server auth and rate limits](https://developers.openai.com/codex/app-server),
 [Codex credential storage](https://developers.openai.com/codex/auth).
 
-## Verification of this implementation
+### Verification of this implementation
 
 Node 24 type checking and the production Chrome build passed. The local suite
 passed 33 core/parser/overview tests, 13 companion tests (including a real child
@@ -243,7 +318,7 @@ launcher quoting and mutual bridge authentication, plus browser coverage for a
 missing native API and unit coverage for partial browser namespace fallback. The
 Windows task/registry installer still requires the live Windows acceptance test.
 
-## Version 3.0 authorization isolation
+### Version 3.0 authorization isolation
 
 The updated daemon opens each official authorization URL in an installed
 Chrome/Brave/Edge/Chromium executable using a dedicated persistent browser profile

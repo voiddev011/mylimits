@@ -51,3 +51,17 @@ test('pause stops uploads and disconnect revokes the device without discarding l
 test('expired backlog remains local and cannot block newer sync with permanent server time errors',async()=>{
  const f=fixture(),now=Date.now();const old=structuredClone(f.store.snapshots[0]!);old.snapshotId='older-than-service-retention';old.observedAt=now-91*86400000;old.receivedAt=old.observedAt;f.setStore({...f.store,snapshots:[old,...f.store.snapshots]});await f.connect();const status=await f.sync.run(true,now);assert.equal(f.saved.acknowledged.length,1);assert.ok(status.error?.includes('90 days'));assert.equal(f.store.snapshots.length,2);const payload=f.calls.find(c=>c.path==='/v1/snapshots/batch')!.body as {items:SyncItem[]};assert.equal(payload.items.length,1);assert.notEqual(payload.items[0]!.snapshot.snapshotId,old.snapshotId);
 });
+test('hosted-only pairing does not enable snapshot uploads and private hosted API cannot target arbitrary paths',async()=>{
+ const f=fixture();await f.sync.start();await f.sync.poll(false);f.calls.length=0;await f.sync.run();assert.equal(f.calls.length,0);assert.equal((await f.sync.status()).connected,true);assert.equal((await f.sync.status()).enabled,false);
+ await f.sync.hostedRequest('/v1/hosted/connections');assert.equal(f.calls[0]!.path,'/v1/hosted/connections');
+ await assert.rejects(f.sync.hostedRequest('https://evil.invalid/steal'),/Invalid hosted/);
+ await assert.rejects(f.sync.hostedRequest('/v1/accounts'),/Invalid hosted/);
+});
+test('hosted readings are never uploaded back as website snapshot imports',async()=>{
+ const f=fixture();await f.connect();const hosted={...f.store.snapshots[0]!,accountId:'hosted:fixture',snapshotId:'hosted-reading'};f.setStore({...f.store,snapshots:[...f.store.snapshots,hosted]});await f.sync.run(true);
+ const b=f.calls.find(c=>c.path==='/v1/snapshots/batch')!.body as {items:SyncItem[]};assert.ok(b.items.every(i=>!i.snapshot.accountId.startsWith('hosted:')));
+});
+test('expired hosted device authorization clears the revoked link and preserves local data',async()=>{
+ const f=fixture();await f.connect();const request=f.port.request;f.port.request=async(path,o)=>{if(path.startsWith('/v1/hosted/'))throw new SyncError(401);return request(path,o);};
+ await assert.rejects(f.sync.hostedRequest('/v1/hosted/connections'));assert.equal((await f.sync.status()).connected,false);assert.equal(f.store.accounts.length,1);assert.equal(f.saved.token,null);
+});

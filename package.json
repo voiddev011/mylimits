@@ -1,6 +1,6 @@
 {
   "name": "mylimits",
-  "version": "3.2.0",
+  "version": "3.4.0",
   "private": true,
   "description": "Your AI usage limits, accounts, and reset times in one place.",
   "type": "module",
@@ -15,7 +15,7 @@
     "postinstall": "wxt prepare",
     "companion:install": "node companion/install.mjs",
     "companion:start": "node companion/daemon.mjs",
-    "test:companion": "node companion/companion.test.mjs && node --test --test-timeout=45000 companion/connections.test.mjs",
+    "test:companion": "node companion/companion.test.mjs && node --test --test-timeout=45000 companion/connections.test.mjs && node --test --test-timeout=20000 companion/transport.test.mjs companion/runtime-update.test.mjs",
     "build:firefox": "wxt build -b firefox",
     "zip:firefox": "wxt zip -b firefox",
     "build:edge": "wxt build -b edge",
@@ -24,7 +24,9 @@
     "test:account-proof": "node --test companion/proof/proof.test.mjs",
     "test:connections": "node --test --test-timeout=45000 companion/connections.test.mjs",
     "probe:hosted": "node scripts/probe-hosted-login.mjs",
-    "test:hosted-probe": "node --test companion/proof/hosted-login.test.mjs"
+    "test:hosted-probe": "node --test companion/proof/hosted-login.test.mjs",
+    "package:desktop": "node scripts/package-desktop.mjs",
+    "test:desktop-package": "node --test scripts/desktop-package.test.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

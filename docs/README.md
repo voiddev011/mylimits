@@ -1,104 +1,51 @@
-# Current experiment: installer-free hosted accounts
+# MyLimits — documentation
 
-See [trial plan and actual results](HOSTED-ACCOUNTS-TRIAL-PLAN.md) on
-`feature/hosted-account-proof`. Official OpenAI device-code initiation/cancellation
-was observed on a server; Claude returned a loopback callback. No real account was
-authenticated and no quota fetched. The user reports the existing GPT sign-in
-journey still opens the ordinary browser session; it remains unresolved. This
-experiment is not a shipped cloud connector or a new extension release.
+MyLimits brings AI account readings into one compact browser dashboard.
+Website tracking exists. The active upgrade is **MyLimits Desktop + extension**:
+separate official OpenAI/Codex and Claude profiles, combined in the extension.
+Real two-account freshness/login acceptance remains pending for both providers.
 
-# Previous checkpoint: MyLimits 3.2 — Independent accounts preview
+## Implementation
 
-Current branch: **`feature/independent-accounts`**.
-[Install](MULTI-ACCOUNT-INSTALL.md) · [Code checklist](MULTI-ACCOUNT-CODE-CHECKLIST.md) ·
-[Status](IMPLEMENTATION-STATUS.md) · [Handoff and downloads](MULTI-ACCOUNT-HANDOFF.md).
+- [Start here](START-HERE.md)
+- [Current status](IMPLEMENTATION-STATUS.md)
+- [Desktop delivery and pending live acceptance](DESKTOP-ACCOUNTS-HANDOFF.md)
+- [Historical evidence and consolidated checkpoints](IMPLEMENTATION-HISTORY.md)
+- [Competitor research](COMPETITOR-RESEARCH.md)
 
-Track available OpenAI Codex/Work and Claude Code subscription quotas from
-multiple independently connected accounts in one browser dashboard. Real-account
-acceptance is a separate manual checklist; this is an unpublished preview.
+## Install and operate
 
-## Connections
+- [Current extension installation](INSTALL.md)
+- [Existing experimental local service](OPENAI-COMPANION.md)
+- [Developer account-proof diagnostic](ACCOUNT-PROOF.md)
+- [Platforms and packaging](PLATFORMS.md)
+- [Provider support and manual acceptance](SUPPORT.md)
 
-- **Website tracking:** reads the account signed into this browser. No helper
-  required. Other saved website accounts keep clearly dated readings.
-- **Independent accounts:** optional local helper, one official CLI profile per
-  account, and separate browser sign-in windows. Add B while keeping your normal
-  website session on A. The extension operates subsequent connection actions.
-- **History:** retained values keep their actual successful fetch timestamp.
-  Missing quotas remain unknown; stale data does not become fresh on restart.
+## Contracts and reference
 
-Open + → choose OpenAI or Claude → Connect an independent account. Install the
-3.2 helper once, authorize its optional browser connection, then complete official
-sign-in. Give each connection its own nickname. Claude requires the official
-Claude Code CLI and may need one-time onboarding in its own setup window.
+- [Architecture](ARCHITECTURE.md)
+- [Provider capabilities and integration evidence](PROVIDER-CAPABILITIES.md)
+- [Privacy](PRIVACY.md)
+- [Provider assets](PROVIDER-ASSETS.md)
+- [Optional server operations](SERVER-SETUP.md)
+- [Deferred hosted provider-access drafts](PROVIDER-ACCESS-REQUESTS.md)
 
-The official CLIs own credentials and renewal. MyLimits does not request passwords,
-copy browser cookies, extract CLI tokens or put credentials into extension storage.
+Project Markdown lives directly in this folder. Completed execution plans and starter prompts are archived in Git history.
+Older removed plans and phase ledgers remain in Git history; their unique evidence
+is consolidated above. Version 3.4 defaults independent connections to Desktop.
+The hosted provider registry remains empty and is not a fallback for Desktop.
 
-## Scope and behavior
+## Docker build and optional API
 
-OpenAI reports returned **Codex/Work** windows, not all ordinary ChatGPT chat,
-image, upload or voice allowances. Claude reports supported **subscription /usage**
-percentages; unknown reset timestamps stay unknown. Other providers retain their
-existing website adapters and are not independently connected by this update.
-
-Eligible refreshes respect provider waits and error backoff: at least two minutes
-for OpenAI, five minutes for Claude. These intervals do not guarantee immediate
-provider data. Other-device changes, website logout and actual credential renewal
-are pending manual acceptance. Global session revocation may require reconnecting.
-
-The helper is optional for website tracking and required for independent accounts.
-Windows x64 provides a guided current-user installer. Linux needs official components
-and xterm for first-party Claude onboarding. Firefox remains website-only.
-
-## Interface
-
-Compact popup: provider logos, aliases, quota bars/reset times, dated status,
-refresh, + account and Full dashboard. The dashboard contains account management,
-history, settings, privacy controls and diagnostics. Guide/prompt features remain
-removed. The optional floating button still displays Coming soon.
-
-Existing account IDs, nicknames, pins, alerts and history are preserved. Optional
-snapshot sync copies readings; it does not maintain remote AI login sessions.
-No backend is required for local independent connections.
-
-## Develop
-
-Run commands from the repository root with Node **22.15+**:
-
-```sh
-npm ci --include=optional
-npm run dev
-npm run check
-npm run test:account-proof
-npm run test:browser
-npm run zip
-npm run build:firefox
-npm run zip:firefox
-```
-
-Load `.output/chrome-mv3` in Chrome/Brave/Edge after building. The packaged ZIP is
-`.output/mylimits-3.2.0-chrome.zip`. Browser tests need Playwright Chromium and use
-isolated fictional profiles; they do not prove real provider behavior.
-
-Built packages do not require Node/npm. Follow the current install guide for the
-matching 3.2 extension and helper, not historical 3.0/3.1 artifacts. All maintained
-project Markdown belongs directly in `docs/`.
-
-## Docker
-
-Build the browser extension in Docker with a maintained Node major (22, 24 or
-26); pass `--build-arg NODE_VERSION=22` to select Node 22. The default is Node
-24. The builder runs `npm run build` and writes output to `.output`.
+The extension builder defaults to Node 24. Select another maintained major through
+`NODE_VERSION` (22, 24 or 26); source tooling requires at least Node 22.15.
 
 ```powershell
 docker build --build-arg NODE_VERSION=22 -t mylimits-extension-builder .
 docker run --rm -v "${PWD}\.output:/app/.output" mylimits-extension-builder
 ```
 
-The optional snapshot API and PostgreSQL database can be started with
-`docker compose up --build`. See [SERVER-SETUP.md](SERVER-SETUP.md) for setup,
-configuration and deployment limitations.
-
-[Privacy](PRIVACY.md) · [Architecture](ARCHITECTURE.md) ·
-[Provider evidence](PROVIDER-CAPABILITIES.md) · [Support](SUPPORT.md).
+This builds extension files; it does not host a browser extension or connect AI
+accounts remotely. The root `compose.yaml` runs the optional API and PostgreSQL
+with `docker compose up --build`. See [server setup](SERVER-SETUP.md) for local
+configuration, data-volume behavior and production limitations.

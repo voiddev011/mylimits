@@ -1,14 +1,15 @@
 import { z } from 'zod';
 export const IndependentProviderSchema = z.enum(['openai', 'claude']);
-export const AuthStateSchema = z.enum(['signing-in', 'verifying', 'connected', 'needs-sign-in', 'needs-setup', 'duplicate', 'disconnected', 'unavailable']);
+export const AuthStateSchema = z.enum(['signing-in', 'verifying', 'awaiting-confirmation', 'connected', 'needs-sign-in', 'needs-setup', 'duplicate', 'disconnected', 'unavailable']);
 const time = z.number().finite().min(0).max(8.64e15);
 export const CapabilitySchema = z.object({
   provider: IndependentProviderSchema, available: z.boolean(), scope: z.enum(['work-codex', 'subscription']),
   isolatedLogin: z.boolean(), activeRefresh: z.boolean(), liveVerified: z.literal(false), reason: z.string().max(300).nullable(),
 }).strict();
-export const CapabilitiesSchema = z.object({ protocol: z.literal(2), version: z.string().max(30), providers: z.array(CapabilitySchema).max(10) }).strict();
+export const CapabilitiesSchema = z.object({ protocol: z.literal(2), version: z.string().max(30), identityConfirmation: z.boolean().optional(), providers: z.array(CapabilitySchema).max(10) }).strict();
 export const IndependentMetadataSchema = z.object({
   provider: IndependentProviderSchema, alias: z.string().max(60), authState: AuthStateSchema,
+  authorizationGeneration: z.number().int().min(0).optional(),
   identityConfidence: z.enum(['unverified', 'email-only', 'email-and-organization']),
   providerSubject: z.string().max(240).nullable(), workspaceIdentity: z.string().max(240).nullable(),
   capability: z.enum(['work-codex', 'subscription']),

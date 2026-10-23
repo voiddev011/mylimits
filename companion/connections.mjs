@@ -1,17 +1,18 @@
 import { EventEmitter } from 'node:events';
 import { randomUUID, createHmac } from 'node:crypto';
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, writeFile, access } from 'node:fs/promises';
 import path from 'node:path';
 import { AppServer } from './app-server.mjs';
 import { parseLimits } from './limits.mjs';
 import { openAuthBrowser } from './auth-browser.mjs';
 import { safeAuthUrl } from './protocol.mjs';
-import { profileEnvironment } from './proof/runtime.mjs';
+import { profileEnvironment, findCli } from './proof/runtime.mjs';
 import { atomicJson, privateDirectory, uuid } from './proof/store.mjs';
 import { createClaudeAdapter } from './claude-adapter.mjs';
 import { codexLoginWaiter } from './proof/codex-login.mjs';
+import {OwnedProcesses} from './owned-processes.mjs';
 
-export const capabilities = { protocol: 2, version: '3.2.0-preview', providers: [
+export const capabilities = { protocol: 2, version: '3.4.0-preview', identityConfirmation: true, providers: [
   { provider: 'openai', available: true, scope: 'work-codex', isolatedLogin: true, activeRefresh: true, liveVerified: false, reason: 'Live account, cross-device, logout and renewal checks are pending.' },
   { provider: 'claude', available: true, scope: 'subscription', isolatedLogin: true, activeRefresh: true, liveVerified: false, reason: 'Experimental official Claude Code adapter. Account freshness/logout/renewal require manual acceptance; publication review remains separate.' },
 ] };
@@ -24,14 +25,16 @@ function identity(info) {
   return { binding: a.email.trim().toLowerCase(), display: a.email,
     plan: typeof a.planType === 'string' && /^[a-zA-Z0-9_-]{1,80}$/.test(a.planType) ? a.planType : null };
 }
-const empty = (id, provider = 'openai') => ({ id, provider, alias: '', generation: 0, binding: null,
+const empty = (id, provider = 'openai') => ({ id, provider, alias: '', generation: 0, binding: null, confirmed: false,
   authState: 'needs-sign-in', plan: null, updatedAt: 0, meters: [], lastAttemptAt: null,
   providerObservedAt: null, nextRetryAt: null, failures: 0, errorCode: null, status: 'signed-out' });
 function savedProfile(p) {
   if (!uuid(p?.id) || !['openai','claude'].includes(p.provider) || !aliases(p.alias) || !Number.isSafeInteger(p.generation) || p.generation < 0 ||
     p.binding !== null && !/^[a-f0-9]{64}$/.test(p.binding) || !time(p.updatedAt) ||
     p.lastAttemptAt !== null && !time(p.lastAttemptAt) || p.nextRetryAt !== null && !time(p.nextRetryAt) ||
-    !Number.isSafeInteger(p.failures) || p.failures < 0 || !Array.isArray(p.meters) || p.meters.length > 30) throw failure('invalid-cache');
+    !Number.isSafeInteger(p.failures) || p.failures < 0 || !Array.isArray(p.meters) || p.meters.length > 30 ||
+    p.confirmed !== undefined && typeof p.confirmed !== 'boolean' ||
+    p.displayIdentity != null && (typeof p.displayIdentity !== 'string' || p.displayIdentity.length > 254 || /[\x00-\x1f\x7f]/.test(p.displayIdentity))) throw failure('invalid-cache');
   // Re-normalize persisted meters with the same allowlist as upstream responses.
   const meters = p.meters.map(m => {
     if (!m || !(p.provider === 'openai' ? /^[a-zA-Z0-9_-]{1,70}-(primary|secondary)$/.test(m.id) : ['session','week-all','week-sonnet','week-opus'].includes(m.id)) || typeof m.label !== 'string' || m.label.length > 120 ||
@@ -43,27 +46,37 @@ function savedProfile(p) {
   return { ...empty(p.id,p.provider), alias: p.alias, generation: p.generation, binding: p.binding, plan: typeof p.plan === 'string' && /^[\w-]{1,80}$/.test(p.plan) ? p.plan : null,
     updatedAt: p.updatedAt, meters, lastAttemptAt: p.lastAttemptAt, nextRetryAt: p.nextRetryAt, failures: p.failures,
     // Restart never makes old readings current. Explicit logout stays signed out.
-    authState: p.authState === 'disconnected' ? 'disconnected' : p.authState === 'needs-sign-in' ? 'needs-sign-in' : 'unavailable',
+    authState: p.authState === 'awaiting-confirmation' && p.confirmed === false ? 'awaiting-confirmation' : p.authState === 'disconnected' ? 'disconnected' : p.authState === 'needs-sign-in' ? 'needs-sign-in' : 'unavailable',
+    confirmed: typeof p.confirmed === 'boolean' ? p.confirmed : true,
+    displayIdentity: typeof p.displayIdentity === 'string' && p.displayIdentity.length <= 254 ? p.displayIdentity : null,
     identityConfidence: p.identityConfidence==='email-and-organization'?'email-and-organization':'email-only', workspaceIdentity: typeof p.workspaceIdentity==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(p.workspaceIdentity)?p.workspaceIdentity:null,
     status: ['disconnected', 'needs-sign-in'].includes(p.authState) ? 'signed-out' : 'unavailable' };
 }
 
 export class Connections extends EventEmitter {
-  constructor({ directory, executable = 'codex', makeClient = options => new AppServer(options), now = Date.now, launchAuth = openAuthBrowser, claudeAdapter = createClaudeAdapter() }) {
+  constructor({ directory, executable = 'codex', makeClient = async options => new AppServer({...options,executable:path.isAbsolute(options.executable)?options.executable:await findCli('openai')}), now = Date.now, launchAuth = openAuthBrowser, claudeAdapter = createClaudeAdapter() }) {
     super(); Object.assign(this, { directory, executable, makeClient, now, launchAuth, claudeAdapter });
+    this.owned=new OwnedProcesses(directory);
     this.profiles = new Map(); this.operations = new Map(); this.logins = new Map(); this.clients = new Set(); this.providerAborts = new Map();
     this.saving = Promise.resolve(); this.indexSaving = Promise.resolve(); this.slots = []; this.running = 0; this.stopping = false;
   }
   async load() {
     await privateDirectory(this.directory);
+    await this.owned.assertClean();
     const file = path.join(this.directory, 'connections-v2.json');
     try {
       const text = await readFile(file, 'utf8');
       if (Buffer.byteLength(text) > 512 * 1024) throw failure('invalid-cache');
       const state = JSON.parse(text);
-      if (state.version !== 2 || !uuid(state.salt) || !Array.isArray(state.profiles) || state.profiles.length > 20) throw failure('invalid-cache');
+      if (state.version !== 2 || state.revision !== undefined && state.revision !== 1 || !uuid(state.salt) || !Array.isArray(state.profiles) || state.profiles.length > 20) throw failure('invalid-cache');
       this.salt = state.salt;
       for (const p of state.profiles) { const profile = savedProfile(p); if (this.profiles.has(profile.id)) throw failure('invalid-cache'); this.profiles.set(profile.id, profile); }
+      if (state.revision === undefined) {
+        // Metadata-only backup; never copy/open first-party credential stores.
+        try { await writeFile(path.join(this.directory,'connections-pre-desktop.json'),text,{flag:'wx',mode:0o600}); }
+        catch (error) { if(error.code!=='EEXIST')throw error; }
+        await this.save();
+      }
     } catch (error) {
       if (error.code !== 'ENOENT') throw failure('invalid-cache');
       let ids = [];
@@ -71,13 +84,14 @@ export class Connections extends EventEmitter {
       catch (error) { if (error.code !== 'ENOENT') throw failure('invalid-cache'); }
       if (!Array.isArray(ids) || ids.length > 20 || ids.some(id => !uuid(id)) || new Set(ids).size !== ids.length) throw failure('invalid-cache');
       this.salt = randomUUID();
-      for (const id of ids) this.profiles.set(id, { ...empty(id), authState: 'unavailable', status: 'unavailable' });
+      for (const id of ids) this.profiles.set(id, { ...empty(id), confirmed: true, authState: 'unavailable', status: 'unavailable' });
       await this.save(); // Existing accounts/<uuid> directories and extension IDs stay untouched.
     }
   }
   save() {
-    const payload = { version: 2, salt: this.salt, profiles: [...this.profiles.values()].map(p => ({
+    const payload = { version: 2, revision: 1, salt: this.salt, profiles: [...this.profiles.values()].map(p => ({
       id: p.id, provider: p.provider, alias: p.alias, generation: p.generation, binding: p.binding,
+      confirmed: p.confirmed, displayIdentity: p.displayIdentity ?? null,
       authState: p.authState, plan: p.plan, updatedAt: p.updatedAt, meters: p.meters,
       lastAttemptAt: p.lastAttemptAt, nextRetryAt: p.nextRetryAt, failures: p.failures,
       identityConfidence:p.identityConfidence??null, workspaceIdentity:p.workspaceIdentity??null,
@@ -90,6 +104,7 @@ export class Connections extends EventEmitter {
   snapshot() {
     return { type: 'snapshot', protocol: 2, profiles: [...this.profiles.values()].map(p => ({
       id: p.id, provider: p.provider, alias: p.alias, status: p.status, authState: p.authState,
+      authorizationGeneration: p.generation,
       plan: p.plan, updatedAt: p.updatedAt, meters: p.meters.map(m => ({ ...m })),
       displayIdentity: p.displayIdentity ?? null, identityConfidence: p.binding ? p.identityConfidence ?? 'email-only' : 'unverified',
       providerSubject: null, workspaceIdentity: p.workspaceIdentity ?? null, capability: p.provider === 'openai' ? 'work-codex' : 'subscription',
@@ -119,16 +134,20 @@ export class Connections extends EventEmitter {
   async withClient(p, task) {
     const home = path.join(this.directory, 'accounts', p.id);
     await privateDirectory(path.join(this.directory, 'accounts')); await privateDirectory(home);
-    await writeFile(path.join(home, 'config.toml'), 'cli_auth_credentials_store = "auto"\n', { mode: 0o600 });
-    const client = this.makeClient({ executable: this.executable, home, environment: profileEnvironment('openai', home) });
+    try { await writeFile(path.join(home, 'config.toml'), 'cli_auth_credentials_store = "auto"\n', { flag:'wx',mode:0o600 }); }
+    catch (error) { if(error.code!=='EEXIST')throw error; }
+    const client = await this.makeClient({ executable: this.executable, home, environment: profileEnvironment('openai', home) });
+    let release,trackingFailed=false;
+    try{release=await this.owned.track(client.child);}catch{trackingFailed=true;this.requiresRecovery=true;void client.ready.catch(()=>{});}
     this.clients.add(client);
-    try { await client.ready; return await task(client); }
+    try { if(trackingFailed)throw failure('shutdown-unconfirmed');await client.ready; return await task(client); }
     finally {
       const child = client.child; let timer;
       const stopped = child?.pid && child.exitCode === null && !child.signalCode
         ? new Promise(resolve => { child.once('exit', () => resolve(true)); timer = setTimeout(() => resolve(false), 5000); }) : Promise.resolve(true);
       client.close(); const confirmed = await stopped; clearTimeout(timer); this.clients.delete(client);
       if (!confirmed) { this.requiresRecovery = true; throw failure('shutdown-unconfirmed'); }
+      await release?.();
     }
   }
   interval(p) { return p.provider === 'claude' ? 300_000 : 120_000; }
@@ -142,7 +161,8 @@ export class Connections extends EventEmitter {
     const cancel=()=>abort.abort();signal?.addEventListener('abort',cancel,{once:true});
     if(signal?.aborted||this.stopping)abort.abort();
     try {
-      const context=await this.claudeAdapter.context(path.join(this.directory,'accounts',p.id),p.generation,abort.signal);
+      const context=await this.claudeAdapter.context(path.join(this.directory,'accounts',p.id),p.generation,abort.signal,(child,executable)=>this.owned.track(child,executable));
+      context.trackProcess=(child,executable)=>this.owned.track(child,executable);
       return await task(context);
     } finally {signal?.removeEventListener('abort',cancel);this.providerAborts.delete(p.id);}
   }
@@ -176,6 +196,7 @@ export class Connections extends EventEmitter {
   async add(provider = 'openai', alias = '') {
     if (!['openai','claude'].includes(provider)) throw failure('provider-unavailable');
     if (provider === 'claude' && !(await this.claudeAdapter.readiness()).available) throw failure('provider-unavailable');
+    if (this.logins.size) throw failure('busy');
     if (!aliases(alias) || this.profiles.size >= 20 || this.stopping) throw failure('invalid-request');
     const p = { ...empty(randomUUID(),provider), alias };
     this.profiles.set(p.id, p); await this.changed();
@@ -183,12 +204,12 @@ export class Connections extends EventEmitter {
   }
   beginLogin(id) {
     const p = this.get(id);
-    if (this.logins.has(id) || this.operations.has(id)) throw failure('busy');
+    if (this.logins.size || this.operations.has(id)) throw failure('busy');
     if (p.nextRetryAt && p.nextRetryAt > this.now()) throw failure('cooldown');
     const abort = new AbortController();
     const entry = { abort, task: null }; this.logins.set(id, entry);
     const task = this.serial(id, async () => {
-      const generation = ++p.generation; p.authState = 'signing-in'; p.status = 'unavailable'; p.errorCode = null;
+      const generation = ++p.generation; p.confirmed = false; p.authState = 'signing-in'; p.status = 'unavailable'; p.errorCode = null;
       // Auth retries cannot be used as a quota-refresh bypass.
       p.nextRetryAt = this.now() + this.interval(p); await this.changed();
       try {
@@ -199,6 +220,7 @@ export class Connections extends EventEmitter {
             p.authState='verifying'; await this.changed();
             const who=await this.claudeAdapter.identity(context); this.verify(p,who,who,generation); this.captureIdentity(p,who);
             if(this.duplicate(p)){p.authState='duplicate';p.errorCode='possible-duplicate';p.status='unavailable';return;}
+            if (!p.confirmed) { p.authState='awaiting-confirmation'; return; }
             await this.readClaude(p,context,generation);
           },abort.signal);
         } else await this.withClient(p, async client => {
@@ -216,8 +238,9 @@ export class Connections extends EventEmitter {
             const who = identity(await client.request('account/read', { refreshToken: false }));
             this.verify(p, who, who, generation);
             // Bind only after first-party completion, never from a nickname.
-            p.binding = this.hash(who.binding,p.provider); p.displayIdentity = who.display; p.plan = who.plan;
+            this.captureIdentity(p, who);
             if (this.duplicate(p)) { p.authState = 'duplicate'; p.errorCode = 'possible-duplicate'; p.status = 'unavailable'; return; }
+            if (!p.confirmed) { p.authState = 'awaiting-confirmation'; return; }
             await this.read(p, client, generation, abort.signal);
           } catch (error) {
             if (loginId) await client.request('account/login/cancel', { loginId }).catch(() => {});
@@ -240,12 +263,41 @@ export class Connections extends EventEmitter {
     const p = this.get(id), login = this.logins.get(id);
     if (login) { login.abort.abort(); await login.task; }
     else if(this.providerAborts.has(id)){this.providerAborts.get(id).abort();await this.operations.get(id);}
+    else if (p.authState === 'awaiting-confirmation') {
+      p.generation++; p.authState = 'needs-sign-in'; p.displayIdentity = null;
+      p.errorCode = 'cancelled'; await this.changed();
+    }
     return { profile: p.id, cancelled: true };
   }
+  async confirm(id, generation, alias) {
+    const p = this.get(id);
+    if (!Number.isSafeInteger(generation) || generation !== p.generation ||
+        p.authState !== 'awaiting-confirmation' || this.operations.has(id)) throw failure('stale-confirmation');
+    if (alias !== undefined && !aliases(alias)) throw failure('invalid-request');
+    return this.serial(id, async () => {
+      if (p.generation !== generation || p.authState !== 'awaiting-confirmation') throw failure('stale-confirmation');
+      if (alias !== undefined) p.alias = alias;
+      try {
+        // Re-read the CLI-owned identity, not the label shown by the UI.
+        // This one collection belongs to the original sign-in operation; it
+        // does not start a second authorization or bypass refresh cooldowns.
+        if (p.provider === 'claude') await this.withClaude(p, async c => {
+          const who = await this.claudeAdapter.identity(c); this.verify(p,who,who,generation);
+          p.confirmed = true; await this.save(); await this.readClaude(p,c,generation);
+        });
+        else await this.withClient(p, async c => {
+          const who = identity(await c.request('account/read',{refreshToken:false})); this.verify(p,who,who,generation);
+          p.confirmed = true; await this.save(); await this.read(p,c,generation);
+        });
+      } catch (error) { this.setFailure(p, error); }
+      await this.changed(); return {};
+    });
+  }
   setFailure(p, error) {
-    const codes = ['needs-sign-in', 'identity-changed', 'cancelled', 'login-failed', 'shutdown-unconfirmed', 'terminal-stop-unconfirmed', 'needs-setup', 'unsupported-cli', 'missing-browser-router', 'browser-route-unconfirmed', 'setup-interrupted', 'missing-setup-terminal', 'throttled'];
+    const codes = ['needs-sign-in', 'identity-changed', 'cancelled', 'login-failed', 'shutdown-unconfirmed', 'terminal-stop-unconfirmed', 'needs-setup', 'unsupported-cli', 'unsupported-auth', 'unverified-profile', 'unverified-identity', 'unsupported-panel', 'unsupported-format', 'missing-browser-router', 'browser-route-unconfirmed', 'setup-interrupted', 'missing-setup-terminal', 'throttled'];
     p.errorCode = codes.includes(error?.code) ? error.code : 'unavailable';
     if(['terminal-stop-unconfirmed','shutdown-unconfirmed'].includes(p.errorCode)) this.requiresRecovery=true;
+    if (p.errorCode === 'identity-changed') p.confirmed = false;
     p.authState = ['needs-setup','missing-setup-terminal','setup-interrupted'].includes(p.errorCode) ? 'needs-setup' : ['needs-sign-in', 'identity-changed', 'cancelled', 'login-failed'].includes(p.errorCode) ? 'needs-sign-in' : 'unavailable';
     p.status = p.authState === 'needs-sign-in' ? 'signed-out' : 'unavailable'; p.failures++;
     const backoff = this.now() + Math.min(30 * 60_000, this.interval(p) * 2 ** Math.min(p.failures - 1, 5));
@@ -271,7 +323,7 @@ export class Connections extends EventEmitter {
   }
   refresh(id, manual = false) {
     const p = this.get(id);
-    if (this.operations.has(id) || this.logins.has(id) || p.authState === 'disconnected' || p.authState === 'needs-sign-in' || p.authState === 'needs-setup' && !manual || p.authState === 'duplicate' || (p.nextRetryAt ?? 0) > this.now()) return Promise.resolve();
+    if (this.operations.has(id) || this.logins.has(id) || !p.confirmed || p.authState === 'awaiting-confirmation' || p.authState === 'disconnected' || p.authState === 'needs-sign-in' || p.authState === 'needs-setup' && !manual || p.authState === 'duplicate' || (p.nextRetryAt ?? 0) > this.now()) return Promise.resolve();
     return this.serial(id, async () => {
       if ((p.nextRetryAt ?? 0) > this.now() || p.authState === 'disconnected') return;
       try { if(p.provider==='claude') await this.withClaude(p,context=>this.readClaude(p,context,p.generation));
@@ -307,11 +359,15 @@ export class Connections extends EventEmitter {
   }
   async handle(request) {
     switch (request.method) {
-      case 'capabilities': { const result=structuredClone(capabilities); const ready=await this.claudeAdapter.readiness();
+      case 'capabilities': { const result=structuredClone(capabilities);
+        try { if(path.isAbsolute(this.executable))await access(this.executable);else this.executable=await findCli('openai'); }
+        catch { const openai=result.providers.find(p=>p.provider==='openai');openai.available=false;openai.reason='Install OpenAI support through MyLimits Desktop setup, then retry.'; }
+        const ready=await this.claudeAdapter.readiness();
         const claude=result.providers.find(p=>p.provider==='claude'); claude.available=ready.available; if(!ready.available)claude.reason=ready.reason; return result; }
       case 'status': case 'list': return this.snapshot();
       case 'add': case 'start': return this.add(request.provider ?? 'openai', request.alias ?? '');
       case 'cancel': return this.cancel(request.profile);
+      case 'confirm': return this.confirm(request.profile, request.generation, request.alias);
       case 'setup': return this.setup(request.profile);
       case 'reconnect': return this.beginLogin(request.profile);
       case 'rename': return this.rename(request.profile, request.alias);

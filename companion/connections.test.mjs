@@ -40,7 +40,14 @@ async function fixture(t) {
     } });
   await service.load();
   t.after(async () => { await service.close(); await rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }); });
-  const idle = async () => { for (let i = 0; i < 20; i++) { await Promise.allSettled([...service.operations.values()]); if (!service.operations.size) break; } };
+  // Most old lifecycle cases explicitly approve their fictional account; the
+  // confirmation-specific cases below inspect the default unapproved state.
+  const idle = async (confirm = true) => { for (let i = 0; i < 20; i++) {
+    await Promise.allSettled([...service.operations.values()]);
+    const waiting = confirm ? [...service.profiles.values()].filter(p=>p.authState==='awaiting-confirmation') : [];
+    for (const p of waiting) await service.confirm(p.id,p.generation);
+    if (!service.operations.size && !waiting.length) break;
+  } };
   return { service, accounts, clients, browsers, directory, idle, advance: (ms = 120001) => { now += ms; } };
 }
 test('strict native contract rejects token fields, invalid profiles and control text', () => {
@@ -57,7 +64,7 @@ test('two account sign-ins use distinct homes/browsers and only verified identit
   assert.equal(profiles.find(p => p.id === a.profile).meters[0].usedPercent, 0);
   assert.equal(profiles.find(p => p.id === b.profile).meters[0].usedPercent, 30);
   assert.ok(profiles.every(p => p.authState === 'connected' && p.identityConfidence === 'email-only' && p.providerSubject === null));
-  assert.notEqual(clients[0].options.home, clients[1].options.home);
+  assert.equal(new Set(clients.map(c=>c.options.home)).size,2);
   assert.notEqual(browsers[0].directory, browsers[1].directory);
   assert.ok(!JSON.stringify(service.snapshot()).includes('PRIVATE'));
   assert.ok(clients.every(c => c.calls.every(v => /^account\/(login\/(start|cancel)|read|rateLimits\/read)$/.test(v.method))));
@@ -72,6 +79,31 @@ test('same identity is surfaced as duplicate without merging or claiming connect
   assert.equal(service.get(b.profile).updatedAt, 0);
   assert.equal(service.snapshot().profiles.length, 2);
   assert.ok(service.snapshot().profiles.every(p => p.possibleDuplicate));
+});
+test('official completion stages reported OpenAI identity until an explicit generation-bound confirmation', async t => {
+  const {service,idle,clients}=await fixture(t);
+  const {profile}=await service.add('openai','Personal'); await idle(false);
+  const pending=service.get(profile);
+  assert.equal(pending.authState,'awaiting-confirmation');assert.equal(pending.confirmed,false);
+  assert.equal(pending.updatedAt,0);assert.equal(pending.meters.length,0);
+  assert.ok(pending.displayIdentity.endsWith('@example.test'));
+  assert.ok(clients.every(c=>!c.calls.some(v=>v.method==='account/rateLimits/read')));
+  await service.refresh(profile,true);assert.equal(pending.updatedAt,0);
+  await assert.rejects(service.confirm(profile,pending.generation-1),e=>e.code==='stale-confirmation');
+  await service.confirm(profile,pending.generation,'My personal account');
+  assert.equal(pending.confirmed,true);assert.equal(pending.authState,'connected');
+  assert.equal(pending.alias,'My personal account');assert.equal(pending.meters[0].usedPercent,0);
+});
+test('wrong identity after confirmation and cancellation of pending identity cannot connect',async t=>{
+  const {service,idle,accounts}=await fixture(t);
+  const a=await service.add();await idle(false);const p=service.get(a.profile);
+  accounts.get(a.profile).email='wrong@example.test';await service.confirm(p.id,p.generation);
+  assert.equal(p.authState,'needs-sign-in');assert.equal(p.confirmed,false);assert.equal(p.updatedAt,0);
+  const b=await service.add();await idle(false);const q=service.get(b.profile);const generation=q.generation;
+  await service.cancel(q.id);await assert.rejects(service.confirm(q.id,generation),e=>e.code==='stale-confirmation');
+  assert.equal(q.updatedAt,0);assert.equal(q.displayIdentity,null);
+  assert.equal(validRequest({id:'confirm',method:'confirm',profile:q.id,generation:-1}),false);
+  assert.equal(validRequest({id:'confirm',method:'confirm',profile:q.id,generation,alias:'Work'}),true);
 });
 test('failed/empty checks retain exact prior timestamp, persist cooldown and recover after restart', async t => {
   const { service, idle, accounts, advance, directory } = await fixture(t);
@@ -121,6 +153,31 @@ test('legacy index migrates IDs without touching profile credentials', async t =
   const upgraded = new Connections({ directory }); await upgraded.load();
   assert.equal(upgraded.get(id).id, id); assert.equal(upgraded.get(id).status, 'unavailable');
   assert.equal(await readFile(path.join(directory, 'profiles.json'), 'utf8'), JSON.stringify([id])); await upgraded.close();
+});
+test('desktop metadata migration backs up once and preserves account history, aliases and config',async t=>{
+ const {service,idle,directory}=await fixture(t);const {profile}=await service.add('openai','Existing name');await idle();
+ const home=path.join(directory,'accounts',profile);await writeFile(path.join(home,'config.toml'),'# user-owned options\n');
+ await service.withClient(service.get(profile),async()=>{});
+ assert.equal(await readFile(path.join(home,'config.toml'),'utf8'),'# user-owned options\n');
+ await service.close();const file=path.join(directory,'connections-v2.json');const state=JSON.parse(await readFile(file,'utf8'));
+ delete state.revision;for(const p of state.profiles){delete p.confirmed;delete p.displayIdentity;}
+ const before=JSON.stringify(state);await writeFile(file,before);
+ const restored=new Connections({directory});await restored.load();
+ assert.equal(restored.get(profile).alias,'Existing name');assert.equal(restored.get(profile).confirmed,true);
+ assert.equal(restored.get(profile).updatedAt,state.profiles[0].updatedAt);
+ assert.deepEqual(restored.get(profile).meters,state.profiles[0].meters);
+ assert.equal(await readFile(path.join(directory,'connections-pre-desktop.json'),'utf8'),before);
+ await restored.close();const again=new Connections({directory});await again.load();await again.close();
+ assert.equal(await readFile(path.join(directory,'connections-pre-desktop.json'),'utf8'),before);
+});
+test('pending account confirmation resumes after service restart without publishing a fresh quota',async t=>{
+ const {service,idle,directory}=await fixture(t);const {profile}=await service.add();await idle(false);
+ const generation=service.get(profile).generation;await service.close();
+ const restored=new Connections({directory,makeClient:service.makeClient});await restored.load();
+ assert.equal(restored.get(profile).authState,'awaiting-confirmation');assert.equal(restored.get(profile).generation,generation);
+ assert.equal(restored.get(profile).updatedAt,0);assert.ok(restored.get(profile).displayIdentity);
+ await restored.refreshAll();assert.equal(restored.get(profile).updatedAt,0);
+ await restored.confirm(profile,generation);assert.equal(restored.get(profile).authState,'connected');await restored.close();
 });
 test('missing Claude dependency is explicit and allocates no misleading profile', async t => {
   const { service } = await fixture(t);
@@ -202,6 +259,29 @@ test('two Claude accounts and an OpenAI account keep identity, usage and logout 
  const restored=new Connections({directory,claudeAdapter:service.claudeAdapter});await restored.load();
  assert.equal(restored.get(b.profile).provider,'claude');assert.equal(restored.get(b.profile).meters[0].usedPercent,40);await restored.close();
 });
+test('Claude confirmation binds organization, retains consent across setup and detects identity changes',async t=>{
+ const {service,idle,advance}=await fixture(t); const states=new Map();
+ service.claudeAdapter={
+  readiness:async()=>({available:true}),
+  context:async(root,generation,signal)=>{const id=path.basename(root);if(!states.has(id))states.set(id,{org:'org-'+id,used:13,setup:true});return {id,generation,signal};},
+  login:async()=>{},
+  identity:async c=>({binding:JSON.stringify(['same@example.test',states.get(c.id).org]),display:'same@example.test',plan:'pro',confidence:'email-and-organization',organizationId:states.get(c.id).org}),
+  usage:async c=>{const s=states.get(c.id);if(s.setup)throw Object.assign(Error('PRIVATE'),{code:'needs-setup'});if(s.changed)s.org='changed';return {meters:[{id:'session',label:'Current session',usedPercent:s.used,resetsAt:null}]};},
+  onboarding:async c=>{states.get(c.id).setup=false;},logout:async()=>{},
+ };
+ const a=await service.add('claude','Work');await idle(false);const p=service.get(a.profile);
+ assert.equal(p.authState,'awaiting-confirmation');assert.equal(p.updatedAt,0);
+ await service.confirm(p.id,p.generation);assert.equal(p.authState,'needs-setup');assert.equal(p.confirmed,true);
+ service.setup(p.id);await idle(false);advance(300001);await service.refresh(p.id,true);
+ assert.equal(p.authState,'connected');assert.equal(p.meters[0].usedPercent,13);
+ states.get(p.id).used=42;advance(300001);await service.refresh(p.id);assert.equal(p.meters[0].usedPercent,42);
+ const b=await service.add('claude','Other workspace');await idle();
+ assert.notEqual(service.get(b.profile).workspaceIdentity,p.workspaceIdentity);
+ assert.equal(service.snapshot().profiles.some(p=>p.possibleDuplicate),false);
+ const before=p.updatedAt;states.get(p.id).changed=true;advance(300001);await service.refresh(p.id);
+ assert.equal(p.errorCode,'identity-changed');assert.equal(p.confirmed,false);assert.equal(p.updatedAt,before);
+ assert.ok(!JSON.stringify(service.snapshot()).includes('PRIVATE'));
+});
 test('Claude browser URL validation requires first-party authorize and local first-party callback', async()=>{
  const {safeAuthUrl}=await import('./protocol.mjs');
  const valid='https://claude.com/cai/oauth/authorize?response_type=code&state=fixture&code_challenge=fixture&redirect_uri='+encodeURIComponent('http://localhost:42345/callback');
@@ -268,6 +348,8 @@ test('production Claude adapter reads two isolated fictional CLI profiles throug
  assert.equal(service.get(ids[0]).authState,'connected');assert.ok(!JSON.stringify(service.snapshot()).includes('PRIVATE'));
  // Exercise the production login terminal and scoped cancellation too.
  service.get(ids[0]).nextRetryAt=null;service.beginLogin(ids[0]);await Promise.allSettled([...service.operations.values()]);
+ assert.equal(service.get(ids[0]).authState,'awaiting-confirmation');
+ await service.confirm(ids[0],service.get(ids[0]).generation);
  assert.equal(service.get(ids[0]).authState,'connected');
  const home=path.join(directory,'accounts',ids[1],'claude');
  await writeFile(path.join(home,'fixture.json'),JSON.stringify({email:'claude-1@example.test',org:'org-1',used:37,delayLogin:true}));
@@ -276,4 +358,16 @@ test('production Claude adapter reads two isolated fictional CLI profiles throug
  assert.ok(started);await service.cancel(ids[1]);assert.equal(service.get(ids[1]).authState,'needs-sign-in');
  assert.equal(service.get(ids[1]).meters[0].usedPercent,37);
 
+});
+test('only one official authorization runs at a time and reconnect requires renewed consent',async t=>{
+ const {service,idle,accounts,advance}=await fixture(t);const a=await service.add();await idle();
+ const b=await service.add();await idle();advance();
+ accounts.get(a.profile).noComplete=true;service.beginLogin(a.profile);
+ await assert.rejects(service.add('openai','Third'),e=>e.code==='busy');
+ assert.throws(()=>service.beginLogin(b.profile),e=>e.code==='busy');
+ assert.equal(service.profiles.size,2);await service.cancel(a.profile);
+ assert.equal(service.get(a.profile).confirmed,false);
+ assert.equal(service.get(b.profile).authState,'connected');
+ advance();accounts.get(a.profile).noComplete=false;service.beginLogin(a.profile);await idle(false);
+ assert.equal(service.get(a.profile).authState,'awaiting-confirmation');
 });

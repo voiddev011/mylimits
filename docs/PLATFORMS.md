@@ -1,5 +1,11 @@
 # Platform and installer acceptance
 
+> Historical platform notes below. Current 3.4 online Desktop setup, automatic
+> extension detection and measured downloads are documented in [INSTALL.md](INSTALL.md)
+> and the [handoff](DESKTOP-ACCOUNTS-HANDOFF.md). It downloads selected official runtimes;
+> older large bundled installers are superseded. Real Windows provider acceptance
+> remains pending; Firefox native setup is not implemented.
+
 Phase 2 builds separate Chrome/Brave, Edge and Firefox MV3 packages. This is an
 unsigned desktop preview, not a store release. Linux Chromium fixtures exercise
 the extension. Actual Windows Chrome/Brave/Edge and Firefox provider/native
