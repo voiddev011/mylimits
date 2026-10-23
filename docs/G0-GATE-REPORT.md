@@ -9,6 +9,12 @@ against the unchanged [R2 plan](MYLIMITS-PERSISTENT-ACCOUNTS-PLAN-v2.md), §6 Ga
 G0 and §7.3. It does not approve G0/G1, cancel a provider on missing evidence, or
 substitute automated fixtures for live results. Updated 23 October 2026.
 
+Execution amendment: the user subsequently authorized coding C9 before these
+experiments. This permits a disabled foundation only: all production provider
+policies stay off, cookie allowlists stay empty, and C8 remains deferred. It does
+not change any live result or approve provider activation. The original proposal
+is preserved unchanged; this amendment and IMPLEMENTATION-STATUS record the order.
+
 ## Findings
 
 - C1–C6 are integrated into main through [PR #8](https://github.com/voiddev011/mylimits/pull/8),
@@ -42,12 +48,13 @@ substitute automated fixtures for live results. Updated 23 October 2026.
 
 **HOLD.** There is no supported decision-table outcome yet. Missing results are
 neither PASS nor FAIL. Do not turn on normalization or saved-session transports
-while the observations that justify them are absent.
+while the observations that justify them are absent. Disabled C9 code may be
+implemented under the amendment above; it cannot establish the technical findings.
 
 | Group | Current disposition | Required evidence or change |
 | --- | --- | --- |
 | C8 | BLOCKED | G0 human decision and E2 showing benefit. If E2 shows no benefit, skip C8 rather than add dead rules. |
-| C9 | BLOCKED | G0 and G1 decisions; provider-specific E3/E4 route proof and an evidence-derived cookie allowlist. If E6 proves rotation plus old-value rejection, include T4.2 in C9. |
+| C9 | Disabled foundation allowed; activation BLOCKED | G0 and G1 decisions; provider-specific E3/E4 route proof and an evidence-derived cookie allowlist. If E6 proves rotation plus old-value rejection, T4.2 must be added before activation. |
 | C10 | BLOCKED by C9 | Private sign-in, refresh wiring and fallback stay unimplemented. Use Bearer-only T3.5 only if E7 passes. |
 | C11 | BLOCKED by C10 | Saved-session UI/management cannot imply a working connection before the verified transport exists. |
 | C12 | BLOCKED by C11 | Expiry/final acceptance follows real integration; do not claim a completed feature from documentation. |
@@ -86,4 +93,5 @@ tokens, raw headers/bodies or account IDs.
 
 Once those observations are available, update this report, apply each relevant
 R2 decision-table row and request the actual G0 decision. G1 follows G0 as a
-separate per-provider policy decision. Do not start C8/C9 before those prerequisites.
+separate per-provider policy decision. Do not activate normalization or saved-session
+connections before their prerequisites; the disabled C9 exception is recorded above.

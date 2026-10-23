@@ -2,7 +2,7 @@ interface Waiter {grant():void;}
 interface Lock {held:boolean;queue:Waiter[];}
 const cancelled=()=>new DOMException('Request was cancelled.','AbortError');
 /** One shared lock per exact host, across ambient/page/temporary/future saved transports. */
-export function createHostLock(){
+export function createHostLock(ready:()=>Promise<void>=()=>Promise.resolve(),blocked:(host:string)=>boolean=()=>false){
  const locks=new Map<string,Lock>();
  function acquire(host:string,signal?:AbortSignal):Promise<()=>void>{
   if(!/^[a-z0-9.-]+$/i.test(host)||host.includes('..'))return Promise.reject(new Error('Invalid request host.'));
@@ -19,11 +19,18 @@ export function createHostLock(){
   });
  }
  return async function withHostLock<T>(host:string,run:()=>Promise<T>,signal?:AbortSignal):Promise<T>{
+  await ready();
+  if(blocked(host.toLowerCase()))throw new Error('Request isolation needs recovery.');
   const release=await acquire(host,signal);
-  try{if(signal?.aborted)throw cancelled();const result=await run();if(signal?.aborted)throw cancelled();return result;}
+  try{if(blocked(host.toLowerCase()))throw new Error('Request isolation needs recovery.');if(signal?.aborted)throw cancelled();const result=await run();if(signal?.aborted)throw cancelled();return result;}
   // Never unlock a still-running request merely because its caller aborted.
   // Transports abort their own I/O; settlement/cleanup must precede the next grant.
   finally{release();}
  };
 }
-export const withHostLock=createHostLock();
+let startup:Promise<void>=Promise.resolve();
+/** Install synchronously before registering controller events; failure blocks HTTP. */
+export function setHostLockStartup(ready:Promise<void>){startup=ready;void ready.catch(()=>{});}
+const blockedHosts=new Set<string>();
+export function blockHost(host:string){blockedHosts.add(host.toLowerCase());}
+export const withHostLock=createHostLock(()=>startup,host=>blockedHosts.has(host));

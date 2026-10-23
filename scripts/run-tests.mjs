@@ -35,3 +35,6 @@ import '../src/platform/connection-refresh.test.ts';
 import '../src/core/spike.test.ts';
 import '../src/platform/spike.test.ts';
 import './package-policy.test.mjs';
+import '../src/core/vault-contracts.test.ts';
+import '../src/platform/vault.test.ts';
+import '../src/platform/vault-transport.test.ts';

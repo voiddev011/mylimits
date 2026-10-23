@@ -1,25 +1,27 @@
 # Current implementation status — Desktop + extension
 
-Updated 23 October 2026. Current checkpoint: C7's G0 report, prepared on
-`codex/c7` for `feat/persistent-accounts`. C1–C6 are merged into main via PR #8; C7 records
-the G0 evidence assessment as HOLD. Desktop was implemented on
+Updated 23 October 2026. Current checkpoint: C9's disabled vault/transport
+foundation, prepared on `codex/c9` from the integration branch. C1–C7 are merged into main;
+C7's G0 evidence assessment remains HOLD. Desktop was implemented on
 `feature/desktop-independent-accounts`, created from clean
 `docs/desktop-accounts-execution-plan` (`3f218f6` locally).
 
 ## Current decision
 
-The latest user instruction authorizes completing tasks in order, merging
-validated checkpoints into main and pruning branches whose commits are preserved.
-This supersedes earlier task-specific no-main-merge instructions. Real-evidence
-gates are unchanged: no C8/C9 implementation is authorized by a simulated PASS.
+The latest user instruction explicitly defers the intermediate tests/decisions
+and permits coding C9 now. This changes the execution order for disabled code,
+not the truth of the missing evidence or provider activation. All vault providers
+remain off and their cookie allowlists empty; no G0/G1 PASS is inferred.
+Validated checkpoints may merge into main; merged task branches are pruned.
 Each finished checkpoint will include file-level added/deleted line counts.
 
 The active persistent-accounts plan is
 [the unchanged R2 proposal](MYLIMITS-PERSISTENT-ACCOUNTS-PLAN-v2.md).
 The user authorized completing tasks in order and merging validated checkpoints.
 C7's report cannot approve G0 because human live experiments E1–E8 are absent.
-Do not begin C8/C9 before the required evidence and G0/G1 decisions. The Checkpoint A
-3–4 day live trial remains PENDING; no main merge or trial result is inferred.
+The user now permits C9 foundation work before those gates; actual provider
+activation still needs evidence and G0/G1 decisions. C8 remains deferred. The Checkpoint A
+3–4 day live trial remains PENDING; authorized main merges do not prove the trial.
 No saved-session vault or browser-only independent login exists from C1–C6.
 Historical Desktop acceptance remains pending.
 
@@ -83,8 +85,9 @@ hosted route is deferred. It was not completed by earlier infrastructure work.
 
 ## Next action
 
-Run human experiments E1–E8 with the separate spike build from main, record
-sanitized results and update the C7 G0 report. Do not infer approval from fixtures.
+Review C9's checked disabled storage/transport foundation. C10's private sign-in/
+refresh wiring and C11's UI remain separate work. Before activating
+providers, run the live experiments, record sanitized results and obtain G0/G1.
 The [manual trial](INSTALL.md#persistent-accounts-checkpoint-a-c1c4) is pending;
 keep all private-session/vault implementation gated by G0/G1. For the separate Desktop path, real-account
 acceptance in DESKTOP-ACCOUNTS-HANDOFF.md remains pending for both providers.
@@ -903,4 +906,75 @@ automated tests, live verification and blocked/unverified work.
   routine/final acceptance tests and E2/E3/E4 feasibility evidence that determines
   the implementation. No instruction waiving the real-evidence gates was given.
   Next required input: sanitized real-account results; update G0, then obtain G1.
-  Do not start C8/C9 from unverified assumptions.
+  Do not start C8/C9 from unverified assumptions. This historical restriction is
+  amended for disabled C9 coding only by the latest instruction below.
+
+### C9 — coding authorized before live gates, activation still off
+
+- Latest user instruction permits holding intermediate tests/decisions and
+  starting C9. This overrides the prior stop for coding only. C8, E1–E8, G0/G1
+  remain deferred/unverified; all provider policies are off and allowlists empty.
+  Created codex/c9 from the latest integration branch with a clean worktree.
+- T3.0: added immutable policy/allowlist tables. No provider names, challenge
+  cookies or captured credentials are guessed into an allowlist. No UI route is
+  exposed; C10/C11 private sign-in and refresh/management remain unimplemented.
+- T3.1: strict bounded payload/envelope validation; AES-GCM-256 with slot/provider
+  AAD and random 96-bit nonce; non-extractable CryptoKey in injected IndexedDB;
+  separate mylimits:vault:v1 storage with required TRUSTED_CONTEXTS protection.
+  Metadata projections exclude ciphertext/nonces/values; key loss fails closed
+  without regenerating over entries; explicit deletion works without decryption.
+  The injected cross-writer lock must be shared (Web Locks in future wiring).
+- T3.2: fixed reader endpoints, scoped per-provider DNR rule IDs, omitted ambient
+  credentials, shared host locking and finally cleanup. Failed removal poisons
+  the host so queued ambient work cannot borrow its cookies. Startup cleanup is
+  wired into the ordinary controller's HTTP readiness barrier; Firefox bypasses
+  this Chromium-only cleanup. No manifest permission added or provider activated.
+  The transport consumes that same one-time readiness barrier; it never repeats
+  startup cleanup during another active account request.
+- Reused the existing reader endpoint allowlist by moving it into a neutral pure
+  module; C6 keeps its original re-export/API. No account Store/schema change,
+  dependency, model prompt or real provider traffic. Optional E7 token storage
+  and conditional E6 rotation are deliberately not inferred from missing results.
+- Initial typecheck found a typed empty-allowlist construction; fixed with an
+  explicit frozen provider record. Fast suite reached 197 passing tests. Actual
+  Chromium tests passed 3/3 for non-extractable key persistence, concurrent atomic
+  creation and corrupt-key rejection. The first browser fixture run failed because
+  Vite returns an array for library output; fixed fixture result handling and
+  reran unchanged security expectations. No existing assertion was weakened.
+- Additional missing/expired credential, partial rule installation, key/write
+  failure and parallel-provider regressions added. Final full/browser/package
+  results and file-level line counts follow after validation. G0/G1 remain HOLD.
+- The full extension-storage fixture exposed a CSP-dependent Zod JIT compile
+  error after an asynchronous lock callback. Vault payload/envelope validation
+  now explicitly uses jitless parsing; the unchanged security assertion passes.
+  Web Locks callback typing was corrected as well. Temporary exception debugging
+  printed only class/location, never credential values; it has been removed.
+- Four actual Chromium fixtures now pass: key persistence/non-extractability,
+  concurrent atomic creation, corrupt-key rejection, and encrypted storage across
+  reload plus exclusion from actual public-state/history-export responses. They
+  inject only fictional credentials into test-only ports; production stays off.
+- Final transport review closed a Retry-After gap: successful responses now
+  persist supplied waits too, and 429 without a valid wait uses a 60s fallback.
+  The new regression passes. Source then stayed frozen for the final full run.
+- Final local validation passed: npm run check (**203 core, 20 native, 24
+  connection, 4 transport/runtime**, TypeScript, Chrome build), followed by
+  npm run test:browser (**46/46**) and npm run test:spike (**4/4**).
+  Added 25 unit regressions (3 contract/policy, 8 vault, 12 transport, 2 host-lock)
+  plus four actual Chromium storage/key fixtures. No existing assertion changed.
+- Server typecheck, Edge/Firefox builds, all package-directory contracts, both
+  release ZIP inspections, checksum generation and separate spike packaging
+  passed. Both normal release ZIPs exclude spike code, diagnostic required grants
+  and the in-memory browser-test helper/fictional credential marker. 68 relative
+  documentation links and whitespace checks passed; the original R2 plan is unchanged.
+- Local ZIPs (CI timestamps can change hashes):
+  - Chrome **314736 bytes**, SHA-256
+    `fb5639402ee7acf9f0f672f944b531e1f34616afb472d43521f274869ac2c017`.
+  - Firefox **312533 bytes**, SHA-256
+    `b1d33b8c2a94e5b62ef7890c23bfa404c281e092a9827432705563362b8b42b6`.
+  - Separate spike **315961 bytes**, SHA-256
+    `12320e44f0afe184b48cb116e6c7211835bd0708183bee34d519f8cfd07718b5`.
+- C9 code is ready for PR/CI review and the user-authorized main merge; exact
+  added/deleted file counts are in its §11.3 handoff. Only the dormant foundation
+  is implemented. Production provider activation, live request/header effects,
+  actual private login, identity proof, logout survival and other-device refresh
+  remain UNVERIFIED. No G0/G1 or inferred E6/E7 decision was made.
