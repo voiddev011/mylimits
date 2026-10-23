@@ -418,3 +418,6 @@ automated tests, live verification and blocked/unverified work.
   source matches the previously CI-verified Desktop tip; only docs differ.
 - Main is the retained integration branch. The merged feature head is removed
   using its expected tip after verifying it is an ancestor of pushed main.
+
+- Updated installer/help/sync documentation links and Desktop build lookup to main
+  so removing merged branch names does not break in-app setup/help destinations.

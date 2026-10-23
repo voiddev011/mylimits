@@ -68,7 +68,7 @@ export function OpenAICompanion({ run, busy, demo, notify, nickname = '', provid
   const supported = status.compatible && status.capabilities?.providers.some(p => p.provider === provider && p.available);
   const disabled = busy || working || demo;
   const signingIn=status.profiles.some(p=>p.authState==='signing-in'||p.authState==='verifying');
-  const setupURL=__MYLIMITS_DESKTOP_SETUP_URL__||'https://github.com/voiddev011/mylimits/actions?query=branch%3Afeature%2Fdesktop-independent-accounts';
+  const setupURL=__MYLIMITS_DESKTOP_SETUP_URL__||'https://github.com/voiddev011/mylimits/actions?query=branch%3Amain';
   return <section className="independent-accounts" aria-label="Independent account connections">
     <div className="section-heading"><h3>Independent {name} accounts</h3><p>{provider==='claude'?'Subscription limits · official Claude Code':'Codex quotas · separate sign-in for each account'}</p></div>
     <div className="connection-readiness" role="status">{demo ? 'Sample mode' : status.compatible ? 'Desktop connected · experimental provider support' : status.enabled ? status.issue ?? 'Desktop unavailable or needs an update' : 'Connect MyLimits Desktop once for separate account logins.'}</div>

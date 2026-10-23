@@ -100,7 +100,7 @@ $install.Add_Click({
  finally{$script:installing=$false;$install.Enabled=$true;$retry.Enabled=$true;$openai.Enabled=$true;$claude.Enabled=$true;$chooseProfile.Enabled=$true;$profileBrowser.Enabled=$true}
 })
 $help=New-Object Windows.Forms.LinkLabel;$help.Text='Setup and account testing instructions';$help.Location=New-Object Drawing.Point(20,430);$help.Size=New-Object Drawing.Size(600,26);$form.Controls.Add($help)
-$help.Add_LinkClicked({Start-Process 'https://github.com/voiddev011/mylimits/blob/feature/desktop-independent-accounts/docs/INSTALL.md'})
+$help.Add_LinkClicked({Start-Process 'https://github.com/voiddev011/mylimits/blob/main/docs/INSTALL.md'})
 Label 'No subscription is included. Credentials stay in official per-account profiles. This is an unsigned development build; signing and store publication are separate.' 468
 if(!$NoShow){
  $mutex=New-Object Threading.Mutex($false,('Local\MyLimitsDesktopSetup-'+[Security.Principal.WindowsIdentity]::GetCurrent().User.Value))
