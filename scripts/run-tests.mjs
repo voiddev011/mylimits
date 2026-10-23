@@ -28,3 +28,4 @@ import '../src/core/hosted.test.ts';
 import '../src/platform/diagnostics.test.ts';
 import '../src/platform/session-cookies.test.ts';
 import '../src/providers/response.test.ts';
+import '../src/platform/bootstrap-tab.test.ts';

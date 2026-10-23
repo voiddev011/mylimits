@@ -5,6 +5,12 @@ Website tracking exists. The active upgrade is **MyLimits Desktop + extension**:
 separate official OpenAI/Codex and Claude profiles, combined in the extension.
 Real two-account freshness/login acceptance remains pending for both providers.
 
+The persistent-accounts development branch adds bounded website recovery: eligible
+failures may briefly open an inactive provider tab, using the current browser
+login. The setting is optional and browser-local. This does not preserve an
+expired/revoked login or establish an independent account; private-session/vault
+work remains gated by real-provider evidence. See [preview testing](INSTALL.md#persistent-accounts-checkpoint-a-c1c4).
+
 ## Implementation
 
 - [Start here](START-HERE.md)

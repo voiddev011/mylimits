@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { SnapshotSync,SyncError,type SyncPrivate,type SyncPort } from './sync';
 import { emptyStore } from './model';
 import { applySnapshot } from './engine';
-import type { SyncItem } from './sync-contracts';
+import { applySyncedSettings, type SyncItem } from './sync-contracts';
 import { validateSyncOrigin } from './sync-origin';
 const deviceId='10000000-0000-4000-8000-000000000001',remoteId='20000000-0000-4000-8000-000000000002',connectionId='30000000-0000-4000-8000-000000000003';
 function fixture(){
@@ -44,6 +44,14 @@ test('changed server origin cannot receive an existing device credential',async(
 });
 test('preference conflicts are explicit and cloud aliases map only to this device’s known accounts',async()=>{
  const f=fixture();await f.connect();await f.sync.run(true);f.setConflict(true);await assert.rejects(f.sync.pushPreferences(),/changed/);const old=f.store.accounts[0]!.alias,remote=await f.sync.pullPreferences();assert.deepEqual(remote.names,{'local-a':'Cloud name'});assert.equal(f.store.accounts[0]!.alias,old);f.setConflict(false);await f.sync.pushPreferences();assert.equal(f.saved.preferenceRevision,4);
+});
+test('background-tab recovery remains local on both preference upload and download',async()=>{
+ const f=fixture();f.store.settings.autoRecoverTab=false;await f.connect();await f.sync.pushPreferences();
+ const patch=f.calls.find(c=>c.path==='/v1/preferences')!.body as {data:{settings:Record<string,unknown>}};
+ assert.equal('autoRecoverTab' in patch.data.settings,false);
+ const remote=await f.sync.pullPreferences();assert.equal('autoRecoverTab' in remote.settings!,false);
+ assert.equal(applySyncedSettings(f.store.settings,remote.settings).autoRecoverTab,false);
+ assert.equal(applySyncedSettings({...f.store.settings,autoRecoverTab:true},remote.settings).autoRecoverTab,true);
 });
 test('pause stops uploads and disconnect revokes the device without discarding local accounts',async()=>{
  const f=fixture();await f.connect();await f.sync.enable(false);await f.sync.run(true);assert.equal(f.calls.length,0);await f.sync.disconnect();assert.equal(f.calls[0]!.path,`/v1/devices/${deviceId}`);assert.equal((await f.sync.status()).connected,false);assert.equal(f.store.accounts.length,1);

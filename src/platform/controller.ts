@@ -21,9 +21,13 @@ import { remoteHostedId } from '../core/hosted';
 import { startAccountSetup, saveAccountSetup } from '../core/account-setup';
 import { createRequestDiagnostics } from './diagnostics';
 import { authRetryDeadline, createSessionCookies } from './session-cookies';
+import { createTabRecovery } from './bootstrap-tab';
+import { isNormalTab } from '../core/browser-tabs';
+import { applySyncedSettings } from '../core/sync-contracts';
 
 const coordinator = new RefreshCoordinator(2);
 const requestDiagnostics = createRequestDiagnostics({ storage: browser.storage.session });
+const tabRecovery=createTabRecovery({tabs:browser.tabs,windows:browser.windows,local:browser.storage.local,session:browser.storage.session});
 const sessionCookies = createSessionCookies({ cookies: browser.cookies, tabs: browser.tabs, permissions: browser.permissions,
   status: async provider => { const c=(await readStore()).connections.find(c=>c.id===`website:${provider}`);return c?.enabled?c.status:null; } });
 const observedProviders: readonly ProviderId[] = ['gemini', 'grok', 'perplexity'];
@@ -73,6 +77,7 @@ async function saveAcceptedHistory(accountId: string, connectionId: string): Pro
 }
 
 export async function refreshProvider(provider: ProviderId, manual = false, reason: RefreshReason = manual ? 'manual' : 'scheduled'): Promise<void> {
+  await tabRecovery.initialize();
   const connectionId = `website:${provider}`;
   return coordinator.run(connectionId, async signal => {
     const before = await readStore();
@@ -88,7 +93,11 @@ export async function refreshProvider(provider: ProviderId, manual = false, reas
       const selected = switchingAccount?undefined:before.workspaces.find(w => w.id === connection.workspaceId);
       const sessionInfo=await sessionCookies.inspect(provider);
       const snapshot = await readProvider(provider, { workspaceRemoteId: selected?.remoteId,readingMode:before.providers[provider].readingMode }, signal,
-        { record: input => requestDiagnostics.record({...input,sessionCookieState:sessionInfo.state,cookieNames:sessionInfo.names}), lastSuccessAt: connection.lastSuccessAt });
+        { record: input => requestDiagnostics.record({...input,sessionCookieState:sessionInfo.state,cookieNames:sessionInfo.names}), lastSuccessAt: connection.lastSuccessAt },
+        {access:tabRecovery,options:{enabled:async()=>((await readStore()).settings.autoRecoverTab??true),cookieState:sessionInfo.state,signal,
+          onStart:async()=>{await updateStore(store=>{const c=store.connections.find(c=>c.id===connectionId);
+            if(!c?.enabled||c.generation!==stamp||signal.aborted||store.settings.autoRecoverTab===false)throw new AdapterError('error','Refresh was cancelled.',null,'cancelled');
+            return {store:{...store,connections:store.connections.map(c=>c.id===connectionId?{...c,message:'Retrying in the background'}:c)},value:undefined};});}}});
       const meters = snapshot.meters.map(m => MeterSchema.parse(m));
       const id = await accountId(provider, snapshot.identity, before.installSalt);
       const choices = await Promise.all((snapshot.workspaces ?? []).map(async w => ({ id:await accountId(provider,`workspace:${w.identity}`,before.installSalt),provider,remoteId:w.identity,name:w.name })));
@@ -257,7 +266,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
       if(command.action==='pull-preferences'){
         const data=await snapshotSync.pullPreferences();
         if(data.settings?.desktopAlerts&&!await browser.permissions.contains({permissions:['notifications']}))data.settings={...data.settings,desktopAlerts:false};
-        await updateStore(store=>({store:{...store,settings:data.settings??store.settings,accounts:store.accounts.map(a=>data.names[a.id]!==undefined?{...a,alias:data.names[a.id]!}:a)},value:undefined}));
+        await updateStore(store=>({store:{...store,settings:applySyncedSettings(store.settings,data.settings),accounts:store.accounts.map(a=>data.names[a.id]!==undefined?{...a,alias:data.names[a.id]!}:a)},value:undefined}));
         if(data.settings)await browser.alarms.create(REFRESH_ALARM,{periodInMinutes:data.settings.refreshMinutes});await renderBadge();return snapshotSync.status();
       }
       const status=command.action==='disconnect'?await snapshotSync.disconnect():command.action==='reset'?await snapshotSync.reset():await snapshotSync.enable(command.action==='resume');
@@ -336,6 +345,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
       if (settings.desktopAlerts && !await browser.permissions.contains({ permissions: ['notifications'] })) throw new Error('Approve desktop notifications first.');
       if (settings.criticalRemaining > settings.warningRemaining) throw new Error('Critical alert must be at or below the warning threshold.');
       await updateStore(store => ({ store: { ...store, settings }, value: undefined }));
+      if(settings.autoRecoverTab===false)tabRecovery.cancelAll();
       await pruneHistory(settings.historyRetentionDays??30);
       await browser.alarms.create(REFRESH_ALARM, { periodInMinutes: settings.refreshMinutes });
       await renderBadge();
@@ -399,8 +409,10 @@ export function startController(): void {
     })().catch(() => undefined);
   });
   browser.runtime.onStartup.addListener(() => { void refreshAll(false, 'startup').catch(() => undefined); });
-  browser.tabs.onUpdated.addListener((_id, info, tab) => { if(info.status==='complete'&&tab.url){const provider=providerForUrl(tab.url);if(provider)void refreshProvider(provider,false,'tab').catch(()=>{});} });
+  browser.idle.onStateChanged.addListener(state=>{if(state==='active')void refreshAll(false,'idle').catch(()=>{});});
+  browser.tabs.onUpdated.addListener((id, info, tab) => { if(isNormalTab(tab)&&!tabRecovery.owns(id)&&info.status==='complete'&&tab.url){const provider=providerForUrl(tab.url);if(provider)void refreshProvider(provider,false,'tab').catch(()=>{});} });
   void (async () => {
+    await tabRecovery.initialize();
     const store = await readStore();
     await browser.alarms.create(REFRESH_ALARM, { periodInMinutes: store.settings.refreshMinutes });
     if ((await companionStatus()).enabled) await browser.alarms.create(COMPANION_ALARM, { periodInMinutes: 1 });

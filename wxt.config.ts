@@ -16,7 +16,7 @@ export default defineConfig({
     version: '3.4.0',
     version_name: '3.4 Desktop accounts preview',
     description: 'Keep your AI accounts, usage limits, and reset times in one place.',
-    permissions: ['storage', 'alarms', 'scripting',...(browser==='firefox'?[]:['sidePanel'])],
+    permissions: ['storage', 'alarms', 'scripting','idle',...(browser==='firefox'?[]:['sidePanel'])],
     optional_permissions: ['notifications','cookies',...(browser==='firefox'?[]:['nativeMessaging'])],
     optional_host_permissions: [
       'https://claude.ai/*',

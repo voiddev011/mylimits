@@ -1,10 +1,18 @@
 # Current implementation status — Desktop + extension
 
-Updated 23 October 2026. Working branch: `main`. Desktop was implemented on
+Updated 23 October 2026. Active work: `codex/c4`, targeting
+`feat/persistent-accounts`. C1–C3 are integrated; C4 passed local checks and is
+ready for Checkpoint A review. Main is unchanged. Desktop was implemented on
 `feature/desktop-independent-accounts`, created from clean
 `docs/desktop-accounts-execution-plan` (`3f218f6` locally).
 
 ## Current decision
+
+The active persistent-accounts plan is
+[the unchanged R2 proposal](MYLIMITS-PERSISTENT-ACCOUNTS-PLAN-v2.md).
+The next major boundary is Checkpoint A after C4: user review and the 3–4 day
+website-reliability trial, before C5. No saved-session vault or browser-only
+independent login exists from C1–C4. Historical Desktop acceptance remains pending.
 
 The implemented direction is a desktop app alongside the extension. See
 [Desktop delivery and pending acceptance](DESKTOP-ACCOUNTS-HANDOFF.md) for the guided Windows installation,
@@ -66,10 +74,10 @@ hosted route is deferred. It was not completed by earlier infrastructure work.
 
 ## Next action
 
-On a Windows laptop, install the delivered matching extension/Desktop artifacts
-and run the real-account matrix in DESKTOP-ACCOUNTS-HANDOFF.md for both providers.
-Automated code/package delivery is recorded below. Both providers remain
-experimental; the requested feature is not fully accepted or release-ready.
+Review the C4 PR, then stop at Checkpoint A for user review and
+the [manual trial](INSTALL.md#persistent-accounts-checkpoint-a-c1c4). Keep C5 and
+all private-session/vault work gated. For the separate Desktop path, real-account
+acceptance in DESKTOP-ACCOUNTS-HANDOFF.md remains pending for both providers.
 
 After each task record changed files, commands/results and skips, evidence level,
 decisions, blockers and next action. Final reporting separates implementation,
@@ -596,3 +604,71 @@ automated tests, live verification and blocked/unverified work.
 - Next: push and open C3 PR into feat/persistent-accounts. C4 (bounded temporary
   tab recovery and normal/incognito tab safety) follows review/integration. Stop
   before C4 here; checkpoints A/B and G0/G1 remain pending.
+
+### C4 — bounded normal-tab recovery / Checkpoint A
+
+- User requested continuation through the next major boundary. C3 PR #4 passed
+  all six CI jobs in run 39905736565 and merged into feat/persistent-accounts
+  as 613f01a. Main remains f755671; no main merge/release is authorized here.
+- New injected bootstrap-tab helper owns a single inactive normal tab for the
+  entire account/usage/identity transaction. Existing normal tabs are tried first;
+  private, container, unknown and owned contexts are excluded from ambient reads
+  and tab-trigger refreshes. Provider selection also focuses only normal tabs.
+- Recovery is limited to eligible network/403/challenge failures. Plain 401/429,
+  provider waits, offline/cancelled reads and invalid data do not create tabs.
+  The load wait is 20 seconds plus a three-second settle. Cleanup closes only
+  recorded owned tab/window pairs; user activation aborts and leaves the tab open.
+  Worker startup cleans leftover ownership. Failed/corrupt storage fails closed.
+- Attempts persist outside Store: at least 30 minutes apart and at most eight
+  per provider per UTC day, including creation failures. Ownership is session-only.
+  No new dependency, provider credential store or independent login is introduced.
+- Added additive autoRecoverTab default true, Settings control, live recovery
+  wording and idle-active refresh that obeys scheduled waits. Preference sync
+  deliberately excludes autoRecoverTab and preserves the local browser choice.
+  normalizeHeaders is absent pending G0. Store.version remains 2; migration
+  preserves IDs, aliases, timestamps and history.
+- Changed: core browser-tabs/model/schema/migrations/sync/presentation; platform
+  bootstrap-tab/controller; provider adapters/errors; AccountConnect/App/Popup;
+  manifest/test registration; browser tests; architecture/privacy/install/start/
+  index/status docs. Original R2 plan is unchanged.
+- Initial npm run typecheck + npm test passed 147/147. A new browser-test storage
+  assertion needed an explicit TypeScript cast; fixed before browser execution.
+  Two npm run check attempts under restricted execution failed the same existing
+  fictional RPC subprocess case (premature EOF). Targeted elevated execution
+  passed; full npm run check with subprocess permissions then passed (147 core,
+  20 native, 24 connection, 4 transport/runtime tests, typecheck and Chrome build).
+- First full browser run: 38 passed, 2 failed. The new temporary-page inline
+  fixture failed to install its fetch stub; replaced with an origin-scoped init
+  script. A no-result script execution exposed generic-error classification;
+  changed to needs-tab so failed browser recovery retains the actionable state.
+  Existing assertion values remain unchanged. Targeted/full reruns and final
+  package results follow below when completed.
+- Live status: all providers/cookies/private flags in new tests are fictional.
+  Actual Chrome/Brave private windows, challenges, overnight recovery and the
+  3–4 day trial remain PENDING. G0/G1 and independent-account acceptance are not
+  passed by these tests. Next: finish validation and C4 PR, then stop for review.
+- Final local verification: targeted browser rerun 2/2 passed, followed by
+  npm run check (147 core + 20 native + 24 connection + 4 transport/runtime,
+  typecheck and Chrome build) and full npm run test:browser **40/40 passed**.
+  Server typecheck, Edge/Firefox builds and package contract checks passed.
+  All builds ran sequentially, after browser testing completed.
+- Added 11 tab-recovery/selection/error unit tests, one migration and one sync
+  regression, plus three browser cases. Browser cases verify one temporary tab
+  can read all four Claude fixture endpoints, preserve the old ID/alias, close
+  only itself, ignore private-tagged metadata and avoid a tab on plain 401.
+  The existing HTML-200 assertion retains needs-tab and its no-fabricated-quota
+  requirement; only its failure diagnostic message was added.
+- npm run zip passed: .output/mylimits-3.4.0-chrome.zip, **312265 bytes**,
+  SHA-256 **3fa33fec9774c2980fa47b856d981805e3732f073074ef5976dbe138809c125d**.
+  git diff --check and 56 relative documentation links passed. Original plan
+  unchanged. Installation and manual clicks are in INSTALL.md's Checkpoint A
+  section; architecture and privacy disclose temporary-page traffic and local
+  counters/setting. No new Desktop installer is needed for this website checkpoint.
+- Delivery boundary: C4 source/package is ready for review, not live acceptance.
+  Source checkpoint 81101e2 is pushed on codex/c4 in
+  [PR #5](https://github.com/voiddev011/mylimits/pull/5), targeting
+  feat/persistent-accounts. Rebasing onto C3's integration merge preserved the
+  tested source tree exactly. Remote CI is pending; local results are above.
+  Main is unchanged. Stop before C5. Human review/integration and the 3–4 day trial are
+  next; private-session evidence gates, independent browser accounts and logout
+  survival remain unimplemented/unverified here.

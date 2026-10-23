@@ -49,7 +49,7 @@ MyLimits 2.1 is a local Manifest V3 extension with an optional separate snapshot
 flowchart TD
   Click[User enables an exact website origin] --> Schedule[Alarms / refresh-on-open / manual request]
   Schedule --> Guard[Per-source cooldown, backoff and generation]
-  Guard --> Reader[Fixed-origin reader: background first, existing tab fallback]
+  Guard --> Reader[Fixed-origin reader: background, normal tab, bounded recovery tab]
   Native[Optional local OpenAI companion] --> Normalize[Validate normalized snapshot]
   Reader --> Normalize
   Normalize --> Reconcile[Source reconciliation and account projection]
@@ -119,8 +119,10 @@ run together. Same-source overlapping requests coalesce, queued work can abort,
 and disabled/forgotten/rebound generations reject late results. State mutations
 serialize through one repository queue.
 
-Background fetch uses fixed origins and timeouts. An existing permitted page can
-provide context when needed; no hidden tab or login window is created. Typed
+Background fetch uses fixed origins and timeouts. An existing permitted normal
+page can provide context when needed. With automatic recovery enabled, selected
+network/403/challenge failures may create one inactive normal tab temporarily;
+this uses the same browser login and never creates an independent login. Typed
 errors distinguish sign-in, missing page, provider denial, offline, throttling
 and unverifiable responses. The native bridge uses its existing coalesced
 request/status path independently of website transport.
@@ -129,12 +131,46 @@ Next attempts and exponential failure backoff persist across worker restarts.
 Provider retry instructions are capped at 24 hours; ordinary exponential backoff
 caps at an hour. A 15-second click cooldown and persisted retry wait apply before
 requests; explicit reconnect resets local scheduling. On the persistent-accounts
-C2 branch, authentication rejection retries automatically once a persisted
+C2 implementation, authentication rejection retries automatically once a persisted
 nextRetryAt is due. A null authentication retry deadline waits for a manual, tab
 or cookie signal. Those signals still obey the 15-second cooldown; non-auth
-provider waits are never bypassed. Cookie and idle reasons are defined, but their
-new browser listeners are not part of C2.
+provider waits are never bypassed. C3 adds normal-store cookie signals; C4 adds
+the idle-to-active trigger, which obeys scheduled retry waits.
 A failed request never changes the observation time of the previous reading.
+
+## Persistent-accounts C4: bounded website recovery
+
+The reader first tries the background request and an existing normal tab. Only
+eligible network/403/HTML-challenge failures enter `bootstrap-tab.ts`. Plain 401,
+429, malformed quota data, offline and cancellation do not create a tab. A
+provider Retry-After wait is respected. Recovery does not bypass a challenge or
+provide a login; if the browser cannot satisfy the request, normal backoff resumes.
+
+One inactive provider tab hosts the entire identity → quota → identity transaction.
+Closing after the first endpoint would make the next endpoint collide with its
+own cooldown. Loading is bounded at 20 seconds, followed by a three-second settle.
+Existing quota/identity validation and generation fences still decide acceptance.
+The UI shows “Retrying in the background” only while recovery is running.
+
+The tab factory chooses an explicitly non-private normal window. Reader selection,
+website focus and tab-update triggers reject private, unknown and Firefox container
+contexts. Owned recovery tabs cannot trigger or be borrowed by other checks.
+Only its recorded tab/window may be closed; user activation aborts the attempt
+and leaves that tab open. Session ownership records support worker-start cleanup.
+Unavailable/corrupt ownership storage disables this recovery path conservatively.
+
+Local counters permit at most eight attempts per provider per UTC day, with at
+least 30 minutes between attempts, including creation failures. They live outside
+Store at `mylimits:recovery-counters:v1`; ownership lives only in extension session
+storage at `mylimits:recovery-tabs:v1`. Neither is exported or synced. Settings
+`autoRecoverTab` defaults to true for old version-2 data and is deliberately
+browser-local: preference push/pull excludes it and preserves the receiving
+browser's choice. IDs, aliases, readings and history retain their existing schema.
+`normalizeHeaders` remains absent until the real-session evidence gate.
+
+Normal/private routing and provider data in automated tests are fictional. Real
+Windows Chrome/Brave, browser-wake, challenge and overnight behavior remain manual
+acceptance checks. C4 introduces no browser session vault or independent account.
 
 Freshness uses each meter's observation time, active source status and reset
 expiry. Expired windows await a new reading; a countdown reaching zero does not
