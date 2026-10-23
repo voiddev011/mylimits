@@ -8,3 +8,21 @@ export function retryTime(value:string|null,now=Date.now()):number|null {
  const time=Number.isFinite(seconds)&&seconds>=0?now+seconds*1000:Date.parse(value);
  return Number.isFinite(time)&&time>=now?Math.min(time,now+86400000):null;
 }
+export interface ResponseInfo {status:number;contentType?:string|null;cfMitigated?:string|null;retryAfter?:string|null;parseFailed?:boolean;}
+export function isChallengeResponse(response:ResponseInfo):boolean {
+ // Throttling always keeps its provider wait, even when the error page is HTML.
+ if(response.status===429)return false;
+ const mime=response.contentType?.split(';',1)[0]?.trim().toLowerCase();
+ return response.status===403&&response.cfMitigated==='challenge'||mime==='text/html'||mime==='application/xhtml+xml';
+}
+export function responseError(response:ResponseInfo,name:string,now=Date.now()):AdapterError|null {
+ const retryAt=retryTime(response.retryAfter??null,now);
+ if(response.status===429)return new AdapterError('error','The website asked us to slow down. Refresh will wait before retrying.',retryAt,'rate-limit');
+ if(isChallengeResponse(response))return new AdapterError('waiting-for-tab','The website requires a browser check. Open it once, then retry.',retryAt,'challenge');
+ if(response.status===401)return new AdapterError('signed-out',`Sign in on the ${name} website, then refresh.`);
+ if(response.status===403)return new AdapterError('unavailable','The website declined this usage request.',retryAt);
+ if(response.status===0)return new AdapterError('error','Usage could not be read. Try again with the website open.');
+ if(response.status<200||response.status>=300)return new AdapterError('unavailable','This usage interface is currently unavailable.',retryAt);
+ if(response.parseFailed)return new AdapterError('unavailable','The website returned usage information that could not be verified.',null,'shape');
+ return null;
+}

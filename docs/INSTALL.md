@@ -145,3 +145,12 @@ Record results separately for **both providers and Windows Chrome/Brave** in
 
 Firefox can build/temporarily install its ZIP, but Desktop native setup for Firefox
 is not implemented. Use Windows Chrome/Brave for this Desktop preview.
+
+## Persistent-accounts C3 development preview
+
+On codex/c3, Use current browser account may request optional cookie access for
+OpenAI/Claude sign-in-change detection. Declining it leaves Continue without
+sign-in detection; website tracking then uses ordinary retry backoff. The helper
+inspects normal-store cookie metadata, not saved independent credentials. Real
+provider cookie-name and logout/renewal behavior remain unverified. This preview
+does not provide a browser-only independent account login.

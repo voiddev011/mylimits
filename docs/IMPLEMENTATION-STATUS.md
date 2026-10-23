@@ -535,3 +535,64 @@ automated tests, live verification and blocked/unverified work.
 
 - C2 package: .output/mylimits-3.4.0-chrome.zip, 308639 bytes;
   SHA-256 d427af8c9ceea9ef0ff27b6740a95e3a5a1b33c5b249335b1e1f1beaccde7283.
+
+### C3 — response classification and optional sign-in signals
+
+- Continued sequentially on codex/c3. C2 PR #3 passed all six PR CI jobs in
+  run 39903478561 and merged into feat/persistent-accounts as 21e2ff7. Main is
+  unchanged. C3 will be based on that integration commit before push.
+- Changed provider errors/adapters plus new response helper/tests; added injected
+  session-cookies helper/tests, controller wiring, optional cookies permission,
+  account-picker permission fallback, browser regressions, test registration and
+  architecture/privacy/status. No schema/data migration or dependencies added.
+- HTTP 200 HTML and Cloudflare 403 challenges are recognized before JSON parsing;
+  plain 401/403, malformed JSON and 429 stay distinct. HTML 429 keeps throttling
+  priority and its Retry-After deadline. Page and background metadata stay redacted.
+- Current-account setup requests optional cookie access with site access. Decline
+  leaves an explicit site-only path. Existing site grants and denied/unsupported
+  cookie APIs degrade to C2's ordinary backoff, without disabling website tracking.
+- Only positively identified normal stores are inspected. No hardcoded store IDs
+  or list-order inference. Incognito events cannot trigger or cancel a pending
+  normal sign-in; container/partition ambiguity stays unknown. Values are never
+  copied/stored/logged. Diagnostics contain only recognized names/presence.
+- Enabled needs-auth/needs-tab connections alone react to matching addition/
+  overwrite signals, debounced two seconds. State, permission, store and current
+  presence are rechecked before refresh. Permission removal stops pending work;
+  rolling cookies on healthy accounts do not produce a refresh storm.
+- Unresolved provider evidence: names in the plan are candidates, not live proof.
+  No production provider is marked verified. Missing candidates therefore remain
+  UNKNOWN; the implemented signed-out + verified-absent => null-deadline rule is
+  tested with fixtures but is not enabled from an unverified name assumption.
+  Spike evidence at C6/G0 must establish names and domain/path/partition
+  applicability before enabling absence inference. This
+  conservative decision prevents premature parked sources.
+- The future spike package check must preserve C3's optional cookies permission
+  in ordinary builds; only debug entrypoints/extra experimental permissions are
+  spike-only. Do not blindly apply the older pre-C3 permission-exclusion wording.
+- Final checks: npm run check passed (134 core, 20 native, 24 connection and
+  4 transport/runtime tests, typecheck and Chrome build). Added 14 unit regressions
+  and three browser regressions; existing assertion values were unchanged.
+- Browser validation: first pass 37/37. After expanding service-switch coverage,
+  one run had 36 pass/1 failure from an overly exact Gemini selector; corrected
+  selector and targeted test passed. A later run had 35 pass/2 setup failures
+  because an overlapping package rebuild removed the manifest temporarily.
+  Reran after all builds completed: npm run test:browser passed 37/37 serially.
+  No application assertion was weakened to accommodate either test/setup issue.
+- Chrome/Edge/Firefox builds and node scripts/check-packages.mjs all passed.
+  npm run zip passed: Chrome ZIP 309945 bytes, SHA-256
+  a4a0366d5a1c6d0f9e356fc16a53c84ec7517b165a041c2333912d1af75ccef8.
+  Whitespace and local documentation links passed; original R2 plan unchanged.
+- New browser coverage uses a temporary fixture manifest with a cookie grant, a
+  fictional sessionKey and fixture-routed HTTP to exercise real Chrome cookie
+  events. It does not authorize a real provider or verify account/logout behavior.
+  Other new browser tests cover HTML 200 and declining cookie access/site switching.
+- Manual C3 check: build/load codex/c3 in a test Chrome/Brave profile. Choose
+  current Claude/OpenAI account and inspect the optional cookie/site request.
+  Decline cookie access and use Continue without sign-in detection to verify the
+  site-only route. With cookie access, sign back in after a failed check and
+  inspect Settings → Copy safe diagnostics for metadata-only recovery. No values
+  or raw session responses should be shared. Real-provider/Windows acceptance
+  and cookie-name verification remain PENDING.
+- Next: push and open C3 PR into feat/persistent-accounts. C4 (bounded temporary
+  tab recovery and normal/incognito tab safety) follows review/integration. Stop
+  before C4 here; checkpoints A/B and G0/G1 remain pending.
