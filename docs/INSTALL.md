@@ -194,3 +194,26 @@ Review these steps with your own test accounts:
 
 Automated fixture coverage does not establish these live outcomes. Stop at
 Checkpoint A for review; merge to main and the trial are human decisions.
+
+## Persistent-accounts Checkpoint B (C5)
+
+For the next code-review build, use the same source setup above but switch/pull
+`codex/c5` instead of `codex/c4`, build, and reload the same unpacked extension
+folder. Do not uninstall it; aliases and history must remain.
+
+1. Overview and the compact popup show the source of each account. In account
+   details, Browser login identifies ordinary website tracking and Companion
+   identifies an existing Desktop connection.
+2. Refresh one source in its details. Its retry state and successful reading
+   belong to that connection. A failure must retain its old reading time and
+   leave other connected accounts untouched.
+3. Current-browser setup, tab and sign-in-change signals still apply only to
+   Browser login. C4's recovery setting and retry limits still apply.
+4. The add-account choices are unchanged. **C5 does not enable Saved sign-in**;
+   that source label is reserved for later gated work. Do not edit storage or
+   manufacture a vault record to connect an account.
+
+Two same-provider saved sources are tested with simulated readers only. Actual
+independent provider login/logout/renewal remains pending; the existing Desktop
+path retains its separate live acceptance checklist. Stop at Checkpoint B for
+review before C6's evidence tools. Main is not merged by this development task.

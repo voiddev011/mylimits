@@ -1,6 +1,7 @@
 import { privateAccountName } from './presentation';
 import { isQuiet, alertKey, confirmedReset } from './alert-policy';
 import { acceptSnapshot, projectAccounts } from './connections';
+import { websiteId } from './connection-id';
 import { type Account, type Meter, type ProviderId, type Store, accountName, alertThresholds, isFresh, remainingPercent } from './model';
 
 export interface Snapshot {
@@ -49,14 +50,21 @@ export function applySnapshot(store: Store, provider: ProviderId, id: string, sn
 
 }
 
-export function markProvider(store: Store, provider: ProviderId, status: Exclude<Store['providers'][ProviderId]['status'], 'checking' | 'active'>, message: string, now: number): Store {
+type FailureStatus=Exclude<Store['providers'][ProviderId]['status'],'checking'|'active'>;
+export function markConnection(store:Store,connectionId:string,status:FailureStatus,message:string,now:number):Store{
+  const connection=store.connections.find(c=>c.id===connectionId);
+  if(!connection)return store;
+  const provider=connection.provider;
   const next: Store = { ...store,
-    connections:store.connections.map(c=>c.id===`website:${provider}`?{...c,status:status==='signed-out'?'needs-auth':status==='waiting-for-tab'?'needs-tab':status==='disabled'?'disabled':status==='inactive'?'disabled':status,enabled:status==='disabled'?false:c.enabled,message,lastAttemptAt:now}:c),
-    accounts: store.accounts.map(account => account.provider === provider && !account.companionProfile && account.connection === 'active'
+    connections:store.connections.map(c=>c.id===connectionId?{...c,status:status==='signed-out'?'needs-auth':status==='waiting-for-tab'?'needs-tab':status==='disabled'?'disabled':status==='inactive'?'disabled':status,enabled:status==='disabled'?false:c.enabled,message,lastAttemptAt:now}:c),
+    // Legacy accounts without snapshots can only follow their explicitly bound source.
+    accounts: store.accounts.map(account => account.id===connection.accountId&&!store.snapshots.some(s=>s.accountId===account.id)&&account.connection==='active'
       ? { ...account, connection: status === 'disabled' ? 'inactive' as const : status } : account),
-    providers: { ...store.providers, [provider]: { ...store.providers[provider], status, activeAccountId:null,checkedAt:now,message } } };
+    providers:connection.kind==='website'?{ ...store.providers, [provider]: { ...store.providers[provider], status, activeAccountId:null,checkedAt:now,message } }:store.providers };
   return projectAccounts(next);
-
+}
+export function markProvider(store: Store, provider: ProviderId, status: FailureStatus, message: string, now: number): Store {
+  return markConnection(store,websiteId(provider),status,message,now);
 }
 
 export function recordObservation(store: Store, provider: ProviderId, id: string, eventId: string, now: number): Store {

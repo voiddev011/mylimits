@@ -1,4 +1,4 @@
-import { accountStatus, type Account, type Settings } from './model';
+import { accountStatus, type Account, type Settings,type ConnectionKind } from './model';
 import type { PublicState } from './public';
 
 /** Account order and nicknames can change; privacy labels follow creation order. */
@@ -24,6 +24,16 @@ export function needsAttention(account: Account, settings: Settings, now: number
 export function accountStatusText(account:Account,store:PublicState,now:number):string{
   const recovering=store.connections.some(c=>c.kind==='website'&&c.accountId===account.id&&c.enabled&&c.status==='checking'&&c.message==='Retrying in the background');
   return recovering?'Retrying in the background':accountStatus(account,now,store.settings.refreshMinutes);
+}
+export function connectionSource(kind:ConnectionKind):string{
+ return kind==='website'?'Browser login':kind==='vault'?'Saved sign-in':kind==='companion'?'Companion':kind==='independent-local'?'Desktop':kind==='cloud'?'Hosted':'Saved reading';
+}
+export function accountSource(account:Account,store:PublicState):string{
+ const sources=store.connections.filter(c=>c.accountId===account.id);
+ const source=sources.find(c=>c.enabled&&['active','checking'].includes(c.status)&&account.meters.some(m=>m.connectionId===c.id))
+  ??sources.find(c=>c.enabled&&['active','checking'].includes(c.status))
+  ??sources.find(c=>account.meters.some(m=>m.connectionId===c.id))??sources[0];
+ return source?connectionSource(source.kind):'Saved reading';
 }
 /** Strict allowlist: no identifiers, names, free-form errors, URLs or readings. */
 export function diagnostics(store: PublicState, version: string, now: number) {

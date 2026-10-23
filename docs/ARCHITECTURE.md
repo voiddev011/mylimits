@@ -114,8 +114,8 @@ establish a remote account or infer an allowance from a message count.
 ## Collection, concurrency and failure recovery
 
 Chrome alarms default to five minutes. Popup opening refreshes only as needed;
-ordinary UI storage reads do not initiate collection. At most two website reads
-run together. Same-source overlapping requests coalesce, queued work can abort,
+ordinary UI storage reads do not initiate collection. At most two explicit source
+refresh jobs run together. Same-source overlapping requests coalesce, queued work can abort,
 and disabled/forgotten/rebound generations reject late results. State mutations
 serialize through one repository queue.
 
@@ -176,6 +176,45 @@ Freshness uses each meter's observation time, active source status and reset
 expiry. Expired windows await a new reading; a countdown reaching zero does not
 refill a meter. Unknown is null/absent, reported zero is valid, and scopes are
 never combined into an overall AI percentage.
+
+## Persistent-accounts C5: connection-scoped collection
+
+`refreshConnection(id)` is the collection boundary. A provider refresh enumerates
+its enabled sources; Refresh all enumerates all enabled sources. The common
+two-job coordinator coalesces by immutable connection ID. Helper/hosted discovery
+runs alongside collection so an unavailable optional service cannot hold up
+ordinary website reads. Native software retains its own per-account scheduling.
+
+`connection-refresh.ts` contains the actual website/future-vault normalization,
+identity checks, generation fencing, status/backoff and history acceptance with
+injected storage, permission and reader ports. Failures call `markConnection`;
+only website failures update the legacy provider mirror. Account presentation
+continues to derive from source-bound snapshots; another account of the same
+provider remains live. Browser-tab, cookie and current-account setup signals
+target only `website:<provider>`, never another connection.
+
+Provider parsing remains transport-injected. `ambientTransport` supplies ordinary
+background/page requests and the C4 whole-transaction temporary-tab retry.
+`host-lock.ts` serializes each individual Chrome request by exact provider host,
+across background, page and temporary transports. Other hosts may proceed in
+parallel. Waiting cancellation removes that request; running work holds the lock
+until its I/O/cleanup settles even if cancellation was requested. Future saved
+transports must use this same lock before installing any scoped request rule.
+No request-header/cookie rules are installed by C5.
+
+IDs `website:<provider>` stay unchanged. The new reserved form is
+`vault:<provider>:<UUID>`; account/workspace identity is still verified separately
+from the slot and nickname. Setup metadata defaults to `method: ambient` and may
+bind a future private attempt to its own slot. `Store.version` remains 2, existing
+aliases/snapshots/history persist, and public state still excludes `profileId`.
+The source labels are Browser login, Saved sign-in, Companion, Desktop, Hosted
+and Saved reading. A label is not evidence that a provider grant is available.
+
+There is **no vault credential store, private-sign-in UI or production saved
+transport yet**. Refreshing a reserved vault record reports unavailable and keeps
+its dated reading; it cannot use ambient browser credentials. Fictional injected
+readers test two-source concurrency and isolation, not actual authorization.
+C6 and the real-session G0/G1 gates remain before private-sign-in implementation.
 
 ## Alerts
 

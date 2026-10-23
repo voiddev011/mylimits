@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { emptyStore } from './model';
 import { initializeV2, migrateV1, STATE_V1, STATE_V2, ACTIVE_SCHEMA, BACKUP_V1 } from './migrations';
 import { StoreSchema } from './schema';
+import { toPublicState } from './public';
+import { vaultId } from './connection-id';
 function legacy(){const s=emptyStore('keep-salt');const {cursor:_,...providers}=s.providers;return {...s,providers,version:1,accounts:[{id:'old-hash',provider:'claude',kind:'account',alias:'Work',defaultName:'Account',plan:null,connection:'inactive',meters:[],createdAt:1,updatedAt:2,alertRemaining:30,alertsMuted:true}]};}
 class Memory {values:Record<string,unknown>={};writes=0;fail=0;async get(keys:string|string[]){return Object.fromEntries((typeof keys==='string'?[keys]:keys).map(k=>[k,structuredClone(this.values[k])]))}async set(items:Record<string,unknown>){if(++this.writes===this.fail)throw new Error('quota exceeded');Object.assign(this.values,structuredClone(items));}}
 test('migration preserves old account identity, salt, aliases and preferences without inventing workspace',()=>{
@@ -24,4 +26,14 @@ test('V2 recovery setting defaults additively without changing IDs, aliases, sna
  const parsed=StoreSchema.parse(old);assert.equal(parsed.version,2);assert.equal(parsed.settings.autoRecoverTab,true);
  assert.deepEqual(parsed.accounts,old.accounts);assert.deepEqual(parsed.snapshots,old.snapshots);assert.equal(parsed.installSalt,old.installSalt);
  assert.equal(StoreSchema.parse({...old,settings:{...old.settings,autoRecoverTab:false}}).settings.autoRecoverTab,false);
+});
+test('V2 connection metadata adds vault and ambient setup defaults without exposing private profile fields',()=>{
+ const old=migrateV1(legacy()),parsed=StoreSchema.parse(old);
+ assert.deepEqual(parsed.accounts,old.accounts);assert.deepEqual(parsed.snapshots,old.snapshots);
+ const slot='75cc9537-6b43-444a-8fbd-b383606b8d45';
+ parsed.connections.push({...parsed.connections[0]!,id:vaultId('claude',slot),kind:'vault',profileId:slot});
+ parsed.accountSetup={id:'9696d962-eac8-41fa-a15c-a04e7c015c0d',provider:'claude',mode:'detect',nickname:'Keep alias',previousAccountId:null,startedAt:1};
+ const next=StoreSchema.parse(parsed);assert.equal(next.version,2);assert.equal(next.accountSetup!.method,'ambient');
+ assert.ok(!('profileId' in toPublicState(next).connections.find(c=>c.kind==='vault')!));
+ assert.equal(StoreSchema.safeParse({...next,accountSetup:{...next.accountSetup,method:'private'}}).success,false);
 });

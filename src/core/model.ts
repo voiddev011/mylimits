@@ -67,6 +67,7 @@ export interface ProviderState {
 export interface AccountSetup {
   id: string; provider: ProviderId; mode: 'detect' | 'another'; nickname: string;
   previousAccountId: string | null; startedAt: number;
+  method?: 'ambient' | 'private'; slotId?: string;
 }
 export interface Store {
   accountSetup?: AccountSetup | null;
@@ -112,7 +113,7 @@ export function alertThresholds(account: Account, settings: Settings): { warning
   return { warning, critical: Math.min(warning, settings.criticalRemaining) };
 }
 
-export type ConnectionKind = 'website' | 'companion' | 'independent-local' | 'cloud' | 'snapshot-import';
+export type ConnectionKind = 'website' | 'vault' | 'companion' | 'independent-local' | 'cloud' | 'snapshot-import';
 export type ConnectionStatus = 'disabled' | 'checking' | 'active' | 'needs-auth' | 'needs-tab' | 'unavailable' | 'offline' | 'error';
 export interface ConnectionRecord {
   id: string; provider: ProviderId; kind: ConnectionKind; accountId: string | null;

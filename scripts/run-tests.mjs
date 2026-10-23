@@ -5,6 +5,7 @@ import '../src/core/companion.test.ts';
 import '../src/core/native-runtime.test.ts';
 
 import '../src/core/connections.test.ts';
+import '../src/core/connection-id.test.ts';
 import '../src/core/migrations.test.ts';
 import '../src/providers/reader.test.ts';
 import '../src/core/actions.test.ts';
@@ -29,3 +30,5 @@ import '../src/platform/diagnostics.test.ts';
 import '../src/platform/session-cookies.test.ts';
 import '../src/providers/response.test.ts';
 import '../src/platform/bootstrap-tab.test.ts';
+import '../src/platform/host-lock.test.ts';
+import '../src/platform/connection-refresh.test.ts';
