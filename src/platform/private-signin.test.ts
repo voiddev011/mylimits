@@ -119,3 +119,13 @@ test('browser restart with lost session journal removes only unconfirmed setup a
  const g=await fixture(),setup=await g.service().start('chatgpt','private','');await g.service().check(setup);const metadata=structuredClone(g.state().accountSetup),candidate=setupCandidate(g.state())!;await g.service().save(setup,candidate.id,true);
  g.setState({...g.state(),accountSetup:metadata,connections:g.state().connections.map(c=>c.kind==='vault'?{...c,enabled:false}:c)});await g.restart().initialize();assert.equal(g.entries.size,1);assert.equal(g.state().connections.filter(c=>c.kind==='vault').length,1);assert.equal(g.state().accountSetup,null);
 });
+test('same verified browser identity converts its live source and preserves account IDs, aliases and previous snapshots',async()=>{
+ const f=await fixture();f.setIdentity('A');const before=structuredClone(f.state()),id=await f.service().start('chatgpt','private','');await f.service().check(id);const candidate=setupCandidate(f.state())!;assert.equal(candidate.id,f.aid);
+ await f.service().save(id,candidate.id,true);const after=f.state();assert.equal(after.accounts.length,1);assert.equal(after.accounts[0]!.id,f.aid);assert.equal(after.accounts[0]!.alias,'Keep work');assert.equal(after.accounts[0]!.createdAt,before.accounts[0]!.createdAt);
+ assert.ok(after.snapshots.some(s=>s.snapshotId===before.snapshots[0]!.snapshotId));assert.equal(after.connections.find(c=>c.kind==='website'&&c.provider==='chatgpt')!.enabled,false);assert.equal(after.providers.chatgpt.enabled,false);
+ assert.equal(after.providers.chatgpt.activeAccountId,null);assert.deepEqual(after.connections.find(c=>c.kind==='vault')!.savedSignIn,{method:'private',notAfter:null});assert.equal(f.entries.size,1);
+});
+test('Save accepts an edited alias only for the confirmed identity',async()=>{
+ const f=await fixture(),id=await f.service().start('chatgpt','private','Original');await f.service().check(id);const candidate=setupCandidate(f.state())!;
+ await f.service().save(id,candidate.id,true,'Renamed personal');assert.equal(f.state().accounts.find(a=>a.id===candidate.id)!.alias,'Renamed personal');assert.equal(f.state().accounts.find(a=>a.id===f.aid)!.alias,'Keep work');
+});

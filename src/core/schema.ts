@@ -45,6 +45,7 @@ export const ConnectionRecordSchema: z.ZodType<ConnectionRecord> = z.object({
   generation: z.number().int().min(0), lastAttemptAt: time.nullable(), lastSuccessAt: time.nullable(),
   nextRetryAt: time.nullable(), failures: z.number().int().min(0), message: z.string().max(300).nullable(), profileId: z.string().uuid().optional(), independent: IndependentMetadataSchema.optional(),
   authFailures:z.number().int().min(0).default(0),
+  savedSignIn:z.object({method:z.enum(['private','current']),notAfter:time.nullable()}).strict().optional(),
 });
 export const WorkspaceSchema: z.ZodType<Workspace> = z.object({ id, provider: ProviderSchema, remoteId: id, name: z.string().max(120) });
 export const UsageSnapshotSchema: z.ZodType<UsageSnapshot> = z.object({

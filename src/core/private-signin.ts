@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { ProviderSchema } from './schema';
 export const PrivateStartSchema=z.object({type:z.literal('vault-signin-start'),provider:ProviderSchema,method:z.enum(['private','current']),nickname:z.string().trim().max(60)}).strict();
-export const PrivateSaveSchema=z.object({type:z.literal('vault-signin-save'),setupId:z.string().uuid(),accountId:z.string().min(1).max(240),consent:z.literal(true)}).strict();
+export const PrivateSaveSchema=z.object({type:z.literal('vault-signin-save'),setupId:z.string().uuid(),accountId:z.string().min(1).max(240),consent:z.literal(true),nickname:z.string().trim().max(60).optional()}).strict();
 export const PrivateCancelSchema=z.object({type:z.literal('vault-signin-cancel'),setupId:z.string().uuid()}).strict();
 export const PrivateCheckSchema=z.object({type:z.literal('vault-signin-check'),setupId:z.string().uuid()}).strict();
 export const PRIVATE_ALARM='mylimits:vault-signin-timeout';

@@ -1,7 +1,7 @@
 # Current implementation status — Desktop + extension
 
-Updated 23 October 2026. Current checkpoint: C10's disabled private sign-in and
-saved-source refresh on `codex/c10`. C1–C7 and C9 are merged into main;
+Updated 23 October 2026. Current task: C11's gated setup UI, source conversion,
+credential deletion and leak tests on `codex/c11`. C1–C7 and C9/C10 are merged into main;
 C7's G0 evidence assessment remains HOLD. Desktop was implemented on
 `feature/desktop-independent-accounts`, created from clean
 `docs/desktop-accounts-execution-plan` (`3f218f6` locally).
@@ -85,9 +85,9 @@ hosted route is deferred. It was not completed by earlier infrastructure work.
 
 ## Next action
 
-Merge C10's validated disabled checkpoint under the user's existing authorization,
-then continue with C11's UI, consent controls and forget/disconnect credential
-deletion as the next separate task group. Before activating
+Publish/merge C11's validated disabled checkpoint under the user's existing
+authorization and prune the merged task branch. C12 is the next separate group;
+it is not started here. Before activating
 providers, run the live experiments, record sanitized results and obtain G0/G1.
 The [manual trial](INSTALL.md#persistent-accounts-checkpoint-a-c1c4) is pending;
 keep all private-session/vault implementation gated by G0/G1. For the separate Desktop path, real-account
@@ -1055,3 +1055,81 @@ automated tests, live verification and blocked/unverified work.
   access denial, policy off, consent and recovery errors without parsing sentences.
   Website errors retain their existing messages and shape. The production-disabled
   Chromium fixture checks the structured disabled response as well.
+
+### C11 — gated setup, conversion, deletion and leak tests
+
+- C10 merged through PRs #13/#14 into main (`ab6ee29`); source checkpoint
+  `cd3d164` passed all six CI jobs. Created `codex/c11` from the latest integration
+  branch after a clean worktree and remote inspection. No user edits were present.
+- Scope is T3.6/T3.7/T3.8 and R2 source conversion only. Providers remain off,
+  allowlists empty; no guessed cookies or inferred live/logout behavior. C12 is
+  separate. Website tracking and the optional Desktop route remain available.
+- Inspected the controller, private flow, schema/public projections, React setup,
+  exports, sync and diagnostics. Reuse C10's runtime; add safe public expiry/method
+  metadata, explicit consent/identity UI, same-identity source conversion and
+  fenced credential deletion. Actual commands/results and blockers follow here.
+- Implemented additive source method/expiry metadata (schema version still 2),
+  consent/nickname/identity flow, private-access guidance and explicit weaker
+  current-login choice. Private choices stay hidden for off providers. Grants
+  remain unchanged in actual manifests; optional DNR is conditional on future
+  evidence-approved provider policy, and current release guards stay strict.
+- Same verified identity converts its website source with a generation fence,
+  preserving account ID/alias/history. Disconnect/forget fence refresh first,
+  erase encrypted slots, then remove source metadata; deletion failure retains
+  a disabled retryable source instead of claiming successful removal.
+- npm run typecheck and npm test pass: **243/243**. Added 16 regressions across
+  migration, privacy, conversion/alias editing, permissions/UI helpers, encrypted
+  deletion and leak boundaries. No existing assertion changed. Initial typing
+  fixes restricted permission names and declared the browser-only fixture global.
+- Chrome build passes. The first focused Chromium run failed all ten fixtures
+  before application assertions: the expanded in-memory React test bundle left
+  process.env.NODE_ENV unresolved in library mode. Added a test-only production
+  React define and automatic JSX configuration; rerunning the same expectations.
+  All provider/window/cookie/DNR HTTP in these UI fixtures is fictional.
+- The corrected focused Chromium suite passed **10/10**, including all six
+  existing vault fixtures plus four new real React consent-flow fixtures. It
+  covers first-account default, two saved accounts beside normal A, denied
+  incognito with explicit current-login fallback, Privacy mode, cancellation and
+  denied grants. Actual worker disconnect/forget messages erase encrypted slots
+  created by the fixture and preserve unrelated accounts. No provider traffic.
+- Updated privacy/architecture/install disclosure for the gated flow, local
+  encryption limits, current-login warning, conversion and retryable deletion.
+  Added a consent-screen screenshot artifact for visual review. Full check,
+  complete browser suite, variant/package guards and CI still follow.
+- Full check passed: **243 core, 20 native, 24 connection and four transport/runtime**
+  tests, TypeScript and Chrome build. Complete Chromium suite passed **52/52**;
+  server typecheck and Chrome/Edge/Firefox directory contracts passed. The separate
+  spike suite passed **4/4**. Reviewed the actual consent screenshot: readable
+  layout, unchecked consent, disabled Save and collapsed privacy disclosure.
+- Final source-isolation review found website disconnection unconditionally
+  revoked the shared site grant. Retain that grant while another enabled saved
+  source needs it; release it after the last website/vault source is removed.
+  Added an actual Chromium permissions regression. Re-running full browser and
+  variant/package checks on this final correction; core/full check still passes.
+- The 53-test browser run passed 52; only the new final-grant removal assertion
+  failed. Diagnosis: its existing fixture grants required host access, so Chromium
+  reports "You cannot remove required permissions." Production grants are
+  optional. Model that removal in the fixture explicitly and assert zero removal
+  requests while B needs the host, exactly one after the last source is gone.
+  This proves controller ownership/routing, not the real approval/removal prompt.
+- Final frozen-source validation passes: npm run check (**243 core, 20 native,
+  24 connection and four transport/runtime**, TypeScript/Chrome build), followed
+  by the complete Chromium suite **53/53**. Separate spike **4/4**, server
+  TypeScript, Chrome/Edge/Firefox build-directory guards and actual normal ZIP
+  inspection pass. No pre-existing assertion was weakened. 68 relative Markdown
+  links, whitespace and the unchanged original R2 plan were checked.
+- Packaged normal Chrome/Firefox ZIPs and the separate spike; generated checksums.
+  Normal archives exclude spike entrypoints/grants, in-memory UI/provider helpers,
+  fictional credential markers and debugging. No new dependencies, required
+  permissions, version bump or release. Local ZIPs (CI timestamps change hashes):
+  - Chrome **325321 bytes**, SHA-256
+    `85baed98f77ef5b62bc1a32419a240fd4c6c3546a568cd2e626eba66e49300cb`.
+  - Firefox **323281 bytes**, SHA-256
+    `4b9f5d82dd002b2c144a0fcfc63106767cbd3e44181937bfbac989e0f5e45757`.
+- C11's code is implemented and locally validated behind off policies. The PR
+  handoff records exact file +/− counts, simulated versus live evidence and manual
+  steps. Publish/CI and the authorized integration/main merge follow. Only main
+  and the integration branch should remain after pruning the merged C11 branch.
+  C12, the live trial, E1–E8, G0/G1 and real provider/logout/other-device acceptance
+  remain PENDING. Installing this checkpoint does not expose an enabled private
+  login route or prove the requested overall feature works live.

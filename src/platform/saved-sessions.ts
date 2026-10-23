@@ -13,6 +13,7 @@ import { createVault } from './vault';
 import { createIndexedDBVaultKeys } from './vault-key-store';
 import { createVaultTransport } from './vault-transport';
 import { createPrivateSignIn } from './private-signin';
+import { createVaultLifecycle } from './vault-lifecycle';
 import type { RequestTrace } from './diagnostics';
 const WAITS='mylimits:vault-waits:v1';
 const Waits=z.partialRecord(ProviderSchema,z.number().int().min(0).max(8.64e15));
@@ -23,6 +24,7 @@ interface SavedPort {
  lock<T>(host:string,fn:()=>Promise<T>,signal?:AbortSignal):Promise<T>;ready():Promise<void>;blockHost(host:string):void;dnr:import('./vault-transport').VaultDNR;
  now():number;uuid():string;trace:RequestTrace;
  policy?:{enabled(p:ProviderId):boolean;allowlist(p:ProviderId):readonly string[]};
+ cancelRefresh(id:string):void;
 }
 /** Actual browser bindings; no credential material is returned through runtime messages. */
 export function createSavedSessions(port:SavedPort){
@@ -62,7 +64,8 @@ export function createSavedSessions(port:SavedPort){
   put:vault.putVault,delete:vault.deleteVault,accepted:port.accepted,
  });
  let cookiesBound=false,windowsBound=false;
- return {...signin,
+ const lifecycle=createVaultLifecycle({...port,deleteSlot:vault.deleteVault,cancelSetup:signin.cancel});
+ return {...signin,disconnect:lifecycle.disconnect,forget:lifecycle.forget,
   async readConnection(c:ConnectionRecord,options:ReaderOptions,signal:AbortSignal,trace:RequestTrace){
    const id=parseConnectionId(c.id);
    if(c.kind!=='vault'||!c.profileId||id?.kind!=='vault'||id.provider!==c.provider||id.slot!==c.profileId)throw new AdapterError('unavailable','Saved sign-in metadata is unavailable.',null,'saved-unavailable');

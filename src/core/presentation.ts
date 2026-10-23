@@ -15,7 +15,7 @@ export function privatePresentation(store: PublicState): PublicState {
   copy.workspaces = copy.workspaces.map((workspace, index) => ({ ...workspace, name: `Workspace ${index + 1}` }));
   copy.connections = copy.connections.map(connection => ({ ...connection, message: null }));
   for (const provider of Object.values(copy.providers)) provider.message = null;
-  if (copy.accountSetup) copy.accountSetup.nickname = '';
+  if (copy.accountSetup) {copy.accountSetup.nickname = '';if(copy.accountSetup.candidate)copy.accountSetup.candidate={...copy.accountSetup.candidate,name:'Detected account',plan:null};}
   return copy;
 }
 export function needsAttention(account: Account, settings: Settings, now: number): boolean {

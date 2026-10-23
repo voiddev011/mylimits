@@ -2,10 +2,11 @@ import type { AccountSetup,ProviderId,Store } from '../core/model';
 import { websiteConnection } from '../core/model';
 import { accountId,applySnapshot,type Snapshot } from '../core/engine';
 import { startAccountSetup } from '../core/account-setup';
+import { enableWebsite } from '../core/actions';
 import { vaultId } from '../core/connection-id';
 import { AccountSchema,MeterSchema } from '../core/schema';
 import { PRIVATE_JOURNAL,PrivateJournalSchema,type PrivateJournal } from '../core/private-signin';
-import { VaultError,validateVaultPayload,type VaultPayload } from '../core/vault-contracts';
+import { VaultError,validateVaultPayload,vaultNotAfter,type VaultPayload } from '../core/vault-contracts';
 import { providers } from '../providers/catalog';
 import { AdapterError } from '../providers/errors';
 interface Tab {id?:number;windowId?:number;incognito?:boolean;cookieStoreId?:string;}
@@ -134,19 +135,21 @@ export function createPrivateSignIn(port:PrivateSignInPort){
   try{await task;a.task=undefined;check(a);void runCheck(a).catch(()=>{});return a.id;}
   catch(e){a.task=undefined;await retire(a);if(e instanceof VaultError)throw e;throw new VaultError('setup-unavailable');}
  }
- async function save(id:string,selectedId:string,consent:boolean){
+ async function save(id:string,selectedId:string,consent:boolean,nickname?:string){
   await initialize();const a=active;if(!a||a.id!==id||!consent||!a.snapshot||!a.payload||a.accountId!==selectedId||a.task)throw new VaultError('confirmation-required');check(a);
   const task=(async()=>{
    const fresh=await capture(a);check(a);if(JSON.stringify(fresh)!==JSON.stringify(a.payload)){a.payload=undefined;a.snapshot=undefined;await patch(a,{candidate:undefined,phase:'error',message:message('wrong-account')});throw new VaultError('wrong-account');}
    await port.put(a.slot,a.provider,a.payload!);check(a);
-   const snapshot=a.snapshot!,choices=await Promise.all((snapshot.workspaces??[]).map(async w=>({id:await accountId(a.provider,`workspace:${w.identity}`,(await port.readStore()).installSalt),provider:a.provider,remoteId:w.identity,name:w.name})));check(a);
+   const snapshot=a.snapshot!,notAfter=vaultNotAfter(a.payload!),choices=await Promise.all((snapshot.workspaces??[]).map(async w=>({id:await accountId(a.provider,`workspace:${w.identity}`,(await port.readStore()).installSalt),provider:a.provider,remoteId:w.identity,name:w.name})));check(a);
    const accepted=await port.updateStore(s=>{
     check(a);if(s.accountSetup?.id!==a.id||s.connections.some(c=>c.kind==='vault'&&c.profileId!==a.slot&&c.accountId===selectedId))throw new VaultError('duplicate-account');
     const c=s.connections.find(c=>c.id===vaultId(a.provider,a.slot));if(!c||c.enabled||c.generation!==0)throw new VaultError('cancelled');a.committing=true;
     const workspaceId=choices.find(w=>w.remoteId===snapshot.workspace?.identity)?.id??null;
-    const base={...s,accountSetup:null,workspaces:[...s.workspaces.filter(w=>!choices.some(v=>v.id===w.id)),...choices],connections:s.connections.map(v=>v.id===c.id?{...v,enabled:true,workspaceIds:choices.map(w=>w.id)}:v)};
+    let base:Store={...s,accountSetup:null,workspaces:[...s.workspaces.filter(w=>!choices.some(v=>v.id===w.id)),...choices],connections:s.connections.map(v=>v.id===c.id?{...v,enabled:true,workspaceIds:choices.map(w=>w.id),savedSignIn:{method:a.method,notAfter}}:v)};
+    // Convert only a matching verified identity; another browser account remains untouched.
+    if(s.connections.some(v=>v.kind==='website'&&v.provider===a.provider&&v.accountId===selectedId))base=enableWebsite(base,a.provider,false);
     let next=applySnapshot(base,a.provider,selectedId,snapshot,port.now(),{connectionId:c.id,workspaceId,observedAt:a.verifiedAt,generation:c.generation});
-    next={...next,accounts:next.accounts.map(v=>v.id===selectedId?{...v,alias:s.accountSetup!.nickname||v.alias}:v)};AccountSchema.parse(next.accounts.find(v=>v.id===selectedId),{jitless:true});return {store:next,value:true};
+    next={...next,accounts:next.accounts.map(v=>v.id===selectedId?{...v,alias:(nickname??s.accountSetup!.nickname).trim()||v.alias}:v)};AccountSchema.parse(next.accounts.find(v=>v.id===selectedId),{jitless:true});return {store:next,value:true};
    });a.committed=accepted;
   })();a.task=task;
   try{await task;await retire(a);await port.accepted(selectedId,vaultId(a.provider,a.slot)).catch(()=>{});}

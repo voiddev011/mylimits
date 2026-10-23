@@ -3,11 +3,12 @@ import { build } from 'vite';
 import { mkdtemp,rm } from 'node:fs/promises';import { tmpdir } from 'node:os';import path from 'node:path';
 import type { browser } from 'wxt/browser';declare const chrome:typeof browser;
 declare const VaultKeys:typeof import('../fixtures/vault-api');
+declare global {var SavedUI:Awaited<ReturnType<typeof VaultKeys.mountPrivateUI>>;}
 // Bundle the actual adapter into memory for CDP injection in this test only.
 // No extra extension entrypoint, exposed runtime method or shipped test helper.
 let source:Promise<string>|undefined;
 function bundle(){return source??=(async()=>{
- const built=await build({configFile:false,logLevel:'silent',build:{write:false,minify:false,lib:{entry:path.resolve('tests/fixtures/vault-api.ts'),name:'VaultKeys',formats:['iife']}}});
+ const built=await build({configFile:false,logLevel:'silent',define:{'process.env.NODE_ENV':JSON.stringify('production')},esbuild:{jsx:'automatic'},build:{write:false,minify:false,lib:{entry:path.resolve('tests/fixtures/vault-api.ts'),name:'VaultKeys',formats:['iife']}}});
  const results=Array.isArray(built)?built:[built],result=results[0];
  if(results.length!==1||!result||!('output' in result))throw Error('Expected one fixture bundle');
  const chunk=result.output.find(c=>c.type==='chunk');if(!chunk||chunk.type!=='chunk')throw Error('Missing fixture bundle');return chunk.code;
@@ -92,4 +93,44 @@ test('production private commands remain disabled and validate consent and exact
  const popup=await context.newPage();await popup.goto(`chrome-extension://${extensionId}/popup.html`);
  const denied=await popup.evaluate(async()=>await chrome.runtime.sendMessage({type:'vault-signin-start',provider:'chatgpt',method:'private',nickname:''}));
  expect(denied.ok).toBe(false);expect(denied.error).toContain('normal MyLimits dashboard');
+});
+test('simulated first-account sign-in UI requires explicit consent and saves an encrypted dated account',async({context,extensionId})=>{
+ const page=await open(context,extensionId);await page.evaluate(async()=>{globalThis.SavedUI=await VaultKeys.mountPrivateUI(chrome,{empty:true})});
+ await expect(page.getByRole('radio',{name:'Private sign-in (recommended)'})).toBeChecked();await page.getByRole('button',{name:'Start private sign-in',exact:true}).click();
+ await expect(page.getByText('Identity checked',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Save account',exact:true})).toBeDisabled();
+ await page.screenshot({path:'test-results/c11-consent.png',fullPage:true});
+ await page.getByLabel('Saved account nickname').fill('Personal');await page.getByRole('checkbox',{name:/I agree to save/}).check();await page.getByRole('button',{name:'Save account',exact:true}).click();await expect(page.getByText('Saved 1 account',{exact:true})).toBeVisible();
+ const result=await page.evaluate(async()=>({state:await SavedUI.read(),slots:await SavedUI.slots(),metrics:SavedUI.metrics(),stored:JSON.stringify(await chrome.storage.local.get('mylimits:vault:v1'))}));
+ expect(result.state.accounts).toHaveLength(1);expect(result.state.accounts[0]!.alias).toBe('Personal');expect(result.slots).toHaveLength(1);expect(result.metrics.ambientReads).toBe(0);expect(result.metrics.normalUnchanged).toBe(true);expect(result.stored).not.toContain('FICTIONAL_PRIVATE_');
+ expect(result.state.connections.find(c=>c.kind==='vault')!.savedSignIn).toEqual({method:'private',notAfter:1800000020000+3*86400000});
+});
+test('simulated sign-in UI connects B and C beside normal A and removes only one encrypted connection',async({context,extensionId})=>{
+ const page=await open(context,extensionId);await page.evaluate(async()=>{globalThis.SavedUI=await VaultKeys.mountPrivateUI(chrome)});
+ for(const [id,name] of [['B','Personal'],['C','Other']] as const){
+  await page.evaluate(id=>SavedUI.identity(id),id);await page.getByRole('button',{name:'Start private sign-in',exact:true}).click();await expect(page.getByText('Identity checked',{exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Save account',exact:true})).toBeDisabled();await page.getByLabel('Saved account nickname').fill(name);await page.getByRole('checkbox',{name:/I agree to save/}).check();await page.getByRole('button',{name:'Save account',exact:true}).click();await expect(page.getByText(`Saved ${id==='B'?1:2} account`,{exact:true})).toBeVisible();
+ }
+ const before=await page.evaluate(()=>SavedUI.read());expect(before.accounts.map(a=>a.alias)).toEqual(['Keep work','Personal','Other']);
+ const target=before.connections.find(c=>c.accountId===before.accounts[1]!.id)!;
+ await page.evaluate(async state=>{await chrome.storage.local.set({'mylimits:state:v2':state})},before);
+ expect((await page.evaluate(id=>chrome.runtime.sendMessage({type:'disconnect',connectionId:id}),target.id)).ok).toBe(true);
+ const after=await page.evaluate(async()=>({state:(await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as import('../../src/core/model').Store,slots:await SavedUI.slots(),metrics:SavedUI.metrics(),envelope:(await chrome.storage.local.get('mylimits:vault:v1'))['mylimits:vault:v1'] as {entries:Record<string,unknown>}}));
+ expect(after.slots).toHaveLength(1);expect(after.envelope.entries[target.profileId!]).toBeUndefined();expect(after.state.connections.some(c=>c.id===target.id)).toBe(false);expect(after.state.accounts[1]!.connection).toBe('inactive');expect(after.state.accounts[2]).toEqual(before.accounts[2]);expect(after.state.accounts[0]).toEqual(before.accounts[0]);expect(after.metrics.ambientReads).toBe(0);expect(after.metrics.normalUnchanged).toBe(true);
+ expect((await page.evaluate(accountId=>chrome.runtime.sendMessage({type:'forget',accountId}),before.accounts[2]!.id)).ok).toBe(true);
+ const forgotten=await page.evaluate(async()=>({slots:await SavedUI.slots(),state:(await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as import('../../src/core/model').Store}));
+ expect(forgotten.slots).toHaveLength(0);expect(forgotten.state.accounts.map(a=>a.alias)).toEqual(['Keep work','Personal']);expect(forgotten.state.connections.some(c=>c.kind==='vault')).toBe(false);
+});
+test('simulated incognito denial offers explicit current-login fallback; privacy blocks identity confirmation',async({context,extensionId})=>{
+ const page=await open(context,extensionId);await page.evaluate(async()=>{globalThis.SavedUI=await VaultKeys.mountPrivateUI(chrome,{incognito:false})});
+ await page.getByRole('button',{name:'Start private sign-in',exact:true}).click();await expect(page.getByText('Allow in Incognito',{exact:true})).toBeVisible();
+ expect((await page.evaluate(()=>SavedUI.metrics())).requests).toBe(0);
+ await page.getByRole('radio',{name:'Save current login',exact:true}).check();await page.getByRole('button',{name:'Save current login',exact:true}).click();await expect(page.getByText('Identity checked',{exact:true})).toBeVisible();await expect(page.getByText('Signing out of the website will probably end this connection.',{exact:true})).toBeVisible();
+ await page.evaluate(()=>SavedUI.privacy(true));await expect(page.getByLabel('Saved account nickname')).toBeDisabled();await expect(page.getByRole('checkbox',{name:/I agree to save/})).toBeDisabled();await expect(page.getByRole('button',{name:'Save account',exact:true})).toBeDisabled();await expect(page.getByText('Turn off Privacy mode to confirm this account.',{exact:true})).toBeVisible();
+ await page.evaluate(()=>SavedUI.privacy(false));await page.getByRole('checkbox',{name:/I agree to save/}).check();await page.getByRole('button',{name:'Save account',exact:true}).click();await expect(page.getByText('Saved 1 account',{exact:true})).toBeVisible();
+ const state=await page.evaluate(()=>SavedUI.read());expect(state.accounts).toHaveLength(1);expect(state.accounts[0]!.alias).toBe('Keep work');expect(state.connections.find(c=>c.kind==='website'&&c.provider==='chatgpt')!.enabled).toBe(false);expect(state.connections.find(c=>c.kind==='vault')!.savedSignIn!.method).toBe('current');
+});
+test('simulated sign-in UI cancellation leaves no credential; permission denial cannot open login',async({context,extensionId})=>{
+ const page=await open(context,extensionId);await page.evaluate(async()=>{globalThis.SavedUI=await VaultKeys.mountPrivateUI(chrome)});await page.getByRole('button',{name:'Start private sign-in',exact:true}).click();await expect(page.getByText('Identity checked',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Cancel saved sign-in',exact:true}).click();await expect(page.getByRole('button',{name:'Start private sign-in',exact:true})).toBeVisible();expect(await page.evaluate(()=>SavedUI.slots())).toHaveLength(0);expect((await page.evaluate(()=>SavedUI.read())).accountSetup).toBeNull();
+ await page.evaluate(()=>SavedUI.permission(false));const before=await page.evaluate(()=>SavedUI.metrics());await page.getByRole('button',{name:'Start private sign-in',exact:true}).click();await expect(page.getByText('Saved-sign-in access was not granted. Nothing was connected.',{exact:true})).toBeVisible();expect(await page.evaluate(()=>SavedUI.metrics())).toEqual(before);
 });

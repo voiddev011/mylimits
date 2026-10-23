@@ -159,6 +159,26 @@ test.describe('connection-scoped refresh (fictional providers only)',()=>{
    return state.accounts.find(a=>a.updatedAt>observed)?.meters[0]?.usedPercent;
   },{timeout:8000}).toBe(15);
  });
+ test('disconnecting website A retains access for saved B and requests optional-grant release only for the last source',async({context,worker,extensionId})=>{
+  const {vaultId}=await import('../../src/core/connection-id'),slot='10000000-0000-4000-8000-000000000003',sourceId=vaultId('claude',slot),old=Date.now()-3600000;
+  let state=applySnapshot(emptyStore('shared-access-fixture'),'claude','website-A',{kind:'account',displayName:'A',plan:null,meters:[]},old);
+  state.connections.find(c=>c.id==='website:claude')!.lastAttemptAt=Date.now();state.connections.push({...state.connections[0]!,id:sourceId,kind:'vault',profileId:slot,accountId:null,lastAttemptAt:Date.now()});
+  state=applySnapshot(state,'claude','saved-B',{kind:'account',displayName:'B',plan:null,meters:[]},old,{connectionId:sourceId});state.accounts[1]!.alias='Personal B';
+  await worker.evaluate(async state=>{
+   // This fixture grants required host access to avoid a real approval prompt. Model optional removal explicitly.
+   const scope=globalThis as typeof globalThis & {sharedGrantRemovals:number};scope.sharedGrantRemovals=0;const remove=chrome.permissions.remove.bind(chrome.permissions);
+   chrome.permissions.remove=async grants=>{if(grants.origins?.includes('https://claude.ai/*')){scope.sharedGrantRemovals++;return true}return remove(grants)};
+   await chrome.storage.local.set({'mylimits:state:v2':state});
+  },state);
+  const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
+  expect((await page.evaluate(()=>chrome.runtime.sendMessage({type:'disconnect',connectionId:'website:claude'}))).ok).toBe(true);
+  expect(await page.evaluate(()=>chrome.permissions.contains({origins:['https://claude.ai/*']}))).toBe(true);
+  expect(await worker.evaluate(()=>(globalThis as typeof globalThis & {sharedGrantRemovals:number}).sharedGrantRemovals)).toBe(0);
+  const kept=await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);
+  expect(kept.connections.find(c=>c.id===sourceId)!.enabled).toBe(true);expect(kept.accounts.find(a=>a.id==='saved-B')).toEqual(state.accounts[1]);
+  const removed=await page.evaluate(connectionId=>chrome.runtime.sendMessage({type:'disconnect',connectionId}),sourceId);expect(removed.ok,removed.error).toBe(true);
+  expect(await worker.evaluate(()=>(globalThis as typeof globalThis & {sharedGrantRemovals:number}).sharedGrantRemovals)).toBe(1);
+ });
 });
 
 // Protocol-2 fixture: first-party processes are fictional; no provider is contacted.
