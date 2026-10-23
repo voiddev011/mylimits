@@ -654,3 +654,65 @@ test.describe('current website account',()=>{
   expect(context.pages().length).toBe(before);expect(existing.url()).toBe('https://claude.ai/');
  });
 });
+
+test.describe('request diagnostics (fictional providers only)', () => {
+ test.use({grantedProviderOrigin:'https://claude.ai/*'});
+ test('records no-tab rejection and copies redacted request metadata from Settings', async ({context,worker,extensionId}) => {
+  await worker.evaluate(() => {
+   globalThis.fetch = async () => new Response('BODY_SECRET', {status:403,headers:{
+    'content-type':'text/html; secret=HEADER_SECRET','cf-mitigated':'challenge','retry-after':'120','set-cookie':'sessionKey=COOKIE_SECRET',
+   }});
+  });
+  const page=await context.newPage(); await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
+  expect((await page.evaluate(()=>chrome.runtime.sendMessage({type:'enable',provider:'claude',enabled:true}))).ok).toBe(true);
+  const response=await page.evaluate(()=>chrome.runtime.sendMessage({type:'request-diagnostics'}));
+  expect(response.ok).toBe(true);
+  expect(response.data.entries).toMatchObject([
+   {provider:'claude',path:'/api/account',transport:'background',status:403,contentType:'text/html',cfMitigated:'challenge',retryAfter:'120',pageFallbackRan:true,tabAvailable:false,sessionCookieState:'unknown'},
+   {provider:'claude',path:'/api/account',transport:'page',status:0,pageFallbackRan:true,tabAvailable:false},
+  ]);
+  await page.evaluate(()=>{
+   Object.defineProperty(navigator.clipboard,'writeText',{configurable:true,value:async(value:string)=>{
+    (window as typeof window & {copiedDiagnostics:string}).copiedDiagnostics=value;
+   }});
+  });
+  await page.getByRole('button',{name:'Settings',exact:true}).click();
+  await page.getByRole('button',{name:'Copy safe diagnostics',exact:true}).click();
+  await expect(page.getByText('Diagnostics copied.',{exact:true})).toBeVisible();
+  const copied=await page.evaluate(()=>(window as typeof window & {copiedDiagnostics:string}).copiedDiagnostics);
+  expect(JSON.parse(copied).requests.entries).toHaveLength(2);
+  for(const secret of ['BODY_SECRET','HEADER_SECRET','COOKIE_SECRET','set-cookie'])expect(copied).not.toContain(secret);
+  const local=await worker.evaluate(()=>chrome.storage.local.get(null));
+  expect(JSON.stringify(local)).not.toContain('request-diagnostics');
+  const session=await worker.evaluate(()=>chrome.storage.session.get('mylimits:request-diagnostics:v1'));
+  expect(session['mylimits:request-diagnostics:v1']).toHaveLength(2);
+ });
+ test('page fallback retains safe response metadata, hides workspace identity, and denies website reads', async ({context,worker,extensionId}) => {
+  await context.route('https://claude.ai/**',r=>r.fulfill({status:200,contentType:'text/html',body:'<p>Fictional provider</p>'}));
+  const website=await context.newPage(); await website.goto('https://claude.ai/');
+  await website.evaluate(()=>{
+   window.fetch=async input=>{
+    const pathname=new URL(String(input)).pathname;
+    const body=pathname==='/api/account'?{uuid:'ACCOUNT_SECRET',accessToken:'TOKEN_SECRET'}:pathname==='/api/organizations'?
+     [{uuid:'WORKSPACE_SECRET',name:'PRIVATE_NAME',capabilities:['chat']}]:{five_hour:{utilization:25,resets_at:'2030-01-01T00:00:00Z'}};
+    return new Response(JSON.stringify(body),{status:200,headers:{'content-type':'application/json; charset=utf-8','set-cookie':'sessionKey=COOKIE_SECRET'}});
+   };
+  });
+  await worker.evaluate(()=>{globalThis.fetch=async()=>new Response(null,{status:403,headers:{'content-type':'text/html','cf-mitigated':'challenge'}});});
+  const page=await context.newPage(); await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
+  expect((await page.evaluate(()=>chrome.runtime.sendMessage({type:'enable',provider:'claude',enabled:true}))).ok).toBe(true);
+  const response=await page.evaluate(()=>chrome.runtime.sendMessage({type:'request-diagnostics'}));
+  expect(response.ok).toBe(true); expect(response.data.entries).toHaveLength(8);
+  expect(response.data.entries.filter((e:{transport:string})=>e.transport==='page')).toEqual(expect.arrayContaining([
+   expect.objectContaining({path:'/api/organizations/:organization/usage',status:200,contentType:'application/json',tabAvailable:true,pageFallbackRan:true}),
+  ]));
+  for(const secret of ['ACCOUNT_SECRET','WORKSPACE_SECRET','PRIVATE_NAME','TOKEN_SECRET','COOKIE_SECRET'])expect(JSON.stringify(response)).not.toContain(secret);
+  const saved=await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);
+  expect(saved.accounts[0]!.meters[0]!.usedPercent).toBe(25);
+  const denied=await worker.evaluate(async()=>{
+   const tab=(await chrome.tabs.query({url:'https://claude.ai/*'}))[0]!;
+   return (await chrome.scripting.executeScript({target:{tabId:tab.id!},func:()=>chrome.runtime.sendMessage({type:'request-diagnostics'})}))[0]!.result;
+  });
+  expect(denied.ok).toBe(false);
+ });
+});

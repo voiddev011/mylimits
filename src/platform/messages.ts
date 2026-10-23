@@ -8,6 +8,7 @@ import type { HistoryPoint } from './history';
 const ms = z.number().finite().min(0).max(8.64e15);
 export const CommandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('state') }),
+  z.object({ type: z.literal('request-diagnostics') }).strict(),
   z.object({type:z.literal('hosted-status')}),
   z.object({type:z.literal('hosted-link'),action:z.enum(['start','poll'])}),
   z.object({type:z.literal('hosted-start'),provider:z.enum(['openai','claude']),reconnectId:z.string().uuid().optional()}),

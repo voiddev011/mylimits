@@ -25,3 +25,4 @@ import '../src/core/browser-capabilities.test.ts';
 import '../src/core/account-setup.test.ts';
 import '../src/core/hosted-contracts.test.ts';
 import '../src/core/hosted.test.ts';
+import '../src/platform/diagnostics.test.ts';

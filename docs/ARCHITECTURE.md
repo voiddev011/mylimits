@@ -391,3 +391,14 @@ Alert identities include account, workspace/scope, meter and reset window.
 Do not collapse different quota windows into one ledger entry. Snooze/quiet
 hours must not falsely mark an undelivered alert as delivered. When notifications
 resume, alert once only if a fresh currently low reading still warrants it.
+
+## Persistent-accounts C1: request diagnostics
+
+The current experimental branch adds a browser-injected, bounded session buffer
+(src/platform/diagnostics.ts). Controller supplies it and the connection's last
+successful fetch time to readProvider; adapters observe background and page
+responses without changing authentication or quota parsing rules. Strict
+metadata reconstruction happens before storage and again on read. A dashboard-only
+request-diagnostics message feeds the existing safe-diagnostics copy action.
+Storage failures degrade to memory and do not fail quota collection. No new
+permissions, session capture or independent browser credentials are enabled.
