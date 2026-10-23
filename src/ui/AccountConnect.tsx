@@ -8,9 +8,10 @@ import type { Command, PublicStore } from '../platform/messages';
 import { ProviderMark } from './ProviderMark';
 import { OpenAICompanion } from './OpenAICompanion';
 import { supportsSessionSignals } from '../platform/session-cookies';
+import { pickNormalTab } from '../core/browser-tabs';
 export const connectionNames:Record<ProviderId,string>={chatgpt:'OpenAI · ChatGPT / Codex',claude:'Claude · Claude Code',cursor:'Cursor',gemini:'Gemini',grok:'Grok',perplexity:'Perplexity'};
 export async function focusProvider(provider:ProviderId){
-  const existing=(await browser.tabs.query({url:providers[provider].origin})).find(t=>t.id);
+  const existing=pickNormalTab(await browser.tabs.query({url:providers[provider].origin}));
   if(existing?.id){await browser.windows.update(existing.windowId,{focused:true});await browser.tabs.update(existing.id,{active:true});}
   else await browser.tabs.create({url:providers[provider].home});
 }

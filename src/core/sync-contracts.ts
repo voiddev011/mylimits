@@ -1,11 +1,12 @@
 import { z } from 'zod';
 import { MeterSchema, ProviderSchema, SettingsSchema, UsageSnapshotSchema } from './schema';
-import type { Account, UsageSnapshot } from './model';
+import type { Account, UsageSnapshot, Settings } from './model';
 const id=z.string().min(1).max(240);
 export const CloudAccountSchema=z.object({name:z.string().trim().min(1).max(120),plan:z.string().max(80).nullable()}).strict();
 export const SyncItemSchema=z.object({account:CloudAccountSchema,snapshot:UsageSnapshotSchema}).strict();
 export const SyncBatchSchema=z.object({deviceId:z.string().uuid(),items:z.array(SyncItemSchema).min(1).max(100)}).strict();
-export const SyncPreferencesSchema=z.object({settings:SettingsSchema.optional(),names:z.record(z.string().uuid(),z.string().trim().max(60)).optional()}).strict();
+export const SyncPreferencesSchema=z.object({settings:SettingsSchema.transform(({autoRecoverTab:_,...settings})=>settings).optional(),names:z.record(z.string().uuid(),z.string().trim().max(60)).optional()}).strict();
+export function applySyncedSettings(current:Settings,remote:Settings|undefined):Settings{return remote?{...remote,autoRecoverTab:current.autoRecoverTab??true}:current;}
 export type SyncItem=z.infer<typeof SyncItemSchema>;
 export function syncItem(account:Account,snapshot:UsageSnapshot):SyncItem {
  // Deliberately reconstruct; never upload the writable state or native auth.

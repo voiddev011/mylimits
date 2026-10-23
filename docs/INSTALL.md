@@ -146,11 +146,51 @@ Record results separately for **both providers and Windows Chrome/Brave** in
 Firefox can build/temporarily install its ZIP, but Desktop native setup for Firefox
 is not implemented. Use Windows Chrome/Brave for this Desktop preview.
 
-## Persistent-accounts C3 development preview
+## Persistent-accounts Checkpoint A (C1–C4)
 
-On codex/c3, Use current browser account may request optional cookie access for
+For this review checkout (Node 24+, existing cloned repository):
+
+```powershell
+git status
+git fetch origin
+git switch codex/c4
+git pull --ff-only origin codex/c4
+npm ci --include=optional
+npm run build
+```
+
+Preserve any local changes before switching branches. Load/reload the extension
+at `<your repository>\.output\chrome-mv3` in Chrome/Brave; that folder contains
+`manifest.json`. This website-only checkpoint does not need Desktop setup.
+The PR's successful Actions run also supplies extension ZIPs.
+
+Use current browser account may request optional cookie access for
 OpenAI/Claude sign-in-change detection. Declining it leaves Continue without
 sign-in detection; website tracking then uses ordinary retry backoff. The helper
 inspects normal-store cookie metadata, not saved independent credentials. Real
 provider cookie-name and logout/renewal behavior remain unverified. This preview
 does not provide a browser-only independent account login.
+
+Review these steps with your own test accounts:
+
+1. Full dashboard → Settings → Preferences: **Recover without opening the site
+   (briefly opens a background tab)** defaults on. Turn it off, save and reload
+   to confirm the choice persists; turn it back on for recovery testing.
+2. Connect the current website account, note its alias, quota and reading time,
+   then close provider tabs. Refresh from MyLimits. If background access fails
+   with an eligible browser-check error, one inactive tab may appear briefly,
+   the row says **Retrying in the background**, and only that tab closes.
+   A successful direct request need not open any tab.
+3. Settings → Copy safe diagnostics: recovered requests show `temp-tab`.
+   Keep the sanitized report for failures. Do not share cookies or raw responses.
+   Repeat attempts cannot force more tabs: 30-minute spacing, eight per UTC day.
+   Provider wait instructions and the ordinary click cooldown still apply.
+4. Keep an unrelated tab open during recovery. Select a recovery tab if it appears:
+   recovery must cancel and leave that selected tab open. With incognito access
+   enabled, use a different test account there; the normal account must not switch.
+5. Restart/wake the browser and check without reopening the provider. Record real
+   overnight behavior over the plan's **3–4 day trial**. Sign-out, challenge and
+   device-offline cases may retain a dated reading and ask for website action.
+
+Automated fixture coverage does not establish these live outcomes. Stop at
+Checkpoint A for review; merge to main and the trial are human decisions.

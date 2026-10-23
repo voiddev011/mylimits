@@ -29,6 +29,7 @@ export const SettingsSchema: z.ZodType<Settings> = z.object({
   textSize: z.enum(['standard','large']).optional(), privacyMode: z.boolean().optional(),
   historyRetentionDays:z.union([z.literal(30),z.literal(90)]).optional(),
   displayMode: z.enum(['remaining', 'used']).optional(), resetAlerts: z.boolean().optional(),
+  autoRecoverTab: z.boolean().default(true),
   quietHours: z.object({ enabled: z.boolean(), start: clock, end: clock }).optional(),
 }).refine(s => s.criticalRemaining <= s.warningRemaining, { message: 'Critical alert must be at or below warning.' });
 export const ProviderStateSchema: z.ZodType<ProviderState> = z.object({

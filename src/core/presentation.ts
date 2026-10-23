@@ -21,6 +21,10 @@ export function privatePresentation(store: PublicState): PublicState {
 export function needsAttention(account: Account, settings: Settings, now: number): boolean {
   return account.kind !== 'browser' && accountStatus(account, now, settings.refreshMinutes) !== 'Current';
 }
+export function accountStatusText(account:Account,store:PublicState,now:number):string{
+  const recovering=store.connections.some(c=>c.kind==='website'&&c.accountId===account.id&&c.enabled&&c.status==='checking'&&c.message==='Retrying in the background');
+  return recovering?'Retrying in the background':accountStatus(account,now,store.settings.refreshMinutes);
+}
 /** Strict allowlist: no identifiers, names, free-form errors, URLs or readings. */
 export function diagnostics(store: PublicState, version: string, now: number) {
   return { version, generatedAt: new Date(now).toISOString(), storageVersion: store.version,

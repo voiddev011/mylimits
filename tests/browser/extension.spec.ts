@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { emptyStore, type Store, type Account } from '../../src/core/model';
 import { demoState } from '../../src/ui/demo';
+import { accountId, applySnapshot } from '../../src/core/engine';
 import type { browser } from 'wxt/browser';
 declare const chrome: typeof browser;
 
@@ -35,6 +36,78 @@ const test = base.extend<{ context: BrowserContext; worker: Worker; extensionId:
     await use(worker);
   },
   extensionId: async ({ worker }, use) => use(new URL(worker.url()).host),
+});
+
+test.describe('bounded temporary-tab recovery (fictional provider)',()=>{
+ test.use({grantedProviderOrigin:'https://claude.ai/*'});
+ test('one inactive recovery tab completes identity and quota reads, preserves aliases, then closes itself',async({context,worker,extensionId})=>{
+  await context.route('https://claude.ai/**',r=>r.fulfill({status:200,contentType:'text/html',body:'<p>Fictional recovery provider</p>'}));
+  await context.addInitScript(()=>{
+   if(location.origin!=='https://claude.ai')return;
+   window.fetch=async input=>{const p=new URL(String(input)).pathname;const body=p==='/api/account'?{uuid:'recovery-user'}:p==='/api/organizations'?[{uuid:'recovery-org',name:'Personal',capabilities:['chat']}]:{five_hour:{utilization:35,resets_at:'2030-01-01T00:00:00Z'}};return new Response(JSON.stringify(body),{headers:{'content-type':'application/json'}})};
+  });
+  await context.route('https://example.test/**',r=>r.fulfill({status:200,contentType:'text/html',body:'<p>Keep my tab</p>'}));
+  const unrelated=await context.newPage();await unrelated.goto('https://example.test/');
+  const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
+  const salt='fictional-recovery-salt',id=await accountId('claude','recovery-user:recovery-org',salt),oldTime=Date.now()-3600000;
+  const store=applySnapshot(emptyStore(salt),'claude',id,{kind:'account',displayName:'Personal',plan:'pro',meters:[{...demoState().accounts[0]!.meters[0]!,usedPercent:90}]},oldTime);
+  store.accounts[0]!.alias='Personal saved';store.providers.claude.enabled=true;
+  Object.assign(store.connections.find(c=>c.id==='website:claude')!,{enabled:true,lastAttemptAt:null,nextRetryAt:null});
+  await worker.evaluate(async store=>{
+   globalThis.fetch=async()=>new Response(null,{status:403,headers:{'content-type':'text/html','cf-mitigated':'challenge'}});
+   await chrome.storage.local.set({'mylimits:state:v2':store});
+  },store);
+  const refresh=page.evaluate(()=>chrome.runtime.sendMessage({type:'refresh',provider:'claude'}));
+  await expect(page.getByText('Retrying in the background',{exact:false})).toBeVisible();
+  expect((await refresh).ok).toBe(true);
+  const saved=await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);
+  expect(saved.accounts).toHaveLength(1);expect(saved.accounts[0]).toMatchObject({id,alias:'Personal saved'});
+  const diag=await page.evaluate(()=>chrome.runtime.sendMessage({type:'request-diagnostics'}));
+  expect(saved.accounts[0]!.meters[0]!.usedPercent,JSON.stringify({connections:saved.connections,diag})).toBe(35);expect(saved.accounts[0]!.updatedAt).toBeGreaterThan(oldTime);
+  expect(diag.data.entries.filter((e:{transport:string})=>e.transport==='temp-tab')).toHaveLength(4);
+  const local=await worker.evaluate(()=>chrome.storage.local.get('mylimits:recovery-counters:v1'));
+  expect((local['mylimits:recovery-counters:v1'] as {claude:{attempts:number}}).claude.attempts).toBe(1);
+  expect((await worker.evaluate(()=>chrome.storage.session.get('mylimits:recovery-tabs:v1')))['mylimits:recovery-tabs:v1']).toEqual([]);
+  await expect.poll(()=>context.pages().filter(p=>p.url().startsWith('https://claude.ai')).length).toBe(0);
+  expect(unrelated.isClosed()).toBe(false);expect(unrelated.url()).toBe('https://example.test/');
+ });
+ test('normal tab wins over an active private-tagged tab and private-only context is never read',async({context,worker,extensionId})=>{
+  await context.route('https://claude.ai/**',r=>r.fulfill({status:200,contentType:'text/html',body:'<p>Fictional provider</p>'}));
+  const normal=await context.newPage();await normal.goto('https://claude.ai/normal');
+  const privateFixture=await context.newPage();await privateFixture.goto('https://claude.ai/private-fixture');
+  for(const [page,used] of [[normal,20],[privateFixture,80]] as const)await page.evaluate(used=>{
+   const scope=window as typeof window & {quotaReads:number};scope.quotaReads=0;
+   window.fetch=async input=>{scope.quotaReads++;const p=new URL(String(input)).pathname;const body=p==='/api/account'?{uuid:'normal-user'}:p==='/api/organizations'?[{uuid:'normal-org',name:'Personal',capabilities:['chat']}]:{five_hour:{utilization:used,resets_at:'2030-01-01T00:00:00Z'}};return new Response(JSON.stringify(body),{headers:{'content-type':'application/json'}});};
+  },used);
+  const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
+  await worker.evaluate(()=>{
+   const query=chrome.tabs.query.bind(chrome.tabs);
+   chrome.tabs.query=async q=>{const tabs=await query(q);return q.url?tabs.sort((a,b)=>Number(b.url?.includes('private-fixture'))-Number(a.url?.includes('private-fixture'))).map(t=>({...t,incognito:t.url?.includes('private-fixture')??false,active:t.url?.includes('private-fixture')??false})):tabs;};
+   globalThis.fetch=async()=>new Response(null,{status:403});
+  });
+  await page.evaluate(()=>chrome.runtime.sendMessage({type:'enable',provider:'claude',enabled:true}));
+  const saved=await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);
+  expect(saved.accounts[0]!.meters[0]!.usedPercent).toBe(20);
+  expect(await privateFixture.evaluate(()=>(window as typeof window & {quotaReads:number}).quotaReads)).toBe(0);
+  await normal.close();
+  await worker.evaluate(async()=>{
+   const data=(await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store;
+   data.settings.autoRecoverTab=false;Object.assign(data.connections.find(c=>c.id==='website:claude')!,{lastAttemptAt:null,nextRetryAt:null});await chrome.storage.local.set({'mylimits:state:v2':data});
+  });
+  await page.evaluate(()=>chrome.runtime.sendMessage({type:'refresh',provider:'claude'}));
+  expect(await privateFixture.evaluate(()=>(window as typeof window & {quotaReads:number}).quotaReads)).toBe(0);
+ });
+ test('plain unauthorized responses create no temporary tab and the recovery opt-out persists',async({context,worker,extensionId})=>{
+  const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
+  await page.getByRole('button',{name:'Settings',exact:true}).click();
+  await page.getByLabel('Recover without opening the site (briefly opens a background tab)',{exact:true}).uncheck();
+  await page.getByRole('button',{name:'Save preferences',exact:true}).click();await page.reload();
+  await expect(page.getByLabel('Recover without opening the site (briefly opens a background tab)',{exact:true})).not.toBeChecked();
+  await worker.evaluate(async()=>{globalThis.fetch=async()=>new Response(null,{status:401,headers:{'content-type':'application/json'}});const data=(await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store;data.settings.autoRecoverTab=true;await chrome.storage.local.set({'mylimits:state:v2':data});});
+  const before=context.pages().length;
+  await page.evaluate(()=>chrome.runtime.sendMessage({type:'enable',provider:'claude',enabled:true}));
+  expect(context.pages().length).toBe(before);expect((await worker.evaluate(()=>chrome.storage.local.get('mylimits:recovery-counters:v1')))['mylimits:recovery-counters:v1']).toBeUndefined();
+ });
 });
 
 // Protocol-2 fixture: first-party processes are fictional; no provider is contacted.
@@ -690,7 +763,7 @@ test.describe('request diagnostics (fictional providers only)', () => {
   const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
   await page.evaluate(()=>chrome.runtime.sendMessage({type:'enable',provider:'claude',enabled:true}));
   const store=await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);
-  expect(store.accounts).toHaveLength(0);expect(store.connections.find(c=>c.id==='website:claude')).toMatchObject({status:'needs-tab',lastSuccessAt:null});
+  expect(store.accounts).toHaveLength(0);expect(store.connections.find(c=>c.id==='website:claude'),JSON.stringify(store.connections)).toMatchObject({status:'needs-tab',lastSuccessAt:null});
   const diagnostic=await page.evaluate(()=>chrome.runtime.sendMessage({type:'request-diagnostics'}));
   expect(diagnostic.data.entries[0]).toMatchObject({status:200,contentType:'text/html',pageFallbackRan:true});
   expect(JSON.stringify(diagnostic)).not.toContain('PRIVATE_CHALLENGE_BODY');
