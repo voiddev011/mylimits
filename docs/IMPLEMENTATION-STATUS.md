@@ -1,8 +1,8 @@
 # Current implementation status — Desktop + extension
 
-Updated 23 October 2026. Active work: `codex/c6`, targeting
-`feat/persistent-accounts`. C1–C5 are integrated; C6's isolated diagnostic build
-has passed local validation and is ready for review. Main is unchanged. Desktop was implemented on
+Updated 23 October 2026. Current checkpoint: C7's G0 report, prepared on
+`codex/c7` for `feat/persistent-accounts`. C1–C6 are merged into main via PR #8; C7 records
+the G0 evidence assessment as HOLD. Desktop was implemented on
 `feature/desktop-independent-accounts`, created from clean
 `docs/desktop-accounts-execution-plan` (`3f218f6` locally).
 
@@ -16,8 +16,9 @@ Each finished checkpoint will include file-level added/deleted line counts.
 
 The active persistent-accounts plan is
 [the unchanged R2 proposal](MYLIMITS-PERSISTENT-ACCOUNTS-PLAN-v2.md).
-The user explicitly authorized task group C6 only. The next action after C6 is
-human live experiments E1–E8, not another implementation group. The Checkpoint A
+The user authorized completing tasks in order and merging validated checkpoints.
+C7's report cannot approve G0 because human live experiments E1–E8 are absent.
+Do not begin C8/C9 before the required evidence and G0/G1 decisions. The Checkpoint A
 3–4 day live trial remains PENDING; no main merge or trial result is inferred.
 No saved-session vault or browser-only independent login exists from C1–C6.
 Historical Desktop acceptance remains pending.
@@ -82,8 +83,8 @@ hosted route is deferred. It was not completed by earlier infrastructure work.
 
 ## Next action
 
-Review the C6 PR, then run human experiments E1–E8 with its separate spike build.
-Do not begin C7 or infer a G0/G1 decision from automated fixtures.
+Run human experiments E1–E8 with the separate spike build from main, record
+sanitized results and update the C7 G0 report. Do not infer approval from fixtures.
 The [manual trial](INSTALL.md#persistent-accounts-checkpoint-a-c1c4) is pending;
 keep all private-session/vault implementation gated by G0/G1. For the separate Desktop path, real-account
 acceptance in DESKTOP-ACCOUNTS-HANDOFF.md remains pending for both providers.
@@ -865,6 +866,41 @@ automated tests, live verification and blocked/unverified work.
   Added deterministic timing/exit-race checks alongside the actual Windows
   owned-child shutdown and unrelated-child survival checks. No assertions weakened.
 - PowerShell/Windows execution is unavailable locally; the actual Windows job
-  must validate this path. Local full checks and the Windows rerun are pending.
-  Next: obtain actual results, integrate validated C6, prune only merged branches,
-  then write the C7 evidence assessment without inventing provider findings.
+  validates this path in run 39929586829 (all six jobs passed, including Windows
+  setup/installer). Local npm run check passed 178/20/24/4 tests and Chrome build;
+  npm run test:browser passed 42/42; npm run test:spike passed 4/4. No live provider
+  traffic or real account acceptance was performed.
+- Merged PR #7 as 8916220 into feat/persistent-accounts, then PR #8 as 2c2be4f
+  into main under the user's explicit authorization. The main integration tree
+  exactly matches the validated C6 tree. No conflict or user edit was discarded.
+- Reduced remote/local task branches by six: codex/c1–codex/c5 were already
+  ancestors of the integration branch; codex/c6 was removed only after confirming
+  its tip is an ancestor of main. Retained main and feat/persistent-accounts.
+- Main integration: 72 files, +3344 / -185 lines. The PR #8 description contains
+  every filename with its exact added/deleted counts. The Windows correction alone:
+  companion/windows/desktop-runtime.ps1 +10/-1; scripts/test-windows-setup.ps1
+  +12/-0; docs/IMPLEMENTATION-STATUS.md +26/-1 (commit 3af2cf4).
+
+### C7 — G0 report, evidence HOLD
+
+- Started codex/c7 from the latest integration branch after merging validated C6
+  into main. Created G0-GATE-REPORT.md using §7.3; E1–E8 remain PENDING and no
+  G0/G1 decision is approved. C8 needs E2 benefit; C9 needs G0/G1 plus E3/E4 and
+  an evidence-derived allowlist. E6 may move T4.2 into C9; E7 controls T3.5's route.
+- Updated START-HERE, INSTALL and the evidence preface. Installation now uses main
+  because the merged codex/c6 branch was deleted. No provider code, credentials,
+  schemas, dependencies, permissions or live evidence values were changed.
+- C7 checks passed: 68 relative documentation links, whitespace and unchanged
+  original plan; npm run check (178 core, 20 native, 24 connection, 4
+  transport/runtime tests, TypeScript and Chrome build); npm run test:browser
+  42/42. No test assertion was changed. No new live provider result was obtained.
+- Both C6 workflows now passed all six jobs. Main integration PR #8 also passed
+  actual Windows checks; the already-validated integration source tree is unchanged.
+  C7 adds only the gate report and current documentation; per-file line counts
+  are supplied in its §11.3 PR handoff. Merge this documentation checkpoint under
+  the user's existing authorization, then remove its merged task branch.
+- The user asked whether testing can wait. Explained the difference between
+  routine/final acceptance tests and E2/E3/E4 feasibility evidence that determines
+  the implementation. No instruction waiving the real-evidence gates was given.
+  Next required input: sanitized real-account results; update G0, then obtain G1.
+  Do not start C8/C9 from unverified assumptions.

@@ -2,7 +2,8 @@
 
 C6 supplies diagnostic tools only. **No live experiment below has been run by the
 agent.** Automated cookie/provider/transport fixtures are simulated and cannot
-fill a live PASS. C7's gate report and G0/G1 decisions have not been performed.
+fill a live PASS. The [C7 assessment](G0-GATE-REPORT.md) records HOLD because these
+results are absent. G0/G1 have not been approved; no live row is changed by C7.
 
 Use your own test accounts in a separate Chrome/Edge/Brave profile. Add one row
 per experiment, provider, browser/version and date. Keep only sanitized output:
