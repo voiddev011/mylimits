@@ -1,7 +1,7 @@
 # Current implementation status — Desktop + extension
 
-Updated 23 October 2026. Current task: C11's gated setup UI, source conversion,
-credential deletion and leak tests on `codex/c11`. C1–C7 and C9/C10 are merged into main;
+Updated 23 October 2026. Current task: user-requested minimal UI polish on
+`codex/minimal-ui`. C1–C7 and C9–C11 are merged into main;
 C7's G0 evidence assessment remains HOLD. Desktop was implemented on
 `feature/desktop-independent-accounts`, created from clean
 `docs/desktop-accounts-execution-plan` (`3f218f6` locally).
@@ -85,9 +85,9 @@ hosted route is deferred. It was not completed by earlier infrastructure work.
 
 ## Next action
 
-Publish/merge C11's validated disabled checkpoint under the user's existing
-authorization and prune the merged task branch. C12 is the next separate group;
-it is not started here. Before activating
+The minimal UI follow-up has passed local checks; its PR handoff records CI and
+the authorized merge/branch cleanup. C11 was merged through PRs #15/#16.
+C12 is the next separate group; it is not started here. Before activating
 providers, run the live experiments, record sanitized results and obtain G0/G1.
 The [manual trial](INSTALL.md#persistent-accounts-checkpoint-a-c1c4) is pending;
 keep all private-session/vault implementation gated by G0/G1. For the separate Desktop path, real-account
@@ -1133,3 +1133,45 @@ automated tests, live verification and blocked/unverified work.
   C12, the live trial, E1–E8, G0/G1 and real provider/logout/other-device acceptance
   remain PENDING. Installing this checkpoint does not expose an enabled private
   login route or prove the requested overall feature works live.
+
+### Minimal UI follow-up — requested after C11
+
+- C11 is merged into main through PRs #15/#16. It added gated setup and deletion,
+  not a dashboard-wide simplification. This separate user-requested polish branch
+  is `codex/minimal-ui`, from the current integration tree. No user changes were
+  present. C12 is not started; provider policies and human gates stay unchanged.
+- Removed repeated dashboard branding text, the extra overview title/intro/Add
+  button and duplicate Accounts-page Add button. Limits move closer to the top.
+  Search and Low only stay visible. Sorting, attention and provider filters are
+  behind Filters, with a visible active-count badge and Reset filters control.
+- Service cards keep logos, capability labels, + and errors visible. Less-used
+  website links, individual refresh and reading-mode controls move into existing
+  Connection details. Shortened the connection-method explanation without hiding
+  Desktop requirements. Popup account names grow from 14px to 15px; its essential
+  actions and six-row layout remain. No data model/authentication changes.
+- Added one browser regression for keyboard filter disclosure, sorting/search,
+  hidden active filters/reset, accessible service controls, visible errors and
+  unchanged account/source records. Existing mode-switch test now opens details;
+  the popup font assertion now expects 15px. Full check/browser and visual review
+  follow before delivery.
+- npm run check passed: **243 core, 20 native, 24 connection and four
+  transport/runtime tests**, TypeScript and Chrome build. Initial browser run:
+  53 passed, one new-test failure (sample data has three GPT accounts, not two).
+  Corrected that test-data expectation; focused rerun passed, then the complete
+  final npm run test:browser passed **54/54**. No production workaround and no
+  pre-existing safety assertion weakened. All provider behavior remains fictional.
+- Reviewed actual Chromium screenshots: minimal dashboard/services and six-account
+  popup. Existing regressions still verify six rows without scrolling, ten-row
+  internal scrolling/search, dark/narrow layouts, privacy and 200% text enlargement.
+- Chrome/Edge/Firefox builds and directory guards passed. Packaged Chrome/Firefox
+  ZIPs and actual archive guards/checksums passed. Normal archives exclude fixtures
+  and spike code; no dependencies, permissions or version changes. Local ZIPs:
+  - Chrome **325504 bytes**, SHA-256
+    `d89e4f7936ec18072a2467cecf94dac610c18ce95be4e70ad5e2fe5061684cdc`.
+  - Firefox **323474 bytes**, SHA-256
+    `29cf6d779e28944658983fccaab5b99b5dd7c7d6524e1aedd9e7ea39b0fb19ac`.
+- Whitespace checks pass; original R2 proposal unchanged. Publish the narrow PR
+  with per-file +/− counts, wait for full CI, then merge through integration into
+  main under existing user authorization and prune the merged task branch. No
+  release or provider activation. Next separate group remains C12; live gates,
+  provider/logout/other-device acceptance and the 3–4 day trial stay pending.
