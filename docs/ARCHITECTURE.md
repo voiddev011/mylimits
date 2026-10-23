@@ -639,7 +639,7 @@ retry. Success resets the auth counter; failure retains the last observation
 time. E7 token caching is not implemented because E7 is pending.
 
 C11 adds the gated chooser/consent/setup and forget/disconnect credential
-deletion (below). C12 handles expiry/reconnect hardening. All provider login, real cookie
+deletion (below). C12 adds metadata-only expiry warnings and documentation. All provider login, real cookie
 scoping, logout survival and other-device changes remain unverified; injected
 browser fixtures are not live account evidence.
 
@@ -678,3 +678,39 @@ Chromium UI fixtures use actual React/runtime/encryption/IDB/storage, injecting
 fictional provider/window/cookie/DNR APIs. Actual worker messages also exercise
 encrypted disconnect/forget. Real provider, incognito and logout acceptance stays
 PENDING; C11 does not approve G0/G1 or start C12.
+
+## C12 — metadata-only expiry watchdog (gated)
+
+`core/signin-expiry.ts` selects enabled, source/slot/provider/account-bound saved
+connections with a supplied future expiry and an approved provider policy. It
+does not use quota freshness as evidence of session validity. Rejected sources
+and unknown/expired sessions do not generate expiry warnings. Account details
+already use `signInExpiry` for an honest supplied timestamp; session-only cookie
+sets stay unknown.
+
+`platform/expiry-watchdog.ts` injects Store serialization, clock, policy, alarm,
+permission and notification ports. It never opens the vault or reader. The worker
+checks on open/startup/regular refresh, accepted reads, relevant settings/removal
+changes and `mylimits:signin-expiry` (1440 minutes). Only enabled alerts plus an
+approved eligible source and permission arm the daily alarm; repeat checks retain
+its deadline. Removing eligibility clears it. Regular refresh checks defer quiet
+hour delivery without requesting another permission/alarm. Sleep/closed-browser
+delays remain possible; nothing is promised at an exact wall-clock instant.
+
+Decisions/delivery use serialized current Store; concurrent checks coalesce with
+one trailing pass so disconnect/settings changes reconcile alarm ownership. The
+existing bounded alert ledger holds `accountId/saved-sign-in/connectionId`, an
+expiry window and sent thresholds (48/24). No schema/version change. The ledger
+is absent from public projection/history/export/sync; Forget already erases its
+account prefix. Successful delivery consumes a threshold; failed delivery restores
+that key. A changed supplied expiry rearms only its source. A late wake skips the
+missed 48h warning rather than sending two. Warnings do not change source status,
+quota values, reset times or last successful observation.
+
+Saved sources still move checking → active on identity-bound success, or into
+backoff/offline/error on collection failure. Actual repeated HTTP401s park at
+needs-auth; identity/credential loss can park immediately. Expiry warnings are
+advisory metadata and never imply renewal. Re-sign-in requires removing the saved
+source and repeating the verified setup; dated history/aliases remain. No provider
+is activated, no rotation capture is added and C8/G0/G1/E5/E6 remain unresolved.
+See [the persistence summary](SESSION-PERSISTENCE.md) for exact evidence boundaries.

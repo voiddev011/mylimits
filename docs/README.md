@@ -17,6 +17,7 @@ work remains gated by real-provider evidence. See [preview testing](INSTALL.md#p
 - [Current status](IMPLEMENTATION-STATUS.md)
 - [Proposed persistent-accounts plan v2](MYLIMITS-PERSISTENT-ACCOUNTS-PLAN-v2.md)
 - [Live session-persistence evidence ledger (pending)](SESSION-PERSISTENCE-EVIDENCE.md)
+- [Session persistence: implemented behavior and pending proof](SESSION-PERSISTENCE.md)
 - [Provider support and manual acceptance](PROVIDER-CAPABILITIES.md)
 - [Desktop delivery and pending live acceptance](DESKTOP-ACCOUNTS-HANDOFF.md)
 - [Historical evidence and consolidated checkpoints](IMPLEMENTATION-HISTORY.md)
@@ -40,6 +41,14 @@ Project Markdown lives directly in this folder. Completed execution plans and st
 Older removed plans and phase ledgers remain in Git history; their unique evidence
 is consolidated above. Version 3.4 defaults independent connections to Desktop.
 The hosted provider registry remains empty and is not a fallback for Desktop.
+
+Saved-sign-in code through C12 is implemented behind **off** provider policies.
+The expiry watchdog uses only supplied cookie timestamps and existing optional
+alerts; it does not enable providers or renew credentials. Website logout survival
+is **UNVERIFIED per provider**, both for saved sessions and the separate Desktop
+route. Ordinary website tracking remains session-bound. OpenAI readings are
+returned Work/Codex buckets, not every ChatGPT quota. See
+[the persistence summary](SESSION-PERSISTENCE.md) before evaluating the preview.
 
 ## Docker build and optional API
 
