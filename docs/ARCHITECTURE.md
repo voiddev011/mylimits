@@ -216,6 +216,60 @@ its dated reading; it cannot use ambient browser credentials. Fictional injected
 readers test two-source concurrency and isolation, not actual authorization.
 C6 and the real-session G0/G1 gates remain before private-sign-in implementation.
 
+## C6 evidence spike — separate build only
+
+`MYLIMITS_SPIKE=1` retains the spike entrypoint and compiles a dedicated runtime.
+Without the flag, WXT drops that entrypoint and the compiled branch/import; release
+directory and ZIP checks reject its files, runtime markers and required diagnostic
+permissions. C3's existing optional cookies grant stays deliberately intact.
+The extra required cookies/DNR/webRequest permissions apply only to the spike.
+The spike uses `.output-spike`, separate from `.output`, and carries a distinct
+manifest name/options/toolbar page. Ordinary Firefox builds remain supported;
+this Chromium-specific diagnostic build rejects Firefox explicitly.
+The toolbar popup promotes itself to a persistent tab before connecting, so
+focusing a private test window cannot close the controlling diagnostic page.
+
+The spike worker never starts normal account collection. Its sole client must be
+the exact same-extension normal `spike.html` page; provider pages, query variants,
+private-page clients, extra fields and credential-bearing commands are rejected.
+One page owns the session. Captured cookies and a transient ChatGPT token stay in
+private closure memory, not Store/IndexedDB/local storage/messages/exports/sync.
+Only metadata and redacted results return to the page. Input never accepts pasted
+cookie/token values or arbitrary endpoints.
+
+A lists names/flags from enumerated stores and identifies the normal store only
+from explicit normal-tab linkage. Capture requires an enumerated store, selected
+names and consent; replay filters domain/path/expiry/partition state and caps the
+header at 16 KB. B runs existing readers with ambient, scoped-header and captured
+cookie transports; the ambient diagnostic path omits C4 automatic temporary tabs
+to avoid confounding E2. Every raw probe has an exact provider endpoint, bounded
+request timeout and shared host lock. Temporary rules include both tabIds [-1]
+and initiatorDomains [runtime.id], and are removed in finally. Startup clears only
+the reserved spike rule range; cleanup failure stops further diagnostic requests.
+No unscoped-rule fallback exists. Rule feedback and request success are reported
+separately; missing feedback is not evidence of a match.
+
+C decodes only exp (not signature verification) and tests Bearer-only usage. F
+requires that existing memory token and returns only the status of an omit-cookie,
+no-rule request; it does not fetch a new session. D observes only selected worker
+reader paths, retains Set-Cookie names only, and expires after 60 seconds. E creates
+one owned private window only after checking access and other private windows;
+inspection reports store metadata, not a connected account. Closure never calls
+logout or deletes cookies.
+
+Provider waits and the 15-second diagnostic click interval persist as metadata in
+extension session storage, with a memory fallback for the current wait when a
+write fails. Unavailable/corrupt wait storage fails closed; no network retry is
+allowed to bypass it. Clear/disconnect cancels active work and drops captures;
+the runtime waits for request/rule cleanup before permitting a replacement client.
+The page sends keepalive messages, but a worker/browser restart still loses its
+capture, invalidating any unfinished original-session lifetime trial.
+
+Automated tests use simulated providers and header effects. They do not verify
+DNR-modified headers, real cookie names, logout survival, provider eligibility or
+independent account refresh. The live ledger is SESSION-PERSISTENCE-EVIDENCE.md.
+C7 and G0/G1 are not executed by this diagnostic implementation.
+
 ## Alerts
 
 Optional notification permission is requested by a user action. Per-account

@@ -57,6 +57,18 @@ try{
  if($script:runtimeChanges.Count -ne 0 -or [IO.File]::ReadAllText($oldFile) -ne 'new'){throw 'Commit failed'}
  if((Get-DesktopDirectoryBytes $oldDirectory) -ne 3){throw 'Installed byte measurement failed'}
  # Actual Windows shutdown, isolated test data and no real scheduled-task calls.
+ # Exiting processes can lose timing metadata between the CIM and Process reads.
+ # Never kill based only on a reused PID, null timing field or failed getter.
+ $started=[DateTime]::UtcNow
+ $snapshot=[PSCustomObject]@{CreationDate=$started}
+ if(!(Test-DesktopSameProcess ([PSCustomObject]@{StartTime=$started}) $snapshot)){throw 'Matching process identity was rejected'}
+ if(Test-DesktopSameProcess ([PSCustomObject]@{StartTime=$started.AddSeconds(1)}) $snapshot){throw 'Reused process identity was accepted'}
+ if(Test-DesktopSameProcess ([PSCustomObject]@{StartTime=$null}) $snapshot){throw 'Null process timing authorized termination'}
+ if(Test-DesktopSameProcess ([PSCustomObject]@{StartTime=$started}) ([PSCustomObject]@{CreationDate=$null})){throw 'Null snapshot timing authorized termination'}
+ if(Test-DesktopSameProcess $null $snapshot){throw 'Missing process authorized termination'}
+ $exited=New-Object PSObject
+ $exited | Add-Member -MemberType ScriptProperty -Name StartTime -Value {throw 'Fictional process already exited'}
+ if(Test-DesktopSameProcess $exited $snapshot){throw 'Exited process timing authorized termination'}
  function Get-DesktopTasks { return }
  $priorLocalData=$env:LOCALAPPDATA;$ownedChild=$null;$unrelatedChild=$null
  try{

@@ -320,3 +320,34 @@ creation time for cleanup after a worker restart. These records contain no
 credentials, are excluded from export/sync and never create a session vault.
 The recovery preference stays local even when other preferences are synced.
 Diagnostics label this transport `temp-tab`, with the same redaction rules above.
+
+## C6 diagnostic build only
+
+The explicitly flagged evidence spike is a separate test build with required
+cookies, declarativeNetRequestWithHostAccess and webRequest permissions. It asks
+for each provider's site access when you click a test. These required diagnostic
+permissions, its page and its runtime are excluded from ordinary release builds;
+the existing optional cookie sign-in-change grant remains unchanged.
+
+In your separate test profile, you may explicitly select cookie names/store and
+consent to a temporary in-memory capture. The diagnostic worker may then replay
+those values in a tightly scoped Chrome session rule with browser credentials
+omitted, or obtain a transient ChatGPT token for Bearer-only tests. Values stay in
+worker memory and the temporary browser rule; they are never printed, written to
+Store/local account storage, messaged to the page, exported, synced or logged.
+Cookie names/flags, expiry times, store context and sanitized status/path tables
+are visible. Account IDs, bodies and full headers are not returned.
+
+Automatic production tracking does not run in this build. Rule scope requires
+both the selected provider host and this extension's worker initiator/tab-less
+requests. Rules are removed after requests and cleaned up at startup; failed
+cleanup blocks further probes. Response observation keeps Set-Cookie names only,
+filters extension-worker reader paths and stops after 60 seconds. It does not
+retain renewed cookie values. Session storage contains only provider/wait times
+under mylimits:spike:waits:v1; these are outside Store and never synced/exported.
+
+Closing/disconnecting the page or clearing capture cancels work, drops secrets
+and closes only the window created by its private dry run. No logout endpoint or
+cookie deletion is automated. Browser/worker restart loses captures; this is not
+a persistent vault or independent-account feature. Copy sanitized results copies
+the visible metadata report only. Live tests and G0/G1 decisions remain pending.
