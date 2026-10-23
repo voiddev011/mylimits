@@ -836,7 +836,10 @@ automated tests, live verification and blocked/unverified work.
   Whitespace and 62 relative documentation links passed; the unchanged original
   proposal's archived links are excluded from that link check. The separate
   spike ZIP also passed manifest/archive hygiene inspection.
-  C6 publication/CI status will be recorded after pushing. Human E1–E8,
+  C6 source checkpoint a60bb25 is pushed on codex/c6 in
+  [PR #7](https://github.com/voiddev011/mylimits/pull/7), targeting
+  feat/persistent-accounts with the full §11.3 handoff as its description.
+  GitHub CI is pending; the local results above are complete. Human E1–E8,
   Checkpoint A's trial and real account/logout/rotation/isolation remain PENDING.
   Next action: review C6, collect evidence using INSTALL.md, then stop for the
   separately authorized C7/G0 task. No gate decision or next group was executed.
