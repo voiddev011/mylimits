@@ -68,6 +68,8 @@ export interface AccountSetup {
   id: string; provider: ProviderId; mode: 'detect' | 'another'; nickname: string;
   previousAccountId: string | null; startedAt: number;
   method?: 'ambient' | 'private'; slotId?: string;
+  captureMethod?:'private'|'current'; phase?:'signing-in'|'verifying'|'awaiting-confirmation'|'error'; message?:string|null;
+  candidate?:{accountId:string;name:string;plan:string|null;verifiedAt:number};
 }
 export interface Store {
   accountSetup?: AccountSetup | null;
@@ -121,6 +123,7 @@ export interface ConnectionRecord {
   status: ConnectionStatus; generation: number; lastAttemptAt: number | null;
   lastSuccessAt: number | null; nextRetryAt: number | null; failures: number;
   message: string | null; profileId?: string; independent?: IndependentMetadata;
+  authFailures?:number;
 }
 export interface Workspace { id: string; provider: ProviderId; remoteId: string; name: string; }
 export interface UsageSnapshot {

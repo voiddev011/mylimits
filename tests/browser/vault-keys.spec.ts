@@ -72,3 +72,24 @@ test('actual extension vault storage survives reload and never enters public sta
   return (await vault.getVault('10000000-0000-4000-8000-000000000001','chatgpt'))?.payload.cookies[0]?.value==='FICTIONAL_VAULT_SECRET';
  })).toBe(true);
 });
+test('simulated private-provider runtime verifies two accounts, saves only on consent and refreshes from encrypted slots',async({context,extensionId})=>{
+ const page=await open(context,extensionId),result=await page.evaluate(async()=>await VaultKeys.privateFlow(chrome));
+ expect(result.accountCount).toBe(3);expect(result.aliases).toEqual(['Keep work','Personal B','Personal C']);expect(result.keptAlias).toBe('Keep work');
+ expect(result.slots).toBe(2);expect(result.retainedSlots).toBe(2);expect(result.encrypted).toBe(true);expect(result.secretFree).toBe(true);
+ expect(result.identities).toEqual(['B:acc-B','C:acc-C']);expect(result.quotas).toEqual([65,65]);expect(result.scopes).toEqual(['work-codex','work-codex']);
+ expect(result.ambientReads).toBe(0);expect(result.normalUnchanged).toBe(true);expect(result.removed).toBe(3);expect(result.requests).toBeGreaterThanOrEqual(12);
+ expect(result.cleanRules).toBe(true);expect(result.duplicate).toBe(true);expect(result.journalGone).toBe(true);
+ expect(result.rejection).toBe('saved-http-401');expect(result.challenge).toBe(true);
+});
+test('production private commands remain disabled and validate consent and exact dashboard sender',async({context,extensionId})=>{
+ const page=await open(context,extensionId);
+ const result=await page.evaluate(async()=>{
+  const start={type:'vault-signin-start',provider:'chatgpt',method:'private',nickname:'Personal'};
+  const denied=await chrome.runtime.sendMessage(start),invalid=await chrome.runtime.sendMessage({...start,cookie:'FICTIONAL_REJECTED'}),consent=await chrome.runtime.sendMessage({type:'vault-signin-save',setupId:'10000000-0000-4000-8000-000000000001',accountId:'fictional',consent:false});
+  return {denied,invalid,consent,state:await chrome.runtime.sendMessage({type:'state'}),storage:JSON.stringify(await chrome.storage.local.get(null))};
+ });expect(result.denied.ok).toBe(false);expect(result.denied.error).toContain('disabled');expect(result.denied.code).toBe('disabled');expect(result.invalid.ok).toBe(false);expect(result.consent.ok).toBe(false);
+ expect(result.state.data.accountSetup??null).toBeNull();expect(result.storage).not.toContain('FICTIONAL_REJECTED');
+ const popup=await context.newPage();await popup.goto(`chrome-extension://${extensionId}/popup.html`);
+ const denied=await popup.evaluate(async()=>await chrome.runtime.sendMessage({type:'vault-signin-start',provider:'chatgpt',method:'private',nickname:''}));
+ expect(denied.ok).toBe(false);expect(denied.error).toContain('normal MyLimits dashboard');
+});

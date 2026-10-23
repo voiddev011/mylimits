@@ -292,12 +292,15 @@ clearly separate `*-spike.zip` under `.output-spike`; Actions publishes it as
 spike files/runtime/required permissions. The [C7 report](G0-GATE-REPORT.md)
 records HOLD until your live evidence is available; fixtures cannot approve G0.
 
-## C9 foundation — no new connection setup yet
+## C9/C10 foundation — no new connection setup yet
 
 C9's encryption/key-storage and scoped request components are coded with every
 provider off. It does not change the + button or connect a second browser-only
 account. There is no token-copying or configuration step for users to perform.
-Private sign-in/refresh wiring belongs to C10 and its management UI to C11.
+C10 now adds private-sign-in/refresh code behind the same off policy. Its
+commands are restricted to the normal dashboard; there is no user-facing setup
+or consent button yet. C11 supplies that UI and credential deletion. Do not run
+developer commands to manufacture a saved connection or use fixture allowlists.
 The Desktop path and ordinary website tracking remain available separately.
 The user deferred intermediate gates for coding; live proof and provider decisions
 are still required before activation. Do not edit allowlists or enable policies

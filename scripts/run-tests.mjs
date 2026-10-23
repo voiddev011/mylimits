@@ -38,3 +38,5 @@ import './package-policy.test.mjs';
 import '../src/core/vault-contracts.test.ts';
 import '../src/platform/vault.test.ts';
 import '../src/platform/vault-transport.test.ts';
+import '../src/platform/private-signin.test.ts';
+import '../src/core/private-signin.test.ts';

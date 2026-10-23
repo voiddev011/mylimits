@@ -210,8 +210,9 @@ aliases/snapshots/history persist, and public state still excludes `profileId`.
 The source labels are Browser login, Saved sign-in, Companion, Desktop, Hosted
 and Saved reading. A label is not evidence that a provider grant is available.
 
-There is **no vault credential store, private-sign-in UI or production saved
-transport yet**. Refreshing a reserved vault record reports unavailable and keeps
+At the C5 checkpoint there was **no vault credential store, private-sign-in UI or
+production saved transport** (later dormant C9/C10 additions are below).
+Refreshing a reserved vault record reports unavailable and keeps
 its dated reading; it cannot use ambient browser credentials. Fictional injected
 readers test two-source concurrency and isolation, not actual authorization.
 C6 and the real-session G0/G1 gates remain before private-sign-in implementation.
@@ -597,3 +598,47 @@ normal builds add no DNR permission. A cleanup failure blocks HTTP; a failed fin
 removal poisons the host, including queued ambient requests. Firefox bypasses the
 Chromium-only startup step. This is defensive plumbing, not enabled saved tracking.
 Live E3 scoping, E4 logout, E6 rotation and E7 token behavior remain unverified.
+
+## C10 — dormant private sign-in and saved-source refresh
+
+`saved-sessions.ts` binds the existing vault, IndexedDB key store, shared Web Locks,
+host isolation and pure provider reader in the worker. Policy remains all off,
+allowlists empty and DNR grants absent from normal manifests; no provider is
+activated. No HTTP request uses another source's ambient fallback or tab ladder.
+Ordinary website auto-detection remains a separate source.
+
+`private-signin.ts` receives all browser/Store/vault/reader APIs as injected ports.
+Only the top-level, non-incognito dashboard may send its strict start/check/save/
+cancel messages. Private mode checks incognito access and refuses an existing
+private window: Chromium private windows share one jar, not one jar per window.
+The owned tab determines the store; list order/default store IDs are not assumed.
+Any unrelated tab in that store blocks capture. Current-login capture is explicit
+and warns that signing out will probably end its saved connection.
+
+The ten-minute attempt journal in session storage contains only IDs, method,
+provider, deadline and owned tab/window IDs. Cookie payloads and the verified
+snapshot stay in worker memory until consent plus the exact candidate identity
+are confirmed. Pending candidates are inactive metadata with no quota meters;
+they do not create live accounts or history. Cookie events from another store
+cannot trigger a read. Save rechecks the captured bytes, encrypts the payload,
+accepts its source-bound dated snapshot and closes only the owned window.
+Cancellation/timeout wait for in-flight writes, remove unconfirmed slots and
+never call logout. Restart re-verifies a pending window without extending its
+deadline; accepted connections survive late cleanup. Failed cleanup retains
+metadata and blocks a new attempt until recovery.
+If browser exit clears the session journal, startup removes orphaned unconfirmed
+setup/slots; it preserves already accepted sources and does not close any window
+whose ownership can no longer be proved. Website setup cannot replace private
+setup inside the serialized Store write.
+
+Persisted per-provider waits prevent retries from evading provider deadlines.
+Three consecutive actual HTTP401s park only that saved source at needs-auth with
+no automatic retry deadline. Missing/changed identity or credentials park it
+immediately. A challenge soft-fails with backoff, never an ambient browser-tab
+retry. Success resets the auth counter; failure retains the last observation
+time. E7 token caching is not implemented because E7 is pending.
+
+C11 still needs the visible chooser/consent/setup and forget/disconnect credential
+deletion. C12 handles expiry/reconnect hardening. All provider login, real cookie
+scoping, logout survival and other-device changes remain unverified; injected
+browser fixtures are not live account evidence.

@@ -44,6 +44,7 @@ export const ConnectionRecordSchema: z.ZodType<ConnectionRecord> = z.object({
   status: z.enum(['disabled','checking','active','needs-auth','needs-tab','unavailable','offline','error']),
   generation: z.number().int().min(0), lastAttemptAt: time.nullable(), lastSuccessAt: time.nullable(),
   nextRetryAt: time.nullable(), failures: z.number().int().min(0), message: z.string().max(300).nullable(), profileId: z.string().uuid().optional(), independent: IndependentMetadataSchema.optional(),
+  authFailures:z.number().int().min(0).default(0),
 });
 export const WorkspaceSchema: z.ZodType<Workspace> = z.object({ id, provider: ProviderSchema, remoteId: id, name: z.string().max(120) });
 export const UsageSnapshotSchema: z.ZodType<UsageSnapshot> = z.object({
@@ -54,6 +55,8 @@ export const AccountSetupSchema = z.object({
   id: z.string().uuid(), provider: ProviderSchema, mode: z.enum(['detect','another']), nickname: z.string().trim().max(60),
   previousAccountId: id.nullable(), startedAt: time,
   method:z.enum(['ambient','private']).default('ambient'),slotId:z.string().uuid().optional(),
+  captureMethod:z.enum(['private','current']).optional(),phase:z.enum(['signing-in','verifying','awaiting-confirmation','error']).optional(),message:z.string().max(300).nullable().optional(),
+  candidate:z.object({accountId:id,name:z.string().max(120),plan:z.string().max(80).nullable(),verifiedAt:time}).strict().optional(),
 }).refine(s=>s.method!=='private'||!!s.slotId,{message:'Private setup requires a saved sign-in slot.'});
 const CurrentStoreSchema: z.ZodType<Store> = z.object({
   accountSetup: AccountSetupSchema.nullable().optional(),
