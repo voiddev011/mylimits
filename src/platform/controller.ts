@@ -5,7 +5,7 @@ import { accountId, applySnapshot, badge, collectAlerts, markProvider, recordObs
 import { providers, providerForUrl } from '../providers/catalog';
 import { AdapterError, readProvider } from '../providers/adapters';
 import { enableWebsite, setWorkspace, accountPreferences, orderAccounts, forgetAccount } from '../core/actions';
-import { RefreshCoordinator, shouldRefresh, nextRetry, type RefreshReason } from '../core/scheduler';
+import { RefreshCoordinator, shouldRefresh, type RefreshReason } from '../core/scheduler';
 import { changeConnection } from '../core/connections';
 import { analyzeHistory } from '../core/insights';
 import { historyPoint, exportReadings } from '../core/history-data';
@@ -20,9 +20,12 @@ import { refreshHosted,hostedStatus,startHosted,hostedAttempt,hostedAction } fro
 import { remoteHostedId } from '../core/hosted';
 import { startAccountSetup, saveAccountSetup } from '../core/account-setup';
 import { createRequestDiagnostics } from './diagnostics';
+import { authRetryDeadline, createSessionCookies } from './session-cookies';
 
 const coordinator = new RefreshCoordinator(2);
 const requestDiagnostics = createRequestDiagnostics({ storage: browser.storage.session });
+const sessionCookies = createSessionCookies({ cookies: browser.cookies, tabs: browser.tabs, permissions: browser.permissions,
+  status: async provider => { const c=(await readStore()).connections.find(c=>c.id===`website:${provider}`);return c?.enabled?c.status:null; } });
 const observedProviders: readonly ProviderId[] = ['gemini', 'grok', 'perplexity'];
 const REFRESH_ALARM = 'mylimits:refresh';
 const COMPANION_ALARM = 'mylimits:companion';
@@ -83,8 +86,9 @@ export async function refreshProvider(provider: ProviderId, manual = false, reas
       // Another account can have different workspaces. Do not carry the old selection through setup.
       const switchingAccount=before.accountSetup?.provider===provider;
       const selected = switchingAccount?undefined:before.workspaces.find(w => w.id === connection.workspaceId);
+      const sessionInfo=await sessionCookies.inspect(provider);
       const snapshot = await readProvider(provider, { workspaceRemoteId: selected?.remoteId,readingMode:before.providers[provider].readingMode }, signal,
-        { record: requestDiagnostics.record, lastSuccessAt: connection.lastSuccessAt });
+        { record: input => requestDiagnostics.record({...input,sessionCookieState:sessionInfo.state,cookieNames:sessionInfo.names}), lastSuccessAt: connection.lastSuccessAt });
       const meters = snapshot.meters.map(m => MeterSchema.parse(m));
       const id = await accountId(provider, snapshot.identity, before.installSalt);
       const choices = await Promise.all((snapshot.workspaces ?? []).map(async w => ({ id:await accountId(provider,`workspace:${w.identity}`,before.installSalt),provider,remoteId:w.identity,name:w.name })));
@@ -101,11 +105,12 @@ export async function refreshProvider(provider: ProviderId, manual = false, reas
       if(signal.aborted)return;
       const status=error instanceof AdapterError?error.status:'error';
       const message=error instanceof AdapterError?error.message:'The website returned information MyLimits could not verify.';
+      const cookieState=status==='signed-out'?await sessionCookies.sessionCookieState(provider):'unknown';
       await updateStore(store=>{
         const current=store.connections.find(c=>c.id===connectionId);
         if(!current?.enabled||current.generation!==stamp)return {store,value:undefined};
         const next=markProvider(store,provider,status,message,Date.now());
-        const retry=nextRetry(Date.now(),current.failures+1,store.settings.refreshMinutes,error instanceof AdapterError?error.retryAt:null);
+        const retry=authRetryDeadline(status,cookieState,Date.now(),current.failures+1,store.settings.refreshMinutes,error instanceof AdapterError?error.retryAt:null);
         next.connections=next.connections.map(c=>c.id===connectionId?{...c,lastAttemptAt:Date.now(),failures:current.failures+1,nextRetryAt:retry}:c);
         next.providers[provider].failures=current.failures+1;next.providers[provider].nextRetryAt=retry;
         return {store:next,value:undefined};
@@ -356,6 +361,10 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
 }
 
 export function startController(): void {
+  let stopSessionCookies=()=>{};
+  const listenSessionCookies=()=>{stopSessionCookies();stopSessionCookies=sessionCookies.listenSessionCookies(provider=>refreshProvider(provider,false,'cookie'));};
+  listenSessionCookies();
+  browser.permissions.onAdded.addListener(listenSessionCookies);
   const storage=browser.storage.local as typeof browser.storage.local&{setAccessLevel?:(options:{accessLevel:'TRUSTED_CONTEXTS'})=>Promise<void>};
   void storage.setAccessLevel?.({accessLevel:'TRUSTED_CONTEXTS'}).catch(()=>{});
   listenCompanion(async profiles => {
@@ -377,6 +386,7 @@ export function startController(): void {
   });
   browser.alarms.onAlarm.addListener(alarm => { if(alarm.name===SYNC_ALARM)void snapshotSync.run().catch(()=>{});if (alarm.name === COMPANION_ALARM) void refreshCompanion().catch(() => {}); if (alarm.name === REFRESH_ALARM) void refreshAll().catch(() => undefined); });
   browser.permissions.onRemoved.addListener(permissions => {
+    listenSessionCookies();
     void (async () => {
       if((permissions as {data_collection?:string[]}).data_collection?.length)await snapshotSync.enable(false);
       if (permissions.permissions?.includes('nativeMessaging')) await enableCompanion(false);

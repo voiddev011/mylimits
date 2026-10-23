@@ -9,13 +9,14 @@ import type { browser } from 'wxt/browser';
 declare const chrome: typeof browser;
 
 const extensionPath = path.resolve('.output/chrome-mv3');
-const test = base.extend<{ context: BrowserContext; worker: Worker; extensionId: string; profilePath: string;grantedProviderOrigin:string|null }>({
+const test = base.extend<{ context: BrowserContext; worker: Worker; extensionId: string; profilePath: string;grantedProviderOrigin:string|null;grantedCookieAccess:boolean }>({
   grantedProviderOrigin:[null,{option:true}],
+  grantedCookieAccess:[false,{option:true}],
   profilePath: async ({}, use) => { const dir=await mkdtemp(path.join(tmpdir(),'mylimits-browser-')); try { await use(dir); } finally { await rm(dir,{recursive:true,force:true}); } },
-  context: async ({ profilePath,grantedProviderOrigin }, use) => {
+  context: async ({ profilePath,grantedProviderOrigin,grantedCookieAccess }, use) => {
     if (!existsSync(path.join(extensionPath, 'manifest.json'))) throw new Error('Run npm run build before browser tests.');
     let loadedExtensionPath=extensionPath;
-    if(grantedProviderOrigin){loadedExtensionPath=path.join(profilePath,'fixture-extension');await cp(extensionPath,loadedExtensionPath,{recursive:true});const file=path.join(loadedExtensionPath,'manifest.json');const manifest=JSON.parse(await readFile(file,'utf8'));manifest.host_permissions=[grantedProviderOrigin];await writeFile(file,JSON.stringify(manifest));}
+    if(grantedProviderOrigin||grantedCookieAccess){loadedExtensionPath=path.join(profilePath,'fixture-extension');await cp(extensionPath,loadedExtensionPath,{recursive:true});const file=path.join(loadedExtensionPath,'manifest.json');const manifest=JSON.parse(await readFile(file,'utf8'));if(grantedProviderOrigin)manifest.host_permissions=[grantedProviderOrigin];if(grantedCookieAccess)manifest.permissions.push('cookies');await writeFile(file,JSON.stringify(manifest));}
     const userData = profilePath;
     const configured = process.env.CHROMIUM_PATH;
     const executablePath = configured; // Prefer Playwright's extension-capable Chromium.
@@ -684,6 +685,46 @@ test.describe('current website account',()=>{
 
 test.describe('request diagnostics (fictional providers only)', () => {
  test.use({grantedProviderOrigin:'https://claude.ai/*'});
+ test('HTML 200 is a challenge, preserves HTTP status, and never creates a fabricated quota',async({context,worker,extensionId})=>{
+  await worker.evaluate(()=>{globalThis.fetch=async()=>new Response('<html>PRIVATE_CHALLENGE_BODY</html>',{status:200,headers:{'content-type':'text/html'}});});
+  const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
+  await page.evaluate(()=>chrome.runtime.sendMessage({type:'enable',provider:'claude',enabled:true}));
+  const store=await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);
+  expect(store.accounts).toHaveLength(0);expect(store.connections.find(c=>c.id==='website:claude')).toMatchObject({status:'needs-tab',lastSuccessAt:null});
+  const diagnostic=await page.evaluate(()=>chrome.runtime.sendMessage({type:'request-diagnostics'}));
+  expect(diagnostic.data.entries[0]).toMatchObject({status:200,contentType:'text/html',pageFallbackRan:true});
+  expect(JSON.stringify(diagnostic)).not.toContain('PRIVATE_CHALLENGE_BODY');
+ });
+ test('declining optional cookie access keeps an explicit site-only connection path',async({context,worker,extensionId})=>{
+  await context.route('https://claude.ai/**',r=>r.fulfill({status:200,contentType:'text/html',body:'<p>Fictional provider</p>'}));
+  const website=await context.newPage();await website.goto('https://claude.ai/');
+  await worker.evaluate(()=>{globalThis.fetch=async input=>{
+   const pathname=new URL(String(input)).pathname;
+   const body=pathname==='/api/account'?{uuid:'fictional-denied-cookie-user'}:pathname==='/api/organizations'?
+    [{uuid:'fictional-denied-cookie-workspace',name:'Personal',capabilities:['chat']}]:{five_hour:{utilization:10,resets_at:'2030-01-01T00:00:00Z'}};
+   return new Response(JSON.stringify(body),{headers:{'content-type':'application/json'}});
+  };});
+  const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html#add`);
+  await page.evaluate(()=>{
+   const scope=window as typeof window & {permissionRequests:unknown[]};scope.permissionRequests=[];
+   chrome.permissions.request=async request=>{scope.permissionRequests.push(request);return !request.permissions?.includes('cookies');};
+   chrome.permissions.contains=async()=>false;
+  });
+  await page.getByRole('button',{name:/Claude · Claude Code/}).click();
+  await page.getByRole('button',{name:'Use current browser account',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Continue without sign-in detection',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Choose a different service',exact:true}).click();
+  await page.getByRole('button',{name:/^Gemini/}).click();
+  await expect(page.getByRole('button',{name:'Continue without sign-in detection',exact:true})).toHaveCount(0);
+  await page.getByRole('button',{name:'Choose a different service',exact:true}).click();
+  await page.getByRole('button',{name:/Claude · Claude Code/}).click();
+  await page.getByRole('button',{name:'Use current browser account',exact:true}).click();
+  await page.getByRole('button',{name:'Continue without sign-in detection',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Save detected account',exact:true})).toBeVisible();
+  expect(await page.evaluate(()=>(window as typeof window & {permissionRequests:unknown[]}).permissionRequests)).toEqual([
+   {origins:['https://claude.ai/*'],permissions:['cookies']},{origins:['https://claude.ai/*'],permissions:['cookies']},{origins:['https://claude.ai/*']},
+  ]);
+ });
  test('records no-tab rejection and copies redacted request metadata from Settings', async ({context,worker,extensionId}) => {
   await worker.evaluate(() => {
    globalThis.fetch = async () => new Response('BODY_SECRET', {status:403,headers:{
@@ -741,5 +782,38 @@ test.describe('request diagnostics (fictional providers only)', () => {
    return (await chrome.scripting.executeScript({target:{tabId:tab.id!},func:()=>chrome.runtime.sendMessage({type:'request-diagnostics'})}))[0]!.result;
   });
   expect(denied.ok).toBe(false);
+ });
+});
+
+test.describe('optional cookie signals (fictional cookies and provider)',()=>{
+ test.use({grantedProviderOrigin:'https://claude.ai/*',grantedCookieAccess:true});
+ test('a normal-store sign-in cookie recovers only failed tracking and never enters diagnostics as a value',async({context,worker,extensionId})=>{
+  const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
+  const store=emptyStore('fictional-c3-cookie-salt');
+  Object.assign(store.connections.find(c=>c.id==='website:claude')!,{enabled:true,status:'needs-auth',lastAttemptAt:Date.now()-60000,nextRetryAt:Date.now()+3600000});
+  Object.assign(store.providers.claude,{enabled:true,status:'signed-out'});
+  await worker.evaluate(async store=>{
+   const scope=globalThis as typeof globalThis & {fixtureRequestCount:number};scope.fixtureRequestCount=0;
+   globalThis.fetch=async input=>{
+    scope.fixtureRequestCount++;const pathname=new URL(String(input)).pathname;
+    const body=pathname==='/api/account'?{uuid:'fictional-cookie-user'}:pathname==='/api/organizations'?
+     [{uuid:'fictional-cookie-workspace',name:'Personal',capabilities:['chat']}]:{five_hour:{utilization:15,resets_at:'2030-01-01T00:00:00Z'}};
+    return new Response(JSON.stringify(body),{headers:{'content-type':'application/json'}});
+   };
+   await chrome.storage.local.set({'mylimits:state:v2':store});
+   await chrome.cookies.set({url:'https://claude.ai',name:'sessionKey',value:'FICTIONAL_COOKIE_VALUE',secure:true});
+  },store);
+  await expect.poll(()=>worker.evaluate(async()=>{
+   const saved=(await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store;
+   return saved.connections.find(c=>c.id==='website:claude')!.status;
+  }),{timeout:10000}).toBe('active');
+  const diagnostic=await page.evaluate(()=>chrome.runtime.sendMessage({type:'request-diagnostics'}));
+  expect(diagnostic.data.entries[0]).toMatchObject({sessionCookieState:'present',cookieNames:['sessionKey']});
+  expect(JSON.stringify(diagnostic)).not.toContain('FICTIONAL_COOKIE_VALUE');
+  expect(JSON.stringify(await worker.evaluate(()=>chrome.storage.local.get(null)))).not.toContain('FICTIONAL_COOKIE_VALUE');
+  const before=await worker.evaluate(()=>(globalThis as typeof globalThis & {fixtureRequestCount:number}).fixtureRequestCount);
+  await worker.evaluate(()=>chrome.cookies.set({url:'https://claude.ai',name:'sessionKey',value:'FICTIONAL_ROLLING_VALUE',secure:true}));
+  await page.waitForTimeout(2300);
+  expect(await worker.evaluate(()=>(globalThis as typeof globalThis & {fixtureRequestCount:number}).fixtureRequestCount)).toBe(before);
  });
 });

@@ -273,10 +273,27 @@ path, timestamp, transport, HTTP status, normalized response type/challenge/retr
 metadata, page-fallback/tab availability and elapsed time since a successful
 reading. Organization identifiers and URL queries are removed. Response bodies,
 request headers, credentials, account names and quota values are not collected.
-Cookie state is unknown and cookie-name lists are empty until optional cookie
-access is introduced in a later task.
+On the C3 branch, optional cookie access can report matching session-cookie
+names and presence from the confirmed normal cookie store. Without permission,
+or when the store/names cannot be established, it reports unknown. No cookie
+values are retained in diagnostics or account state.
 
 The buffer uses extension session storage, or bounded memory when unavailable.
 It is not part of account storage, reading exports, analytics or snapshot sync.
 The copy button copies the sanitized report to your clipboard only when clicked;
 it does not send the report anywhere. Browser exit clears the session buffer.
+
+## Optional sign-in change detection (C3 preview)
+
+Connecting the current OpenAI/Claude website account offers the optional cookies
+permission together with that site's access. If declined, Continue without
+sign-in detection requests site access only; backoff-based tracking still works.
+The helper calls the cookie API for the selected provider's normal store and uses
+names, domain/store/partition metadata and expiry to notice possible sign-in
+changes. Cookie values returned by that API are not copied, saved or logged.
+
+Private-store events are excluded. Only failed/waiting website sources may
+refresh after a debounced matching change; healthy accounts do not refresh for
+every rolling cookie. Candidate names remain live-unverified, so a missing
+candidate is unknown in production rather than proof that the user signed out.
+There is no saved session vault or new independent login in C3.

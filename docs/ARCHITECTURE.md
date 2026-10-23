@@ -406,3 +406,27 @@ metadata reconstruction happens before storage and again on read. A dashboard-on
 request-diagnostics message feeds the existing safe-diagnostics copy action.
 Storage failures degrade to memory and do not fail quota collection. No new
 permissions, session capture or independent browser credentials are enabled.
+
+## Persistent-accounts C3: response classification and cookie signals
+
+Provider response metadata is classified before JSON parsing. HTML responses
+(including HTTP 200) and explicit Cloudflare 403 challenges remain needs-tab
+with challenge provenance instead of becoming network status 0. Plain JSON 401
+is sign-out, JSON 403 is denial, and 429 always retains rate-limit/backoff semantics
+even when its body is HTML. Injected page responses use the same MIME guard and
+the background classifier; C3 creates no new tabs.
+
+createSessionCookies injects browser APIs. Exact provider access plus optional
+cookies permission are required. The default store must be linked to explicitly
+non-incognito tabs; store IDs/list order are never assumed. Firefox container,
+ambiguous and partitioned cases remain unknown. Session-cookie additions/
+overwrites debounce for two seconds and recheck store/permission/source state
+before a cookie-reason refresh; only enabled needs-auth/needs-tab sources qualify.
+Permission changes restart listeners and clear pending work.
+
+Candidate cookie-name absence is not authoritative before live validation.
+Production has no verifiedProviders, so missing candidates retain capped backoff.
+The pure retry helper supports a verified-absent auth state (null retry deadline)
+for later evidence-backed configuration; tests of that branch are simulated.
+Request diagnostics include only recognized names/presence, never values.
+All existing accounts/IDs/history and the Desktop authorization route remain.
