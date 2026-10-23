@@ -64,7 +64,8 @@ this off in Settings; it does not sign into another account.
   extension IDs; the bridge has no HTTP listener.
 - Optional `notifications`: show low-balance reminders after explicit approval.
 
-Disabling a provider stops its collection and removes its site permission.
+Disabling website tracking stops that source. Its site permission is removed
+when no enabled website/saved-sign-in source for that provider still needs it.
 Browser-only counts never trigger account quota notifications. No network
 response containing authentication material is written to project files.
 
@@ -371,3 +372,39 @@ replaced over saved entries. Explicit per-slot deletion does not need decryption
 C9 does not store a ChatGPT access token, copy browser cookies, collect passwords,
 run model prompts or promise tracking after logout. Actual provider behavior and
 activation still require G0/G1; fixture data does not establish those findings.
+
+## C11 saved-sign-in consent and removal (gated)
+
+All production providers remain off and cookie allowlists empty. Saved-sign-in
+choices are hidden until the provider policy permits them; ordinary website
+tracking and optional Desktop retain their existing behavior. Current normal
+packages do not add cookie/DNR required grants or activate a saved login.
+
+For a future approved provider, Private sign-in is offered for the first account
+as well as additional accounts. It requests explicit optional site/cookie/request
+access. The private window must be separate from existing private browsing;
+Chromium's private windows share a cookie jar. The normal browser login is not
+switched. Save current login is an explicit weaker alternative: website logout
+will probably end that connection.
+
+Before Save, captured cookie values remain in worker memory only, with a
+ten-minute timeout and metadata-only recovery journal. Identity confirmation,
+an editable nickname and an unchecked per-account consent box precede encrypted
+persistence. Privacy mode hides candidate names/plan/reference and blocks Save.
+Stored source metadata includes capture method and supplied expiry, never a
+guessed lifetime. Normal account readings remain unencrypted; credentials use
+the separate AES-GCM vault described above. This does not protect against malware
+or someone possessing the whole browser profile. No credential is sent to sync,
+exports, diagnostic messages or analytics.
+
+Remove saved sign-in stops that source and deletes its encrypted slot, retaining
+dated readings/history. Forget account deletes its slots and then removes account
+readings/history. If credential deletion fails, a disabled source remains for
+retry and removal is not reported as successful. Removing one account does not
+delete another account's credentials. These operations do not log out provider
+websites or claim remote revocation. Save closes only its own private window;
+do not explicitly log out inside that window before saving.
+
+Source, encryption and injected-browser tests are not proof of live provider
+authorization, request scoping, logout survival or cross-device usage. Those
+findings and G0/G1 decisions remain pending.

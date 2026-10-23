@@ -9,7 +9,7 @@ import { AccountSchema, SettingsSchema } from '../core/schema';
 import { badge, collectAlerts, recordObservation,markConnection } from '../core/engine';
 import { providers, providerForUrl } from '../providers/catalog';
 import { AdapterError, readProvider,ambientTransport } from '../providers/adapters';
-import { enableWebsite, setWorkspace, accountPreferences, orderAccounts, forgetAccount } from '../core/actions';
+import { enableWebsite, setWorkspace, accountPreferences, orderAccounts, forgetAccount,providerAccessInUse } from '../core/actions';
 import { RefreshCoordinator, shouldRefresh, nextRetry, type RefreshReason } from '../core/scheduler';
 import { changeConnection } from '../core/connections';
 import { analyzeHistory } from '../core/insights';
@@ -43,7 +43,7 @@ const COMPANION_ALARM = 'mylimits:companion';
 const SYNC_ALARM='mylimits:sync';
 const savedSessions=createSavedSessions({browser,crypto,indexedDB,locks:navigator.locks,supported:__MYLIMITS_BROWSER__!=='firefox',dnr:browser.declarativeNetRequest,
   request:(url,options)=>fetch(url,options),readStore,updateStore,accepted:async(id,source)=>{await saveAcceptedHistory(id,source);await renderBadge();await sendAlerts();},
-  lock:withHostLock,ready:hostLockStartup,blockHost,now:()=>Date.now(),uuid:()=>crypto.randomUUID(),trace:{lastSuccessAt:null,record:input=>requestDiagnostics.record(input)}});
+  lock:withHostLock,ready:hostLockStartup,blockHost,cancelRefresh:id=>coordinator.cancel(id),now:()=>Date.now(),uuid:()=>crypto.randomUUID(),trace:{lastSuccessAt:null,record:input=>requestDiagnostics.record(input)}});
 
 async function renderBadge(): Promise<void> {
   const value = badge(await readStore(), Date.now());
@@ -144,6 +144,9 @@ async function refreshAll(manual=false,reason:RefreshReason=manual?'manual':'sch
   if(results.some(result=>result.status==='rejected'))await renderBadge().catch(()=>{});
 }
 
+async function releaseUnusedProviderAccess(provider:ProviderId){
+  if(!providerAccessInUse(await readStore(),provider))await browser.permissions.remove({origins:[providers[provider].origin]});
+}
 async function setProvider(provider: ProviderId, enabled: boolean): Promise<void> {
   const origin = providers[provider].origin;
   if (enabled && !await browser.permissions.contains({ origins: [origin] })) throw new Error('Approve Chrome site access before enabling this website.');
@@ -152,7 +155,7 @@ async function setProvider(provider: ProviderId, enabled: boolean): Promise<void
   await reconcileObserver(provider);
   if (enabled) {await refreshConnection(websiteId(provider), true);await reconcileWidgets();}
   else {
-    await browser.permissions.remove({ origins: [origin] });
+    await releaseUnusedProviderAccess(provider);
     await renderBadge();
   }
 }
@@ -241,7 +244,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
   if(command.type.startsWith('vault-signin-')){
     if(!privateSenderAllowed(sender,browser.runtime.id,browser.runtime.getURL('/')))throw new Error('Saved sign-in actions require the normal MyLimits dashboard.');
     if(command.type==='vault-signin-start')await savedSessions.start(command.provider,command.method,command.nickname);
-    else if(command.type==='vault-signin-save')await savedSessions.save(command.setupId,command.accountId,command.consent);
+    else if(command.type==='vault-signin-save')await savedSessions.save(command.setupId,command.accountId,command.consent,command.nickname);
     else if(command.type==='vault-signin-cancel')await savedSessions.cancel(command.setupId);
     else if(command.type==='vault-signin-check')await savedSessions.check(command.setupId);
     return publicStore();
@@ -305,6 +308,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
       const conn = (await readStore()).connections.find(c => c.id === command.connectionId);
       if (!conn) throw new Error('Connection is no longer saved.');
       if(conn.kind==='cloud'&&remoteHostedId(conn.id))await hostedAction(remoteHostedId(conn.id)!,'disconnect');
+      else if(conn.kind==='vault'){await savedSessions.disconnect(conn.id);await releaseUnusedProviderAccess(conn.provider);}
       else if (conn.kind === 'website') await setProvider(conn.provider, false);
       else if (conn.kind === 'companion') { await companionRequest((await companionStatus()).compatible ? 'disconnect' : 'remove', conn.profileId); await refreshCompanion(); }
       else {coordinator.cancel(conn.id);await updateStore(store => ({ store: changeConnection(store, conn.id, { enabled:false,status:'disabled' }, true), value:undefined }));}
@@ -351,11 +355,14 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
     case 'forget': {
       const store = await readStore();
       const account = store.accounts.find(item => item.id === command.accountId);
+      const vaultProviders=[...new Set(store.connections.filter(c=>c.kind==='vault'&&c.accountId===command.accountId).map(c=>c.provider))];
+      await savedSessions.forget(command.accountId);
       if(remoteHostedId(command.accountId))await hostedAction(remoteHostedId(command.accountId)!,'forget');
       if (account?.companionProfile) { await companionRequest('remove', account.companionProfile); await refreshCompanion(); }
       if (account && !account.companionProfile && store.providers[account.provider].activeAccountId === account.id) await setProvider(account.provider, false);
       await snapshotSync.forget(command.accountId);
       await updateStore(async current => { await removeHistory(command.accountId); await forgetLegacyAccount(command.accountId); return { store: forgetAccount(current, command.accountId), value: undefined }; });
+      for(const provider of vaultProviders)await releaseUnusedProviderAccess(provider);
       break;
     }
     case 'settings': {

@@ -1,5 +1,6 @@
 import { type Account, type ProviderId, type Store } from './model';
 import { changeConnection } from './connections';
+export function providerAccessInUse(store:Store,provider:ProviderId){return store.connections.some(c=>c.provider===provider&&c.enabled&&(c.kind==='website'||c.kind==='vault'));}
 export function enableWebsite(store:Store,provider:ProviderId,enabled:boolean):Store {
  let next=changeConnection(store,`website:${provider}`,{enabled,status:enabled?'unavailable':'disabled',message:enabled?null:'Website tracking is off.',lastAttemptAt:null,nextRetryAt:null,failures:0},true);
  next={...next,providers:{...next.providers,[provider]:{...next.providers[provider],enabled,status:enabled?'inactive':'disabled',activeAccountId:enabled?next.providers[provider].activeAccountId:null,message:enabled?null:'Website tracking is off.',checkedAt:null,nextRetryAt:null,failures:0}}};return next;

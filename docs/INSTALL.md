@@ -292,16 +292,32 @@ clearly separate `*-spike.zip` under `.output-spike`; Actions publishes it as
 spike files/runtime/required permissions. The [C7 report](G0-GATE-REPORT.md)
 records HOLD until your live evidence is available; fixtures cannot approve G0.
 
-## C9/C10 foundation — no new connection setup yet
+## C9–C11 saved-sign-in code — production providers still off
 
 C9's encryption/key-storage and scoped request components are coded with every
 provider off. It does not change the + button or connect a second browser-only
 account. There is no token-copying or configuration step for users to perform.
-C10 now adds private-sign-in/refresh code behind the same off policy. Its
-commands are restricted to the normal dashboard; there is no user-facing setup
-or consent button yet. C11 supplies that UI and credential deletion. Do not run
+C10 adds private-sign-in/refresh code behind the same off policy. C11 adds its
+chooser, consent screen, same-account source conversion and credential deletion.
+The normal dashboard is the only allowed command sender. The new choices remain
+hidden while providers are off; installing this build does not activate them. Do not run
 developer commands to manufacture a saved connection or use fixture allowlists.
 The Desktop path and ordinary website tracking remain available separately.
 The user deferred intermediate gates for coding; live proof and provider decisions
 are still required before activation. Do not edit allowlists or enable policies
 from fixture names. C6's evidence build above remains the testing tool.
+
+Once a provider has evidence and human policy approval, its prepared flow is:
+Accounts → provider **+** → **Private sign-in (recommended)** → **Start private
+sign-in**. If asked, open the browser's Extensions → MyLimits → Details and allow
+incognito/private access, then retry. Sign into the intended account in the owned
+private window; confirm the detected identity, enter a nickname, check the local
+encrypted-sign-in consent box and choose **Save account**. Save closes the window;
+do not log out inside it. **Save current login** is an explicit weaker fallback.
+These are gated implementation instructions, not a claim that current providers
+are approved or live-tested. Activation also requires reviewing the release
+permission guards; the current guards intentionally reject diagnostic DNR grants.
+
+For a saved source, **Remove saved sign-in** deletes credentials while retaining
+dated readings/history. **Forget saved account** removes both. If removal fails,
+use its retry action; the disabled source remains until deletion succeeds.

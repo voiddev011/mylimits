@@ -40,3 +40,7 @@ import '../src/platform/vault.test.ts';
 import '../src/platform/vault-transport.test.ts';
 import '../src/platform/private-signin.test.ts';
 import '../src/core/private-signin.test.ts';
+import '../src/core/vault-ui.test.ts';
+import '../src/platform/private-access.test.ts';
+import '../src/platform/vault-lifecycle.test.ts';
+import '../src/platform/secrets.test.ts';

@@ -48,3 +48,7 @@ test('source labels follow the live bound reading, not the provider or an accoun
  assert.equal(connectionSource('companion'),'Companion');assert.equal(connectionSource('cloud'),'Hosted');
  assert.equal(accountSource({...account,id:'unbound'},state),'Saved reading');
 });
+test('privacy projection hides a pending private identity and plan before consent',()=>{
+ const state=demoState();state.accountSetup={id:'10000000-0000-4000-8000-000000000001',provider:'chatgpt',method:'private',slotId:'10000000-0000-4000-8000-000000000002',mode:'detect',nickname:'PRIVATE_ALIAS',previousAccountId:null,startedAt:1,phase:'awaiting-confirmation',candidate:{accountId:'verified-hash',name:'PRIVATE_NAME',plan:'PRIVATE_PLAN',verifiedAt:2}};
+ const shown=JSON.stringify(privatePresentation(state));for(const value of ['PRIVATE_ALIAS','PRIVATE_NAME','PRIVATE_PLAN'])assert.ok(!shown.includes(value));assert.equal(state.accountSetup.candidate!.name,'PRIVATE_NAME');
+});

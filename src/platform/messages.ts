@@ -53,6 +53,7 @@ export const CommandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('observation'), provider: ProviderSchema, eventId: z.string().uuid() }),
 ]);
 export type Command = z.infer<typeof CommandSchema>;
+export type ActionRunner=(action:Command,onError?:(error:unknown)=>void)=>Promise<boolean>;
 export type PublicStore = PublicState;
 export interface Response<T = unknown> { ok: boolean; data?: T; error?: string; code?:string; }
 export class CommandError extends Error {constructor(message:string,readonly code?:string){super(message);}}

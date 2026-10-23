@@ -638,7 +638,43 @@ immediately. A challenge soft-fails with backoff, never an ambient browser-tab
 retry. Success resets the auth counter; failure retains the last observation
 time. E7 token caching is not implemented because E7 is pending.
 
-C11 still needs the visible chooser/consent/setup and forget/disconnect credential
-deletion. C12 handles expiry/reconnect hardening. All provider login, real cookie
+C11 adds the gated chooser/consent/setup and forget/disconnect credential
+deletion (below). C12 handles expiry/reconnect hardening. All provider login, real cookie
 scoping, logout survival and other-device changes remain unverified; injected
 browser fixtures are not live account evidence.
+
+## C11 — gated consent UI, source conversion and credential deletion
+
+The setup chooser offers Private sign-in first, current browser login and the
+optional independent Desktop route only where supported by provider policy.
+All policies are still off, so current normal builds hide the saved-sign-in
+choices. There is no runtime flag or external message to enable a provider.
+Optional DNR declaration is conditional on an approved policy; current package
+guards remain unchanged and would require review before activation.
+
+PrivateSignIn consumes injected action/access ports. Incognito denial produces
+setup guidance; current-login capture requires an explicit selection and warning.
+Verified identity, editable alias and an unchecked consent box precede Save.
+Privacy mode masks candidate metadata and disables confirmation. Supplied expiry
+is additive public source metadata; missing expiry stays unknown. No credential
+or ciphertext enters that metadata or the account Store. Consent is not retained
+for a different setup/candidate. The normal build exposes no simulated test API.
+
+Saving an existing website account's verified identity preserves its ID, alias,
+preferences and history. It disables only that matching website source with a
+generation fence, then accepts the saved source. A different browser account
+remains tracked. Conversion never calls a website logout endpoint.
+
+vault-lifecycle fences/cancels collection, deletes the encrypted slot and removes
+the source record. Dated snapshots stay for a disconnected account. Forget first
+cleans up all that account's vault sources, then applies existing account/history
+deletion. Failure retains disabled metadata and a retry-removal action; it does
+not silently orphan credentials after erasing the account. Other sources/accounts
+remain intact. Late collector results cannot re-enable a deleted source.
+
+Focused leak tests cover Store/public state, JSON/CSV exports, sync items, support
+and request diagnostics and fixed errors with a recognisable fictional cookie.
+Chromium UI fixtures use actual React/runtime/encryption/IDB/storage, injecting
+fictional provider/window/cookie/DNR APIs. Actual worker messages also exercise
+encrypted disconnect/forget. Real provider, incognito and logout acceptance stays
+PENDING; C11 does not approve G0/G1 or start C12.
