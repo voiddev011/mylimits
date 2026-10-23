@@ -1,27 +1,20 @@
-# Start here — MyLimits Desktop + extension
+# Start here — MyLimits
 
-The active direction is a one-time Windows desktop installation plus the existing
-extension. Separate official provider profiles should track multiple accounts
-without changing the ordinary Chrome/Brave website session.
-Version 3.4 on `feature/desktop-independent-accounts` now routes independent +
-connections through Desktop, with a guided bootstrapper and identity confirmation.
-**Both providers still need real two-account acceptance.** Code/fixture checks do
-not certify login, quota freshness or preservation of a real website account.
+The current implementation is the Desktop + extension preview on
+`feature/desktop-independent-accounts`. Website tracking works without Desktop.
+Independent OpenAI/Claude connections use separate official provider profiles.
+**Real two-account acceptance remains pending for both providers.**
 
-Read in this order:
+Read:
 
 1. Applicable repository instructions and Git status; preserve user changes.
-2. [Current status and next action](IMPLEMENTATION-STATUS.md).
-3. [The single active implementation plan](DESKTOP-ACCOUNTS-IMPLEMENTATION-PLAN.md).
-4. [Existing local proof commands](ACCOUNT-PROOF.md) and [historical evidence](IMPLEMENTATION-HISTORY.md).
+2. [Current implementation status](IMPLEMENTATION-STATUS.md).
+3. [Desktop handoff and pending acceptance](DESKTOP-ACCOUNTS-HANDOFF.md).
+4. [Installation](INSTALL.md) and relevant [architecture](ARCHITECTURE.md).
 
-[Sol 6.1 starter prompt](STARTER-PROMPT.md) runs D01–D10 sequentially on a new
-feature branch. No parallel agents. Keep project Markdown directly in docs/.
-Reuse the existing local account service and Windows installer. Do not repeat
-hosted foundation work or build another desktop framework before provider proof.
+Completed execution plans and starter prompts were removed on 23 October 2026.
+They remain in Git history. No replacement plan has been agreed yet; follow the
+user's next instructions instead of replaying completed implementation tasks.
+Keep project Markdown directly in docs/.
 
-Website tracking stays available without Desktop. Independent connections require
-Desktop in this plan; a normal new tab does not isolate a login. Codex quota is not
-every ChatGPT allowance. Source/fixture checks are not live account proof.
-
-[Install current preview](INSTALL.md) · [Delivery/handoff](DESKTOP-ACCOUNTS-HANDOFF.md) · [Documentation index](README.md)
+[Documentation index](README.md) · [Research](COMPETITOR-RESEARCH.md)

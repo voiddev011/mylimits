@@ -6,8 +6,8 @@ Updated 22 October 2026. Working branch:
 
 ## Current decision
 
-The user accepts a desktop app alongside the extension. Execute
-[D01–D10](DESKTOP-ACCOUNTS-IMPLEMENTATION-PLAN.md) for a guided Windows installation,
+The implemented direction is a desktop app alongside the extension. See
+[Desktop delivery and pending acceptance](DESKTOP-ACCOUNTS-HANDOFF.md) for the guided Windows installation,
 isolated official provider profiles and combined account quotas. The installer-free
 hosted route is deferred. It was not completed by earlier infrastructure work.
 
@@ -392,3 +392,12 @@ automated tests, live verification and blocked/unverified work.
   is preserved in Desktop. All original remote tips are ancestors of the pushed
   Desktop merge `25dfb4e`. No release was published. Next: continue work on Desktop
   when requested; provider live acceptance remains pending.
+
+## Documentation cleanup — 23 October 2026
+
+- User requested removal of unnecessary Markdown on both retained branches.
+- Removed the completed Desktop execution plan and its obsolete starter prompt;
+  the current handoff retains delivery details and outstanding live acceptance.
+- Preserved unique research, provider conditions, architecture, privacy, operations,
+  installation and historical test evidence. Previous plans remain in Git history.
+- Updated entry points and links. No new product plan is authorized by this cleanup.

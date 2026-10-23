@@ -1,6 +1,6 @@
 # Provider access — prepared requests, not submitted
 
-> Deferred hosted-access reference. The active [desktop plan](DESKTOP-ACCOUNTS-IMPLEMENTATION-PLAN.md) uses local official profiles; these unsent drafts do not block beginning that work.
+> Deferred hosted-access reference. The active [Desktop delivery and pending acceptance](DESKTOP-ACCOUNTS-HANDOFF.md) uses local official profiles; these unsent drafts do not block beginning that work.
 
 22 October 2026 (Asia/Calcutta). Product: MyLimits, repository
 `https://github.com/voiddev011/mylimits`.

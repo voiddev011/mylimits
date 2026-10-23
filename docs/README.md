@@ -8,10 +8,8 @@ Real two-account freshness/login acceptance remains pending for both providers.
 ## Implementation
 
 - [Start here](START-HERE.md)
-- [Active desktop implementation plan](DESKTOP-ACCOUNTS-IMPLEMENTATION-PLAN.md)
 - [Current status](IMPLEMENTATION-STATUS.md)
 - [Desktop delivery and pending live acceptance](DESKTOP-ACCOUNTS-HANDOFF.md)
-- [Sol 6.1 starter prompt](STARTER-PROMPT.md)
 - [Historical evidence and consolidated checkpoints](IMPLEMENTATION-HISTORY.md)
 - [Competitor research](COMPETITOR-RESEARCH.md)
 
@@ -32,7 +30,7 @@ Real two-account freshness/login acceptance remains pending for both providers.
 - [Optional server operations](SERVER-SETUP.md)
 - [Deferred hosted provider-access drafts](PROVIDER-ACCESS-REQUESTS.md)
 
-Project Markdown lives directly in this folder. One execution plan is active.
+Project Markdown lives directly in this folder. Completed execution plans and starter prompts are archived in Git history.
 Older removed plans and phase ledgers remain in Git history; their unique evidence
 is consolidated above. Version 3.4 defaults independent connections to Desktop.
 The hosted provider registry remains empty and is not a fallback for Desktop.

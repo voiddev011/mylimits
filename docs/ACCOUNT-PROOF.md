@@ -3,7 +3,7 @@
 Updated 22 October 2026. Developer-only diagnostic; it does not install the
 public Desktop experience. The later 3.2 local account service already reuses
 parts of this proof; see [historical evidence](IMPLEMENTATION-HISTORY.md).
-The [desktop implementation plan](DESKTOP-ACCOUNTS-IMPLEMENTATION-PLAN.md) is active.
+The [Desktop delivery and pending acceptance](DESKTOP-ACCOUNTS-HANDOFF.md) records the current delivery.
 Neither provider has real two-account acceptance recorded here.
 
 ## Run on your Windows laptop
@@ -181,4 +181,4 @@ The production local adapter separately implements the official BROWSER override
 and has unauthenticated Linux/Windows binary routing evidence. Do not use this
 diagnostic's guard as proof that the later router is absent. Real account-B sign-in,
 primary-browser preservation and current remote-device quotas remain pending.
-See [history](IMPLEMENTATION-HISTORY.md) and the active plan before changing code.
+See [history](IMPLEMENTATION-HISTORY.md) and the current handoff before changing code.

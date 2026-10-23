@@ -1,7 +1,7 @@
 # Implementation history and evidence
 
 Consolidated 22 October 2026. This is historical evidence, not the active task list.
-Use [the desktop plan](DESKTOP-ACCOUNTS-IMPLEMENTATION-PLAN.md) and
+Use [Desktop delivery and pending acceptance](DESKTOP-ACCOUNTS-HANDOFF.md) and
 [current status](IMPLEMENTATION-STATUS.md) for what to do next.
 
 ## Local proof and 3.2 account service
@@ -49,7 +49,7 @@ Fixture end-to-end tests exercised Chromium/API/database transport only.
 The 3.3 default + flow selected hosted connections, so it reported providers as
 unavailable. The earlier local service remained in advanced settings. Do not
 conflate an empty hosted registry with absence of the earlier local adapter code.
-The active plan changes the default journey to the local desktop service.
+The Desktop implementation changes the default journey to the local desktop service.
 
 ## Official-binary hosted observations
 

@@ -1,6 +1,6 @@
 # Provider support and acceptance — Phase 2
 
-> Historical support/acceptance reference. Use [current status](IMPLEMENTATION-STATUS.md) and [the desktop plan](DESKTOP-ACCOUNTS-IMPLEMENTATION-PLAN.md) for the current execution scope.
+> Historical support/acceptance reference. Use [current status](IMPLEMENTATION-STATUS.md) and [Desktop delivery and pending acceptance](DESKTOP-ACCOUNTS-HANDOFF.md) for the current execution scope.
 
 Code/fixture verification does not establish live provider support. All quota
 readers remain **live-unverified prototypes** until tested with the relevant

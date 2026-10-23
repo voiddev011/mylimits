@@ -6,7 +6,7 @@ confirmation. No real A/B account acceptance has been recorded. The older 3.2
 installation instructions below are historical developer references, not current
 public setup. Do not install an old helper to test the 3.4 confirmation protocol.
 
-Follow [the active desktop plan](DESKTOP-ACCOUNTS-IMPLEMENTATION-PLAN.md) for the
+Follow [Desktop delivery and pending acceptance](DESKTOP-ACCOUNTS-HANDOFF.md) for the
 upgrade and [current extension install](INSTALL.md) for the current branch.
 Historical 3.2 artifact links and actual test evidence are in
 [IMPLEMENTATION-HISTORY.md](IMPLEMENTATION-HISTORY.md). Older downloads can expire.

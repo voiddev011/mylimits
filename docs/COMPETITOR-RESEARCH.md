@@ -259,7 +259,7 @@ Useful next product features are per-account identity/error/freshness, independe
 refresh, clearly labelled pace estimates, reset notifications after confirmation,
 history and compact pinned accounts. Do not add coaching/leaderboards/proxies to
 the current provider-proof workstream. The active
-[Desktop + extension plan](DESKTOP-ACCOUNTS-IMPLEMENTATION-PLAN.md) applies these
+[Desktop delivery and pending acceptance](DESKTOP-ACCOUNTS-HANDOFF.md) applies these
 findings without starting another broad research cycle.
 
 Retained regression references from the previous account research:

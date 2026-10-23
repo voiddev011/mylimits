@@ -1,6 +1,6 @@
 # Optional snapshot service — local setup
 
-> Operational reference for existing optional server features. Local independent accounts follow [the desktop plan](DESKTOP-ACCOUNTS-IMPLEMENTATION-PLAN.md) and do not require this server.
+> Operational reference for existing optional server features. Local independent accounts follow [Desktop delivery and pending acceptance](DESKTOP-ACCOUNTS-HANDOFF.md) and do not require this server.
 
 Phase 2 builds a separate TypeScript/Fastify/PostgreSQL service in `server/`.
 Local extension tracking does not require it. It is **snapshot-only**; hosted
