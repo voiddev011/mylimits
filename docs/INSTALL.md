@@ -226,8 +226,8 @@ account state, or saves captured credentials. Use a **separate test browser prof
 
 ```powershell
 git fetch origin
-git switch codex/c6
-git pull --ff-only origin codex/c6
+git switch main
+git pull --ff-only origin main
 npm ci --include=optional
 npm run build:spike
 ```
@@ -289,5 +289,5 @@ capture data and requires a new explicit capture. Desktop is not needed for C6.
 generated types, and never contacts providers. `npm run zip:spike` writes a
 clearly separate `*-spike.zip` under `.output-spike`; Actions publishes it as
 `mylimits-evidence-spike-not-for-release`. Ordinary release ZIPs are checked for
-spike files/runtime/required permissions. Stop after C6; C7 requires your filled
-live evidence and must not turn these fixtures into a G0 decision.
+spike files/runtime/required permissions. The [C7 report](G0-GATE-REPORT.md)
+records HOLD until your live evidence is available; fixtures cannot approve G0.
