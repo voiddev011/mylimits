@@ -644,6 +644,33 @@ test('provider plus selects Desktop without opening the current website session'
 
 test.describe('current website account',()=>{
  test.use({grantedProviderOrigin:'https://claude.ai/*'});
+ test('automatically retries persisted due authentication backoff when MyLimits opens, without a provider tab',async({context,worker,extensionId})=>{
+  const store=emptyStore('fictional-c2-retry-salt');
+  const connection=store.connections.find(c=>c.id==='website:claude')!;
+  Object.assign(connection,{enabled:true,status:'needs-auth',lastAttemptAt:Date.now()-20*60000,nextRetryAt:Date.now()-60000,failures:3});
+  Object.assign(store.providers.claude,{enabled:true,status:'signed-out',nextRetryAt:connection.nextRetryAt,failures:3});
+  await worker.evaluate(async store=>{
+   const scope=globalThis as typeof globalThis & {fixtureRequestCount:number};scope.fixtureRequestCount=0;
+   globalThis.fetch=async input=>{
+    scope.fixtureRequestCount++;
+    const pathname=new URL(String(input)).pathname;
+    const body=pathname==='/api/account'?{uuid:'fictional-c2-user'}:pathname==='/api/organizations'?
+     [{uuid:'fictional-c2-workspace',name:'Personal',capabilities:['chat']}]:{five_hour:{utilization:40,resets_at:'2030-01-01T00:00:00Z'}};
+    return new Response(JSON.stringify(body),{status:200,headers:{'content-type':'application/json'}});
+   };
+   await chrome.storage.local.set({'mylimits:state:v2':store});
+  },store);
+  const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
+  await expect.poll(()=>worker.evaluate(async()=>{
+   const saved=(await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store;
+   return saved.connections.find(c=>c.id==='website:claude')!.status;
+  })).toBe('active');
+  const saved=await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);
+  expect(saved.connections.find(c=>c.id==='website:claude')).toMatchObject({failures:0,nextRetryAt:null});
+  expect(saved.accounts[0]!.meters[0]!.usedPercent).toBe(40);
+  expect(await worker.evaluate(()=>(globalThis as typeof globalThis & {fixtureRequestCount:number}).fixtureRequestCount)).toBe(4);
+  expect(await worker.evaluate(()=>chrome.tabs.query({url:'https://claude.ai/*'}))).toHaveLength(0);
+ });
  test('uses existing tab without opening a replacement login',async({context,extensionId})=>{
   await context.route('https://claude.ai/**',r=>r.fulfill({status:200,contentType:'text/html',body:'<p>Fictional signed-in website</p>'}));
   const existing=await context.newPage();await existing.goto('https://claude.ai/');

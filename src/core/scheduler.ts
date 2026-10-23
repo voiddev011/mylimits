@@ -1,11 +1,16 @@
 import type { ConnectionRecord } from './model';
-export type RefreshReason='scheduled'|'manual'|'open'|'startup'|'tab';
+export type RefreshReason='scheduled'|'manual'|'open'|'startup'|'tab'|'cookie'|'idle';
+const AUTH_SIGNALS:readonly RefreshReason[]=['manual','tab','cookie'];
 export function shouldRefresh(c:ConnectionRecord,reason:RefreshReason,now:number,minutes:number):boolean {
  if(!c.enabled)return false;
- if(c.status==='needs-auth'&&!['manual','tab'].includes(reason))return false;
  if(c.lastAttemptAt!==null&&now-c.lastAttemptAt<15000)return false;
+ // An explicit sign-in signal may retry authentication, but never bypasses the click cooldown.
+ if(c.status==='needs-auth'){
+  if(AUTH_SIGNALS.includes(reason))return true;
+  return c.nextRetryAt!==null&&now>=c.nextRetryAt;
+ }
  // A restart or repeated manual click must not bypass a persisted provider wait.
- if(c.status!=='needs-auth'&&c.nextRetryAt!==null&&now<c.nextRetryAt)return false;
+ if(c.nextRetryAt!==null&&now<c.nextRetryAt)return false;
  if(['manual','tab','startup'].includes(reason))return true;
  if(c.nextRetryAt!==null)return now>=c.nextRetryAt;
  if(reason==='open'&&c.status==='active'&&c.lastSuccessAt!==null&&now-c.lastSuccessAt<minutes*60000)return false;

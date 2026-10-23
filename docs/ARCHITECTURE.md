@@ -128,8 +128,12 @@ request/status path independently of website transport.
 Next attempts and exponential failure backoff persist across worker restarts.
 Provider retry instructions are capped at 24 hours; ordinary exponential backoff
 caps at an hour. A 15-second click cooldown and persisted retry wait apply before
-requests; explicit reconnect resets local scheduling. Authentication rejection
-pauses scheduled/open retries until a manual/relevant website recovery event.
+requests; explicit reconnect resets local scheduling. On the persistent-accounts
+C2 branch, authentication rejection retries automatically once a persisted
+nextRetryAt is due. A null authentication retry deadline waits for a manual, tab
+or cookie signal. Those signals still obey the 15-second cooldown; non-auth
+provider waits are never bypassed. Cookie and idle reasons are defined, but their
+new browser listeners are not part of C2.
 A failed request never changes the observation time of the previous reading.
 
 Freshness uses each meter's observation time, active source status and reset

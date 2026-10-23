@@ -497,3 +497,41 @@ automated tests, live verification and blocked/unverified work.
   Local documentation links passed; original R2 plan is unchanged.
 - Next task group is C2 (scheduler backoff), after review/integration of C1.
   Do not begin C2 as part of this PR. Human checkpoints A/B and G0/G1 remain.
+
+### C2 — scheduler backoff instead of parking
+
+- User requested continuation. C1 PR #2 passed PR CI 39902753843 (all six
+  jobs: Node 22/24/26, verify/browser, Windows and connected services) and was
+  merged into feat/persistent-accounts as dd7eb18. Main is unchanged. C2 branch
+  codex/c2 uses that integration baseline.
+- Scope is T1.1 only: src/core/scheduler.ts, its existing unit tests, one browser
+  regression, architecture and status. No new dependencies, schema, permissions,
+  credential/session capture or provider readers.
+- needs-auth now obeys a finite persisted retry deadline for scheduled/open/
+  startup/idle work. A null deadline waits for a manual/tab/cookie signal. All
+  reasons obey the 15-second attempt cooldown. Non-auth retry waits, disabled
+  tracking, coalescing/concurrency and nextRetry's caps are unchanged.
+- Added cookie/idle reason types for later tasks; no cookie or idle listeners are
+  installed in C2. Login invalidation is not bypassed; every new reading still
+  requires a successful authenticated provider response.
+- Actual initial checks: npm run typecheck passed; npm test passed 120/120
+  including five new scheduler tests. Existing assertion values were unchanged;
+  one test title was renamed to describe its null-deadline authentication case.
+- Added a browser fixture that seeds an overdue authentication backoff, opens only
+  MyLimits, and expects automatic collection without a provider tab or manual
+  refresh. All data is fictional, and all external HTTP is blocked/fixture-routed.
+- Actual full checks: npm run check passed (120 core, 20 native, 24 connection,
+  4 transport/runtime tests, typecheck and Chrome build). npm run test:browser
+  passed 34/34 using Playwright Chromium, including the new automatic retry test.
+  npm run zip, whitespace and local documentation links passed. The original
+  R2 plan is unchanged. No existing assertion values were changed or weakened.
+- Manual C2 check: use a test Chrome/Brave profile, sign out of the provider,
+  refresh once, sign back in and close its tab. An eligible successful check
+  should recover without clicking MyLimits refresh. This live check is PENDING;
+  unit deadlines and fictional-browser recovery do not prove provider behavior.
+- Next: push C2 and open its separate PR into feat/persistent-accounts. C3
+  (response classification and cookie signals) follows review/integration. Do not
+  start C3 in this task; checkpoints A/B and provider gates G0/G1 remain pending.
+
+- C2 package: .output/mylimits-3.4.0-chrome.zip, 308639 bytes;
+  SHA-256 d427af8c9ceea9ef0ff27b6740a95e3a5a1b33c5b249335b1e1f1beaccde7283.
