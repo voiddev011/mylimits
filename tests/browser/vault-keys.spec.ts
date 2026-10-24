@@ -375,7 +375,7 @@ test("production ChatGPT connection UI offers the explicitly enabled saved sign-
 }) => {
   const page = await context.newPage();
   await page.goto(`chrome-extension://${extensionId}/dashboard.html#add`);
-  await page.getByRole("button", { name: "ChatGPT / Codex", exact: true }).click();
+  await page.getByRole("button", { name: /^ChatGPT \/ Codex/ }).click();
   await expect(page.getByRole("button", { name: "Private sign-in", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Use current browser login", exact: true })).toBeVisible();
 });
