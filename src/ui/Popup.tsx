@@ -1,14 +1,7 @@
+import { BrandMark } from "./BrandMark";
 import { accountStatusText, accountSource } from "../core/presentation";
 import { useState } from "react";
-import {
-  ArrowUpRight,
-  Bell,
-  Gauge,
-  Plus,
-  RefreshCw,
-  Search,
-  X,
-} from "lucide-react";
+import { ArrowUpRight, Bell, Plus, RefreshCw, Search, X } from "lucide-react";
 import {
   accountName,
   isFresh,
@@ -86,7 +79,7 @@ export function Popup() {
     <div className="app app--popup quick-popup">
       <header className="quick-header">
         <div className="quick-brand">
-          <Gauge size={20} />
+          <BrandMark size={20} />
           <h1>MyLimits</h1>
           <span
             className="quick-count"
@@ -256,7 +249,7 @@ export function Popup() {
             )}
             {!store.accounts.length && (
               <div className="quick-empty">
-                <Gauge size={29} />
+                <BrandMark size={29} />
                 <h2>Your limits at a glance.</h2>
                 <p>Connect a service using your existing login.</p>
                 <button
