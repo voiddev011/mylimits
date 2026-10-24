@@ -28,8 +28,8 @@ Final validation: `npm run check` PASS again (263 + 20 + 24 + 4 tests and build)
 Known boundary: trusted-context local-storage protection is required; unsupported
 browser APIs fail closed. Chrome browser flows are simulated; Firefox token setup
 and real GitHub accounts are not verified. No API allowance field is assumed.
-Next: user-run real-token acceptance in COPILOT.md; branch/PR delivery into main,
-without merging or publishing.
+Delivered: [PR #24](https://github.com/voiddev011/mylimits/pull/24) into main.
+Next: user-run real-token acceptance in COPILOT.md. Not merged or published.
 
 # Current implementation status — Desktop + extension
 
