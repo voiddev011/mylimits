@@ -46,3 +46,5 @@ import '../src/platform/vault-lifecycle.test.ts';
 import '../src/platform/secrets.test.ts';
 import '../src/core/signin-expiry.test.ts';
 import '../src/platform/expiry-watchdog.test.ts';
+
+import '../src/platform/copilot.test.ts';

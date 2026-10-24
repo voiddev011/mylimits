@@ -64,3 +64,5 @@ This builds extension files; it does not host a browser extension or connect AI
 accounts remotely. The root `compose.yaml` runs the optional API and PostgreSQL
 with `docker compose up --build`. See [server setup](SERVER-SETUP.md) for local
 configuration, data-volume behavior and production limitations.
+
+GitHub Copilot setup and REST field assumptions: [COPILOT.md](COPILOT.md).

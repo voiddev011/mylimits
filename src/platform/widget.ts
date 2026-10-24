@@ -9,7 +9,7 @@ async function notify(provider:ProviderId,type='mylimits-widget-refresh'){
 }
 export async function reconcileWidgets(){
  const settings=await widgetSettings();
- for(const provider of PROVIDER_IDS){const id=`mylimits-widget-${provider}`,enabled=settings.providers.includes(provider)&&await browser.permissions.contains({origins:[providers[provider].origin]});const registered=await browser.scripting.getRegisteredContentScripts({ids:[id]});
+ for(const provider of PROVIDER_IDS.filter(p=>p!=='copilot')){const id=`mylimits-widget-${provider}`,enabled=settings.providers.includes(provider)&&await browser.permissions.contains({origins:[providers[provider].origin]});const registered=await browser.scripting.getRegisteredContentScripts({ids:[id]});
   if(!enabled){if(registered.length)await browser.scripting.unregisterContentScripts({ids:[id]});await notify(provider,'mylimits-widget-stop');continue}
   if(!registered.length)await browser.scripting.registerContentScripts([{id,matches:[providers[provider].origin],js:['/content-scripts/widget.js'],runAt:'document_idle',persistAcrossSessions:true}]);
   const tabs=await browser.tabs.query({url:providers[provider].origin});await Promise.allSettled(tabs.filter(t=>t.id).map(t=>browser.scripting.executeScript({target:{tabId:t.id!},files:['/content-scripts/widget.js']})));await notify(provider);

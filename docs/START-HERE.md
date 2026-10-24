@@ -45,3 +45,6 @@ activation and pending human checks. C13 is optional and not started.
 See the latest entry in [implementation status](IMPLEMENTATION-STATUS.md).
 
 [Documentation index](README.md) · [Research](COMPETITOR-RESEARCH.md)
+
+U2 provider work: [COPILOT.md](COPILOT.md) documents token setup, exact official REST
+fields, storage boundaries and pending real-token checks on `codex/u2-copilot`.

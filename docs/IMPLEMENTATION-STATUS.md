@@ -1,3 +1,25 @@
+## U2 · GitHub Copilot (24 October 2026)
+
+Branch `codex/u2-copilot` from main. Implemented official REST identity/usage,
+separate encrypted token vault, token setup/replacement, allowance settings,
+per-connection refresh, 15-minute minimum and disconnect/forget token deletion.
+Existing main features remain; U1/U4 are separate PRs.
+
+Changed files: core model/schema/migration/public/scheduler/presentation/meter display;
+Copilot parser, REST adapter, token vault, account lifecycle, controller/messages;
+Copilot setup/settings and provider assets/catalog; API optional permission; tests,
+package assertions and Copilot setup/security documentation.
+
+Actual checks: `npm run check` PASS (263 core/platform tests; 20 companion,
+24 connections and 4 transport/runtime tests; Chrome build). `npm run test:browser` PASS (57 Chromium tests, including the simulated two-token
+Copilot UI lifecycle). Legacy V1 fixtures exclude the new Copilot default, just as
+they already excluded Cursor. No production migration assertion is weakened.
+
+Decisions: documented `grossQuantity`, not net discounted quantities; no documented
+API allowance field, so require explicit user allowance. No live account access:
+real-token, plan eligibility and included-request comparison checks PENDING.
+Next: verify the bundled mark in dark mode, package and open PR into main. No release/merge.
+
 # Current implementation status — Desktop + extension
 
 Updated 23 October 2026. Latest coded task: C12 expiry watchdog and final persistence

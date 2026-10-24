@@ -32,6 +32,7 @@ export default defineConfig({
       'https://grok.com/*',
       'https://www.perplexity.ai/*',
       'https://cursor.com/*',
+      'https://api.github.com/*',
       ...(syncOrigin?[syncPermission(syncOrigin)]:[]),
     ],
     action: { default_title: 'MyLimits',...(spike?{default_popup:'spike.html'}:{}) },

@@ -714,3 +714,13 @@ advisory metadata and never imply renewal. Re-sign-in requires removing the save
 source and repeating the verified setup; dated history/aliases remain. No provider
 is activated, no rotation capture is added and C8/G0/G1/E5/E6 remain unresolved.
 See [the persistence summary](SESSION-PERSISTENCE.md) for exact evidence boundaries.
+
+## U2 · GitHub Copilot
+
+`copilot-accounts.ts` verifies identity and usage before committing a `copilot:<slot>`
+connection. `copilot.ts` exclusively uses GitHub REST with cookie omission and
+redirect rejection. `token-vault.ts` protects PATs in a separate storage key;
+`connection-refresh.ts` integrates source-bound reads, generation fences, history
+and backoff. The scheduler enforces 15 minutes even for manual clicks and parks
+401 failures until replacement. Allowance is an explicit account-setting override
+because the documented usage response exposes no allowance. See [COPILOT.md](COPILOT.md).

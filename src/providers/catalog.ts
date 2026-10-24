@@ -4,6 +4,7 @@ export const providers: Record<ProviderId, {
   name: string; origin: string; home: string; usage: string; color: string;
   detail: string; support: 'prototype' | 'browser-observed';
 }> = {
+ copilot:{name:'GitHub Copilot',origin:'https://api.github.com/*',home:'https://api.github.com',usage:'https://api.github.com',color:'#939bab',support:'prototype',detail:'Official GitHub REST API premium requests; fine-grained token with Plan: read.'},
   claude: { name: 'Claude', origin: 'https://claude.ai/*', home: 'https://claude.ai', usage: 'https://claude.ai/settings/usage', color: '#cc8566', support: 'prototype', detail: 'Reported subscription limits where your plan exposes them.' },
   chatgpt: { name: 'ChatGPT', origin: 'https://chatgpt.com/*', home: 'https://chatgpt.com', usage: 'https://chatgpt.com/codex/settings/usage', color: '#52a990', support: 'prototype', detail: 'Work / Codex allowance. Ordinary chat quotas are separate.' },
   gemini: { name: 'Gemini', origin: 'https://gemini.google.com/*', home: 'https://gemini.google.com', usage: 'https://gemini.google.com/usage', color: '#7798dc', support: 'browser-observed', detail: 'Local request observations only; consumer account quotas remain unverified.' },

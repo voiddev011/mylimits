@@ -1,3 +1,8 @@
+import { createTokenVault } from './token-vault';
+import { createIndexedDBVaultKeys } from './vault-key-store';
+import { createCopilotAccounts } from './copilot-accounts';
+import { readCopilot } from './copilot';
+import { projectAccounts } from '../core/connections';
 import { browser } from 'wxt/browser';
 import { cleanupVaultRules } from './vault-transport';
 import { setHostLockStartup,hostLockStartup,withHostLock,blockHost } from './host-lock';
@@ -35,6 +40,8 @@ import { EXPIRY_ALARM } from '../core/signin-expiry';
 import { vaultEnabled } from '../core/vault-policy';
 import { createExpiryWatchdog } from './expiry-watchdog';
 
+const tokens=createTokenVault({local:browser.storage.local,keys:createIndexedDBVaultKeys({indexedDB,crypto}),crypto,lock:async fn=>await navigator.locks.request('mylimits:vault:v1',async()=>await fn())});
+const copilotAccounts=createCopilotAccounts({readStore,updateStore,tokens,lock:async(id,fn)=>await navigator.locks.request(`mylimits:copilot:${id}`,async()=>await fn()),request:(url,options)=>fetch(url,options),permitted:()=>browser.permissions.contains({origins:['https://api.github.com/*']}),uuid:()=>crypto.randomUUID(),now:()=>Date.now(),cancel:id=>coordinator.cancel(id),accepted:saveAcceptedHistory});
 const coordinator = new RefreshCoordinator(2);
 const requestDiagnostics = createRequestDiagnostics({ storage: browser.storage.session });
 const tabRecovery=createTabRecovery({tabs:browser.tabs,windows:browser.windows,local:browser.storage.local,session:browser.storage.session});
@@ -100,6 +107,7 @@ const collectConnection=createConnectionRefresh({readStore,updateStore,coordinat
     else await updateStore(store=>({store:changeConnection(store,connection.id,{enabled:false,status:'disabled',message:'Allow site access before reconnecting this source.'},true),value:undefined}));
   },
   read:async(connection,options,signal,onRecoveryStart)=>{
+    if(connection.kind==='copilot'){let token:string;try{token=await tokens.get(connection.profileId!);}catch{throw new AdapterError('signed-out','Token expired or revoked, paste a new one',null,'copilot-auth');}return readCopilot(token,connection.copilotAllowance??null,Date.now(),(url,options)=>fetch(url,options),signal);}
     if(connection.kind==='vault')return savedSessions.readConnection(connection,options,signal,{lastSuccessAt:connection.lastSuccessAt,record:input=>requestDiagnostics.record(input)});
     if(connection.kind!=='website')throw new AdapterError('unavailable','This connection has no usage reader.');
     await tabRecovery.initialize();
@@ -115,7 +123,7 @@ const collectConnection=createConnectionRefresh({readStore,updateStore,coordinat
 export async function refreshConnection(connectionId:string,manual=false,reason:RefreshReason=manual?'manual':'scheduled'):Promise<void>{
   const source=(await readStore()).connections.find(c=>c.id===connectionId);
   if(!source)return;
-  if(source.kind==='website'||source.kind==='vault')return collectConnection(connectionId,reason);
+  if(source.kind==='website'||source.kind==='vault'||source.kind==='copilot')return collectConnection(connectionId,reason);
   if(source.kind==='snapshot-import')return; // Imported readings have no live provider authorization.
   return coordinator.run(connectionId,async signal=>{
     const store=await readStore(),current=store.connections.find(c=>c.id===connectionId);
@@ -258,6 +266,16 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
     return publicStore();
   }
   switch (command.type) {
+    case 'copilot-connect':
+      if(!privateSenderAllowed(sender,browser.runtime.id,browser.runtime.getURL('/')))throw new Error('Connect from the normal MyLimits dashboard.');
+      try{await copilotAccounts.connect(command.token,command.connectionId);}catch(e){if(e instanceof AdapterError)throw e;throw new Error('Copilot connection could not be saved. Verify the token belongs to this account and try again.');}break;
+    case 'copilot-allowance':
+      coordinator.cancel(command.connectionId);
+      await updateStore(store=>{
+        const source=store.connections.find(c=>c.id===command.connectionId&&c.kind==='copilot');if(!source)throw new Error('Copilot connection is no longer saved.');
+        const snapshots=store.snapshots.map(s=>s.connectionId!==source.id?s:{...s,meters:s.meters.map(m=>({...m,total:command.allowance,usedPercent:command.allowance===null||m.used===null?null:Math.min(1000,m.used/command.allowance*100),remaining:command.allowance===null||m.used===null?null:Math.max(0,command.allowance-m.used)}))});
+        return {store:projectAccounts({...changeConnection(store,source.id,{copilotAllowance:command.allowance},true),snapshots,accounts:store.accounts.map(a=>a.id===source.accountId?{...a,plan:command.allowance===null?null:`${command.allowance} requests/month`}:a)}),value:undefined};
+      });break;
     case 'widget-settings': return command.settings?updateWidgetSettings(()=>command.settings!):widgetSettings();
     case 'state': return publicStore();
     case 'request-diagnostics': return { version: 1, entries: await requestDiagnostics.list() };
@@ -268,6 +286,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
     case 'hosted-list': await refreshHosted();return publicStore();
     case 'hosted-action': await hostedAction(command.id,command.action,command.alias);return publicStore();
     case 'account-setup-start': {
+      if(command.provider==='copilot')throw new Error('Use a GitHub token to connect Copilot.');
       if((await readStore()).accountSetup?.method==='private')throw new Error('Finish or cancel saved sign-in setup first.');
       if (!await browser.permissions.contains({origins:[providers[command.provider].origin]})) throw new Error('Allow site access before detecting an account.');
       await updateStore(store => ({store:startAccountSetup(store,command.provider,command.mode,command.nickname,crypto.randomUUID(),Date.now()),value:undefined}));
@@ -315,7 +334,8 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
     case 'disconnect': {
       const conn = (await readStore()).connections.find(c => c.id === command.connectionId);
       if (!conn) throw new Error('Connection is no longer saved.');
-      if(conn.kind==='cloud'&&remoteHostedId(conn.id))await hostedAction(remoteHostedId(conn.id)!,'disconnect');
+      if(conn.kind==='copilot')await copilotAccounts.disconnect(conn.id);
+      else if(conn.kind==='cloud'&&remoteHostedId(conn.id))await hostedAction(remoteHostedId(conn.id)!,'disconnect');
       else if(conn.kind==='vault'){await savedSessions.disconnect(conn.id);await releaseUnusedProviderAccess(conn.provider);}
       else if (conn.kind === 'website') await setProvider(conn.provider, false);
       else if (conn.kind === 'companion') { await companionRequest((await companionStatus()).compatible ? 'disconnect' : 'remove', conn.profileId); await refreshCompanion(); }
@@ -346,7 +366,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
       else await refreshAll(true);
       break;
     }
-    case 'enable': await setProvider(command.provider, command.enabled); break;
+    case 'enable': if(command.provider==='copilot')throw new Error('Use a GitHub token to connect Copilot.'); await setProvider(command.provider, command.enabled); break;
     case 'rename': {
       const account = (await readStore()).accounts.find(a => a.id === command.accountId);
       if(remoteHostedId(command.accountId))await hostedAction(remoteHostedId(command.accountId)!,'rename',command.alias);
@@ -364,6 +384,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
       const store = await readStore();
       const account = store.accounts.find(item => item.id === command.accountId);
       const vaultProviders=[...new Set(store.connections.filter(c=>c.kind==='vault'&&c.accountId===command.accountId).map(c=>c.provider))];
+      for(const c of store.connections.filter(c=>c.kind==='copilot'&&c.accountId===command.accountId))await copilotAccounts.disconnect(c.id);
       await savedSessions.forget(command.accountId);
       if(remoteHostedId(command.accountId))await hostedAction(remoteHostedId(command.accountId)!,'forget');
       if (account?.companionProfile) { await companionRequest('remove', account.companionProfile); await refreshCompanion(); }

@@ -9,6 +9,8 @@ import { PrivateStartSchema,PrivateSaveSchema,PrivateCancelSchema,PrivateCheckSc
 const ms = z.number().finite().min(0).max(8.64e15);
 export const CommandSchema = z.discriminatedUnion('type', [
   PrivateStartSchema,PrivateSaveSchema,PrivateCancelSchema,PrivateCheckSchema,
+  z.object({type:z.literal('copilot-connect'),token:z.string().regex(/^github_pat_[A-Za-z0-9_]{10,490}$/),connectionId:z.string().regex(/^copilot:[0-9a-f-]{36}$/i).optional()}).strict(),
+  z.object({type:z.literal('copilot-allowance'),connectionId:z.string().min(1).max(240),allowance:z.number().finite().positive().max(1000000000).nullable()}).strict(),
   z.object({ type: z.literal('state') }),
   z.object({ type: z.literal('request-diagnostics') }).strict(),
   z.object({type:z.literal('hosted-status')}),

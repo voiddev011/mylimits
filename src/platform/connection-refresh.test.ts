@@ -83,3 +83,16 @@ test('intervening challenge resets consecutive 401 count; successful reads reset
  }
  f.port.read=original;await f.refresh(id,'manual');const c=f.read().connections.find(c=>c.id===id)!;assert.equal(c.authFailures,0);assert.equal(c.nextRetryAt,null);assert.equal(c.status,'active');assert.equal(f.history.length,1);
 });
+
+test('Copilot 401 parks all refresh signals until token replacement, preserves real history and quota timestamp',async()=>{
+ const f=await fixture();for(const c of f.read().connections)if(c.kind==='vault')c.kind='copilot';
+ f.port.read=async()=>{f.calls.push('read');throw new AdapterError('signed-out','Token expired or revoked, paste a new one',null,'copilot-auth');};
+ await f.refresh(f.connections[0]!,'manual');const c=f.read().connections.find(c=>c.id===f.connections[0])!;
+ assert.equal(c.status,'needs-auth');assert.equal(c.nextRetryAt,null);assert.equal(f.read().accounts[0]!.updatedAt,now-60000);assert.equal(f.history.length,0);
+ f.setNow(now+86400000);for(const reason of ['manual','scheduled','startup','tab','cookie'] as const)await f.refresh(c.id,reason);
+ assert.deepEqual(f.calls,['read']);
+});
+test('Copilot identity change during refresh rejects the reading rather than rebinding the connection',async()=>{
+ const f=await fixture();f.read().connections.find(c=>c.id===f.connections[0])!.kind='copilot';f.port.read=async()=>snapshot('Different GitHub ID',5);
+ await f.refresh(f.connections[0]!,'manual');assert.equal(f.read().accounts.length,2);assert.equal(f.read().accounts[0]!.updatedAt,now-60000);assert.equal(f.history.length,0);
+});

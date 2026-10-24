@@ -24,7 +24,7 @@ export function createConnectionRefresh(port:ConnectionRefreshPort){
  return async function refreshConnection(connectionId:string,reason:RefreshReason='scheduled'):Promise<void>{
   return coordinator.run(connectionId,async signal=>{
    const before=await port.readStore(),connection=before.connections.find(c=>c.id===connectionId);
-   if(!connection||!['website','vault'].includes(connection.kind)||!shouldRefresh(connection,reason,now(),before.settings.refreshMinutes))return;
+   if(!connection||!['website','vault','copilot'].includes(connection.kind)||!shouldRefresh(connection,reason,now(),before.settings.refreshMinutes))return;
    if(!await port.permitted(connection)){await port.permissionMissing(connection);return;}
    const provider=connection.provider,stamp=connection.generation;
    const valid=(s:Store)=>s.connections.find(c=>c.id===connectionId&&c.enabled&&c.generation===stamp);
@@ -46,7 +46,7 @@ export function createConnectionRefresh(port:ConnectionRefreshPort){
     const meters=snapshot.meters.map(m=>MeterSchema.parse(m));
     const id=await accountId(provider,snapshot.identity,before.installSalt);
     // A connected saved source may never silently rebind to another identity.
-    if(connection.kind==='vault'&&connection.accountId&&connection.accountId!==id)throw new AdapterError('signed-out','Saved sign-in returned a different account. Reconnect this source.',null,'identity');
+    if(['vault','copilot'].includes(connection.kind)&&connection.accountId&&connection.accountId!==id)throw new AdapterError('signed-out','This connection returned a different account. Reconnect this source.',null,'identity');
     const choices=await Promise.all((snapshot.workspaces??[]).map(async w=>({id:await accountId(provider,`workspace:${w.identity}`,before.installSalt),provider,remoteId:w.identity,name:w.name})));
     const workspaceId=choices.find(w=>w.remoteId===snapshot.workspace?.identity)?.id??null;
     const accepted=await port.updateStore(store=>{
@@ -67,7 +67,7 @@ export function createConnectionRefresh(port:ConnectionRefreshPort){
      const current=valid(store);if(!current)return {store,value:undefined};
      const next=markConnection(store,connectionId,status,message,now());
      const authFailures=rejected?(current.authFailures??0)+1:0;
-     const retry=isVault&&status==='signed-out'&&(!rejected||authFailures>=3)?null:authRetryDeadline(status,cookieState,now(),current.failures+1,store.settings.refreshMinutes,error instanceof AdapterError?error.retryAt:null);
+     const retry=connection.kind==='copilot'&&status==='signed-out'?null:isVault&&status==='signed-out'&&(!rejected||authFailures>=3)?null:authRetryDeadline(status,cookieState,now(),current.failures+1,connection.kind==='copilot'?Math.max(15,store.settings.refreshMinutes):store.settings.refreshMinutes,error instanceof AdapterError?error.retryAt:null);
      next.connections=next.connections.map(c=>c.id===connectionId?{...c,lastAttemptAt:now(),failures:current.failures+1,authFailures,nextRetryAt:retry}:c);
      if(connection.kind==='website'){next.providers[provider].failures=current.failures+1;next.providers[provider].nextRetryAt=retry;}
      return {store:next,value:undefined};

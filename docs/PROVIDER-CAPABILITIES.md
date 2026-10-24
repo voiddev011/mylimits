@@ -172,3 +172,11 @@ Automated tests cover migration/restart, aliases, permissions denial, missing
 native APIs, source independence, six-row fit, keyboard/shared layouts, history,
 exports and stale data. They use fictional data and block real HTTP. They cannot
 promote any row above to live-verified.
+
+## GitHub Copilot
+
+Official REST API premium-request monthly gross quantities; fine-grained PAT with
+Plan: read. Multiple per-token connections, verified numeric user IDs. No cookies,
+website endpoints or scraping. Explicit user-selected allowance until GitHub exposes
+a documented allowance field. Minimum refresh 15 minutes. Real-token acceptance
+is pending; see [COPILOT.md](COPILOT.md).

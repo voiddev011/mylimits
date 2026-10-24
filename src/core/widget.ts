@@ -12,5 +12,5 @@ export const WidgetViewSchema=z.discriminatedUnion('enabled',[
 export type WidgetView=z.infer<typeof WidgetViewSchema>;
 /** Preview receives preferences only: no account or conversation access. */
 export function widgetView(provider:ProviderId,settings:WidgetSettings):WidgetView{
- return settings.providers.includes(provider)?{enabled:true,position:settings.position}:{enabled:false};
+ return provider!=='copilot'&&settings.providers.includes(provider)?{enabled:true,position:settings.position}:{enabled:false};
 }

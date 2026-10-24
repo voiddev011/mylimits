@@ -431,3 +431,11 @@ is introduced. Delayed alarms, sleeping/closed browsers and notification/storage
 failures can delay or repeat delivery. The watchdog does not log users out,
 renew sessions, alter readings or claim provider revocation. See
 [session persistence](SESSION-PERSISTENCE.md) for current evidence and limitations.
+
+## GitHub Copilot REST tokens
+
+Optional Copilot connections use fine-grained tokens with Plan: read. The token
+is encrypted separately in `mylimits:tokens:v1` using the existing non-extractable
+AES-GCM key. Only official `api.github.com` REST requests receive it. Tokens are
+excluded from account state, history, exports and diagnostics. Disconnect removes
+the chosen token; Forget removes that account's tokens and history. See [COPILOT.md](COPILOT.md).
