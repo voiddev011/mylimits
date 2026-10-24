@@ -1040,6 +1040,10 @@ test.describe('Copilot official API token connections (simulated)',()=>{
   const token='github_pat_FICTIONAL_BROWSER_SECRET_FIRST';await add(token);
   await page.getByRole('button',{name:'Add account',exact:true}).click();await add(token+'SECOND');
   await expect(page.locator('.account-row')).toHaveCount(2);
+  await page.evaluate(()=>document.documentElement.dataset.theme='dark');
+  await expect(page.locator('.account-row img[src$="/copilot.svg"]').first()).toHaveCSS('filter','invert(1)');
+  await page.evaluate(()=>document.documentElement.dataset.theme='light');
+  await expect(page.locator('.account-row img[src$="/copilot.svg"]').first()).toHaveCSS('filter','none');
   await page.getByRole('button',{name:'Details for GitHub Copilot · alice'}).click();
   await page.getByLabel('Monthly allowance').selectOption('Pro');await page.getByRole('button',{name:'Save allowance',exact:true}).click();
   await expect(page.locator('.account-detail')).toContainText('20 / 300 used');

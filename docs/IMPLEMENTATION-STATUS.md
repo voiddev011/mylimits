@@ -18,7 +18,18 @@ they already excluded Cursor. No production migration assertion is weakened.
 Decisions: documented `grossQuantity`, not net discounted quantities; no documented
 API allowance field, so require explicit user allowance. No live account access:
 real-token, plan eligibility and included-request comparison checks PENDING.
-Next: verify the bundled mark in dark mode, package and open PR into main. No release/merge.
+Final validation: `npm run check` PASS again (263 + 20 + 24 + 4 tests and build),
+`npm run test:browser` PASS again (57 tests, including light/dark Copilot logo).
+`npm run zip`, `npm run build:edge`, `npm run build:firefox`, and
+`node scripts/check-packages.mjs` PASS. Chrome ZIP:
+`.output/mylimits-3.4.0-chrome.zip`, SHA-256
+`8ea98ad46ae94d6b0d9e37c339c327638dd2f56b7599ba873f88f7ec4cffb151`.
+
+Known boundary: trusted-context local-storage protection is required; unsupported
+browser APIs fail closed. Chrome browser flows are simulated; Firefox token setup
+and real GitHub accounts are not verified. No API allowance field is assumed.
+Next: user-run real-token acceptance in COPILOT.md; branch/PR delivery into main,
+without merging or publishing.
 
 # Current implementation status — Desktop + extension
 
