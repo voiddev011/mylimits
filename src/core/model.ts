@@ -70,6 +70,7 @@ export interface Settings {
   };
   autoRecoverTab?: boolean;
   resetAlerts?: boolean;
+  dailyReminder?: { enabled: boolean; time: string };
   quietHours?: { enabled: boolean; start: string; end: string };
 }
 export interface ProviderState {
@@ -161,6 +162,7 @@ export function emptyStore(salt: string): Store {
       badge: { mode: "auto" },
       autoRecoverTab: true,
       resetAlerts: false,
+      dailyReminder: { enabled: false, time: "09:00" },
       quietHours: { enabled: false, start: "22:00", end: "08:00" },
     },
     alertLedger: {},

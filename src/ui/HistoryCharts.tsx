@@ -106,6 +106,7 @@ function LimitChart({
       : current.resetsAt <= now
         ? "Reset time passed"
         : `resets in ${countdown(current.resetsAt, now).replace(/(\d)([dhm])/g, "$1 $2")}`;
+  const ticks = width >= 540 ? [0, 0.25, 0.5, 0.75, 1] : [0, 0.5, 1];
   return (
     <section className="history-limit" aria-label={label}>
       <header>
@@ -199,31 +200,39 @@ function LimitChart({
               ))}
             </g>
           ))}
-          {[0, 0.5, 1].map((t, i) => {
+          {ticks.map((t, i) => {
             const time = from + (to - from) * t;
             return (
-              <text
-                key={i}
-                className="history-axis"
-                x={x(time)}
-                y={184}
-                textAnchor={i === 0 ? "start" : i === 2 ? "end" : "middle"}
-              >
-                {new Date(time).toLocaleString(
-                  undefined,
-                  to - from <= 86400000
-                    ? { hour: "numeric", minute: "2-digit" }
-                    : { month: "short", day: "numeric" },
-                )}
-                {to - from <= 86400000 && i !== 1 && (
-                  <tspan x={x(time)} dy={17}>
-                    {new Date(time).toLocaleDateString(undefined, {
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </tspan>
-                )}
-              </text>
+              <g key={i}>
+                <line
+                  className="history-tick"
+                  x1={x(time)}
+                  x2={x(time)}
+                  y1={bottom}
+                  y2={bottom + 4}
+                />
+                <text
+                  className="history-axis"
+                  x={x(time)}
+                  y={184}
+                  textAnchor={i === 0 ? "start" : i === ticks.length - 1 ? "end" : "middle"}
+                >
+                  {new Date(time).toLocaleString(
+                    undefined,
+                    to - from <= 86400000
+                      ? { hour: "numeric", minute: "2-digit" }
+                      : { month: "short", day: "numeric" },
+                  )}
+                  {to - from <= 86400000 && i !== Math.floor(ticks.length / 2) && (
+                    <tspan x={x(time)} dy={17}>
+                      {new Date(time).toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </tspan>
+                  )}
+                </text>
+              </g>
             );
           })}
         </svg>

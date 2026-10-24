@@ -27,8 +27,8 @@ export default defineConfig({
   }),
   manifest: ({ browser }) => ({
     name: "MyLimits",
-    version: "3.4.0",
-    version_name: "3.4 Website tracking",
+    version: "3.5.0",
+    version_name: "3.5 Reminders and history",
     description:
       "Keep your AI accounts, usage limits, and reset times in one place.",
     permissions: [

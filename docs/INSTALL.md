@@ -4,9 +4,9 @@
 
 Download the appropriate built ZIP under the GitHub Release's **Assets**:
 
-- Chrome or Brave: `mylimits-3.4.0-chrome.zip`
-- Microsoft Edge: `mylimits-3.4.0-edge.zip`
-- Firefox: `mylimits-3.4.0-firefox.zip` (unsigned, temporary installation)
+- Chrome or Brave: `mylimits-3.5.0-chrome.zip`
+- Microsoft Edge: `mylimits-3.5.0-edge.zip`
+- Firefox: `mylimits-3.5.0-firefox.zip` (unsigned, temporary installation)
 
 Extract it to a permanent folder. Chrome/Brave/Edge: open the browser's Extensions
 page, enable Developer mode, click Load unpacked, and choose the extracted folder

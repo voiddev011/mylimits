@@ -15,7 +15,7 @@ npm run zip:firefox
 node scripts/package-checksums.mjs
 ```
 
-Output: **`.output/mylimits-3.4.0-chrome.zip`**. Share this ZIP directly with testers.
+Output: **`.output/mylimits-3.5.0-chrome.zip`**. Share this ZIP directly with testers.
 They extract it, open Chrome/Brave's Extensions page, enable Developer mode and
 choose **Load unpacked** → the extracted folder containing `manifest.json`.
 [Exact installation steps](INSTALL.md). These installations do not auto-update.
@@ -27,8 +27,8 @@ No native app setup is needed. Distribute only the browser ZIPs validated by the
 
 ## Upload a GitHub beta manually
 
-Open Releases → Draft a new release, create tag `v3.4.0` targeting main, and attach
-all three `.output/mylimits-3.4.0-*.zip` files plus `.output/SHA256SUMS`. Mark it as
+Open Releases → Draft a new release, create tag `v3.5.0` targeting main, and attach
+all three `.output/mylimits-3.5.0-*.zip` files plus `.output/SHA256SUMS`. Mark it as
 a prerelease and include the installation instructions from INSTALL.md. The
 Chrome ZIP also supports Brave. State that Firefox is unsigned/temporary and
 provider live acceptance remains pending. No release is created merely by

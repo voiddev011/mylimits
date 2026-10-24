@@ -701,6 +701,21 @@ input[type="checkbox"] {
   color: var(--text);
   margin: 18px 0;
 }
+.reminder-help {
+  display: block;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: -10px 0 16px 28px;
+  max-width: 520px;
+}
+.daily-reminder-time {
+  display: grid;
+  gap: 7px;
+  width: 210px;
+  margin: 14px 0 22px 28px;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
 .inline-form {
   display: flex;
   gap: 12px;
@@ -1225,19 +1240,33 @@ th {
   margin-top: 6px;
 }
 .history-filters {
-  display: flex;
-  align-items: end;
-  gap: 20px;
-  flex-wrap: wrap;
+  display: grid;
+  gap: 16px;
   margin-bottom: 24px;
 }
-.history-filters > label {
-  flex: 1;
-  min-width: 180px;
-  max-width: 360px;
+.history-filter-selects {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
+  gap: 16px;
 }
-.history-filters select {
+.history-filter-selects label,
+.history-custom-dates label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+.history-filter-selects select,
+.history-custom-dates input {
   width: 100%;
+}
+.history-range-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 .history-ranges {
   display: flex;
@@ -1247,6 +1276,17 @@ th {
 .history-ranges .filter-button {
   min-width: 54px;
   padding: 9px 12px;
+}
+.history-custom-dates {
+  display: flex;
+  gap: 12px;
+  width: min(100%, 420px);
+}
+.history-timeline-summary {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  margin: -8px 0 18px;
+  font-variant-numeric: tabular-nums;
 }
 .history-cards {
   display: grid;
@@ -1311,6 +1351,10 @@ th {
   touch-action: pan-y;
 }
 .history-gridline {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.history-tick {
   stroke: var(--line);
   stroke-width: 1;
 }
@@ -1467,11 +1511,9 @@ th {
   .history-filters {
     gap: 12px;
   }
-  .history-filters > label {
-    max-width: none;
-    min-width: 0;
-    width: 100%;
-    flex-basis: 100%;
+  .history-filter-selects {
+    grid-template-columns: 1fr;
+    gap: 10px;
   }
   .history-ranges {
     gap: 5px;
@@ -1481,6 +1523,15 @@ th {
     padding: 9px;
     flex: 1;
     min-width: 0;
+  }
+  .history-range-controls {
+    align-items: stretch;
+  }
+  .history-custom-dates {
+    width: 100%;
+  }
+  .history-custom-dates label {
+    flex: 1;
   }
   .history-account {
     padding: 14px 10px;

@@ -1,16 +1,25 @@
 import { useEffect, useRef, useState } from "react";
 import { HistoryCharts, historyLimitName } from "./HistoryCharts";
-import type { HistoryInsights } from "../core/insights";
+import type { HistoryInsights, InsightSeries } from "../core/insights";
 import { Download, ChevronDown } from "lucide-react";
 import { command, type PublicStore } from "../platform/messages";
-import { accountName } from "../core/model";
+import { accountName, PROVIDER_IDS } from "../core/model";
 import { providers } from "../providers/catalog";
+import type { ProviderId } from "../core/model";
 import type {
   HistoryCursor,
   HistoryPage,
   HistoryPoint,
 } from "../core/history-data";
 const DAY = 86400000;
+const localDate = (time: number) => {
+  const date = new Date(time);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+};
+const dateStart = (value: string) => new Date(`${value}T00:00:00`).getTime();
+const dateEnd = (value: string) => dateStart(value) + DAY - 1;
+const seriesLimitKey = (series: InsightSeries) =>
+  JSON.stringify([series.meterId, series.scope, series.unit, series.currency]);
 function readingValue(m: HistoryPoint["meters"][number]): string {
   const percent =
     m.usedPercent ??
@@ -31,6 +40,10 @@ export function HistoryView({
   demo: boolean;
 }) {
   const [id, setId] = useState(""),
+    [provider, setProvider] = useState<ProviderId | "all">("all"),
+    [limit, setLimit] = useState("all"),
+    [customActive, setCustomActive] = useState(false),
+    [customDates, setCustomDates] = useState({ from: "", to: "" }),
     [range, setRange] = useState({ days: 7, to: Date.now() });
   const [points, setPoints] = useState<HistoryPoint[]>([]),
     [cursors, setCursors] = useState<Record<string, HistoryCursor>>({});
@@ -46,8 +59,34 @@ export function HistoryView({
   privateNow.current = privacy;
   const retention = store.settings.historyRetentionDays ?? 30,
     days = Math.min(range.days, retention),
-    from = range.to - days * DAY;
+    quickFrom = Math.max(range.to - days * DAY, Date.now() - retention * DAY),
+    customFrom = customDates.from || localDate(quickFrom),
+    customTo = customDates.to || localDate(range.to),
+    from = customActive ? dateStart(customFrom) : quickFrom,
+    to = customActive ? Math.min(dateEnd(customTo), Date.now()) : range.to,
+    invalidRange = from > to;
   const accountIds = store.accounts.map((a) => a.id).join("|");
+  const visibleAccounts = store.accounts.filter(
+    (a) => (provider === "all" || a.provider === provider) && (!id || a.id === id),
+  );
+  const visibleIds = new Set(visibleAccounts.map((a) => a.id));
+  const visibleInsights = insights
+    ? {
+        ...insights,
+        series: insights.series.filter(
+          (series) =>
+            visibleIds.has(series.accountId) &&
+            (limit === "all" || seriesLimitKey(series) === limit),
+        ),
+      }
+    : null;
+  const limitOptions = [
+    ...new Map(
+      (insights?.series ?? [])
+        .filter((series) => visibleIds.has(series.accountId))
+        .map((series) => [seriesLimitKey(series), historyLimitName(series.label)] as const),
+    ),
+  ];
   const names = Object.fromEntries(
     store.accounts.map((a, i) => [
       a.id,
@@ -57,6 +96,7 @@ export function HistoryView({
   useEffect(() => {
     if (id && !store.accounts.some((a) => a.id === id)) setId("");
   }, [accountIds, id]);
+  useEffect(() => setLimit("all"), [provider, id]);
   useEffect(() => {
     const stamp = ++generation.current;
     setError("");
@@ -66,10 +106,8 @@ export function HistoryView({
     setConfirm(false);
     setMenu(null);
     setLoading(false);
-    const ids = store.accounts
-      .filter((a) => !id || a.id === id)
-      .map((a) => a.id);
-    if (!ids.length || demo || privacy) return;
+    const ids = visibleAccounts.map((a) => a.id);
+    if (!ids.length || demo || privacy || invalidRange) return;
     setLoading(true);
     void (async () => {
       const pages: HistoryPoint[] = [],
@@ -91,14 +129,14 @@ export function HistoryView({
                 type: "history-page",
                 accountId,
                 from,
-                to: range.to,
+                to,
                 limit: 48,
               }),
               command<HistoryInsights>({
                 type: "history-insights",
                 accountIds: [accountId],
                 from,
-                to: range.to,
+                to,
               }),
             ]);
             pages.push(...page.points);
@@ -119,7 +157,7 @@ export function HistoryView({
     return () => {
       generation.current++;
     };
-  }, [accountIds, id, from, range.to, demo, revision, privacy]);
+  }, [accountIds, id, provider, from, to, demo, revision, privacy]);
   async function more() {
     if (privacy || loading) return;
     const stamp = generation.current;
@@ -132,7 +170,7 @@ export function HistoryView({
           type: "history-page",
           accountId,
           from,
-          to: range.to,
+          to,
           limit: 48,
           before,
         }),
@@ -165,7 +203,7 @@ export function HistoryView({
         type: "export-history",
         accountId: id || undefined,
         from,
-        to: range.to,
+        to,
         format,
       });
       if (privateNow.current || stamp !== generation.current) return;
@@ -194,8 +232,27 @@ export function HistoryView({
       setLoading(false);
     }
   }
-  const rows = [...points].sort((a, b) => b.time - a.time),
-    empty = !insights?.series.length && !points.some((p) => p.meters.length);
+  const visiblePoints = points
+      .filter((point) => visibleIds.has(point.accountId))
+      .map((point) => ({
+        ...point,
+        meters:
+          limit === "all"
+            ? point.meters
+            : point.meters.filter(
+                (meter) =>
+                  JSON.stringify([
+                    meter.id,
+                    meter.scope,
+                    meter.unit,
+                    meter.currency ?? null,
+                  ]) === limit,
+              ),
+      })),
+    rows = visiblePoints.sort((a, b) => b.time - a.time),
+    empty =
+      !visibleInsights?.series.length &&
+      !visiblePoints.some((point) => point.meters.length);
   return (
     <section className="panel history-panel" aria-label="History">
       <header className="history-heading">
@@ -203,38 +260,125 @@ export function HistoryView({
         <p>How much of each limit you used over time.</p>
       </header>
       <div className="history-filters">
-        <label>
-          Account
-          <select
-            aria-label="History account"
-            value={id}
-            onChange={(e) => setId(e.target.value)}
-          >
-            <option value="">All accounts</option>
-            {store.accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {names[a.id]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div
-          className="history-ranges"
-          role="group"
-          aria-label="History time range"
-        >
-          {[1, 7, 30, ...(retention === 90 ? [90] : [])].map((n) => (
-            <button
-              key={n}
-              className={`filter-button ${days === n ? "selected" : ""}`}
-              aria-pressed={days === n}
-              onClick={() => setRange({ days: n, to: Date.now() })}
+        <div className="history-filter-selects">
+          <label>
+            Provider
+            <select
+              aria-label="History provider"
+              value={provider}
+              onChange={(e) => {
+                setProvider(e.target.value as ProviderId | "all");
+                setId("");
+              }}
             >
-              {n === 1 ? "24 h" : `${n} days`}
+              <option value="all">All providers</option>
+              {PROVIDER_IDS.map((providerId) => (
+                <option key={providerId} value={providerId}>
+                  {providers[providerId].name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Account
+            <select
+              aria-label="History account"
+              value={id}
+              onChange={(e) => setId(e.target.value)}
+            >
+              <option value="">All accounts</option>
+              {store.accounts
+                .filter((account) => provider === "all" || account.provider === provider)
+                .map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {names[account.id]}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <label>
+            Limit
+            <select
+              aria-label="History limit"
+              value={limit}
+              onChange={(e) => setLimit(e.target.value)}
+            >
+              <option value="all">All limits</option>
+              {limitOptions.map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="history-range-controls">
+          <div
+            className="history-ranges"
+            role="group"
+            aria-label="History time range"
+          >
+            {[1, 7, 30, ...(retention === 90 ? [90] : [])].map((n) => (
+              <button
+                key={n}
+                className={`filter-button ${!customActive && days === n ? "selected" : ""}`}
+                aria-pressed={!customActive && days === n}
+                onClick={() => {
+                  setCustomActive(false);
+                  setRange({ days: n, to: Date.now() });
+                }}
+              >
+                {n === 1 ? "24 h" : `${n} days`}
+              </button>
+            ))}
+            <button
+              className={`filter-button ${customActive ? "selected" : ""}`}
+              aria-pressed={customActive}
+              onClick={() => {
+                setCustomDates({ from: localDate(from), to: localDate(to) });
+                setCustomActive(true);
+              }}
+            >
+              Custom
             </button>
-          ))}
+          </div>
+          {customActive && (
+            <div className="history-custom-dates">
+              <label>
+                From
+                <input
+                  type="date"
+                  aria-label="History start date"
+                  min={localDate(Date.now() - retention * DAY)}
+                  max={customTo}
+                  value={customFrom}
+                  onChange={(e) =>
+                    setCustomDates((old) => ({ ...old, from: e.target.value }))
+                  }
+                />
+              </label>
+              <label>
+                To
+                <input
+                  type="date"
+                  aria-label="History end date"
+                  min={customFrom}
+                  max={localDate(Date.now())}
+                  value={customTo}
+                  onChange={(e) =>
+                    setCustomDates((old) => ({ ...old, to: e.target.value }))
+                  }
+                />
+              </label>
+            </div>
+          )}
         </div>
       </div>
+      {invalidRange && (
+        <p className="notice" role="alert">
+          Choose a start date on or before the end date.
+        </p>
+      )}
       {error && (
         <p className="notice" role="alert">
           {error}
@@ -254,17 +398,25 @@ export function HistoryView({
         </div>
       ) : (
         <>
-          {insights && (
+          {visibleInsights && (
             <HistoryCharts
-              insights={insights}
+              insights={visibleInsights}
               names={names}
               colors={Object.fromEntries(
                 store.accounts.map((a) => [a.id, providers[a.provider].color]),
               )}
               from={from}
-              to={range.to}
+              to={to}
               now={Date.now()}
             />
+          )}
+          {visibleInsights && visibleInsights.series.length > 0 && (
+            <p className="history-timeline-summary">
+              {new Date(from).toLocaleDateString()}–{new Date(to).toLocaleDateString()}
+              {" · "}
+              {visibleInsights.series.reduce((total, series) => total + series.samples, 0).toLocaleString()} readings
+              {visibleInsights.gaps > 0 ? ` · ${visibleInsights.gaps} timeline gaps` : ""}
+            </p>
           )}
           <details className="history-readings">
             <summary>Show all readings</summary>
