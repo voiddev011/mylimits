@@ -1,20 +1,27 @@
-# Agent rules for MyLimits
+# Contributing to MyLimits
 
-Main integrates U1–U4 and the static website; archived plans are not active instructions.
-Project Markdown belongs directly in docs/ (this instruction file is the exception).
+MyLimits is an open-source browser extension that shows your AI usage limits
+(Claude / Claude Code, ChatGPT / Codex, Cursor, GitHub Copilot) in one place.
+Everything runs locally; there is no server and no MyLimits account.
 
-- Preserve user changes and work on a task branch; PR into main.
-- Follow the active task scope. No new dependencies without authorization.
-- Keep Claude, ChatGPT/Codex and Cursor website tracking, diagnostics, backoff,
-  sign-in signals, temporary-tab recovery, history, gated saved-sign-in code, and
-  official REST Copilot tracking with separately encrypted tokens.
-- Keep every saved-sign-in provider policy off; never infer live provider behavior
-  from fixtures. Never log, expose or export credentials/ciphertext.
-- Store.version stays 2. Compatibility cleanup must preserve remaining accounts,
-  aliases/preferences/history and retry safely after interruption.
-- Inject browser APIs into new platform modules. No live provider traffic in tests.
-- Register new unit test files in scripts/run-tests.mjs.
-- Before reporting done: npm run check, then npm run test:browser.
-- Handoff PR body includes changed/deleted files, actual checks, migration behavior,
-  permission list before/after, limitations and manual checks.
-- Never modify archive/pre-simplify or feature/desktop-independent-accounts.
+## Working here
+- Branch off `main`, open a PR into `main`. Keep `main` releasable.
+- Match the existing style (compact TypeScript, zod schemas, serialized `updateStore`).
+- Avoid new runtime dependencies unless the change really needs one.
+- Put project docs in `docs/`. This file is the exception.
+
+## Don't break these
+- Never commit or log secrets: cookie values, access tokens, saved-sign-in
+  ciphertext. Cookie *names* and flags are fine. The repo is public.
+- A saved sign-in must only be stored for the account it actually belongs to:
+  re-verify the account identity before saving, even if cookies rotated.
+- `Store.version` stays 2. Migrations must keep existing accounts, nicknames,
+  preferences and history, and be safe to re-run after an interruption.
+- Inject browser APIs (tabs, cookies, windows, declarativeNetRequest) into new
+  platform modules so they can be unit-tested. Tests never hit real provider sites.
+
+## Before a PR
+- Register any new unit-test file in `scripts/run-tests.mjs`.
+- Run `npm run check`, then `npm run test:browser`. Both must pass.
+- In the PR description: what changed, test results, and anything reviewers
+  should check by hand.
