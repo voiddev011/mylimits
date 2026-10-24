@@ -7,6 +7,18 @@ export const STATE_V2 = "mylimits:state:v2";
 export const ACTIVE_SCHEMA = "mylimits:active-schema";
 export const BACKUP_V1 = "mylimits:backup:v1";
 export const MIGRATION = "mylimits:migration:v2";
+function migrateAlertDefaults(store: Store): Store {
+  if (store.settings.alertDefaultsVersion === 1) return store;
+  const settings = { ...store.settings, alertDefaultsVersion: 1 as const };
+  // The previous built-in defaults were 20% / 5%. Move untouched defaults to
+  // 20% / 10% once, while preserving any custom threshold the user chose.
+  if (
+    settings.warningRemaining === 20 &&
+    settings.criticalRemaining === 5
+  )
+    settings.criticalRemaining = 10;
+  return { ...store, settings };
+}
 export interface StoragePort {
   get(keys: string | string[]): Promise<Record<string, unknown>>;
   set(items: Record<string, unknown>): Promise<void>;
@@ -54,6 +66,9 @@ export function migrateV1(raw: unknown): Store {
     workspaces: [],
     historyIssue: null,
   };
+  // The merged defaults include the current marker; restore the legacy marker
+  // state so older stores receive the one-time threshold migration below.
+  next.settings.alertDefaultsVersion = undefined;
   next.connections = next.connections.map((c) => {
     const p =
       c.provider === "cursor" || c.provider === "copilot"
@@ -93,7 +108,7 @@ export function migrateV1(raw: unknown): Store {
         })),
       });
   }
-  return StoreSchema.parse(projectAccounts(next));
+  return StoreSchema.parse(migrateAlertDefaults(projectAccounts(next)));
 }
 // Browser storage and IndexedDB have separate transactions. A durable journal
 // retries each idempotent step; the active pointer is the final commit marker.
@@ -118,7 +133,7 @@ export async function initializeV2(
       "This MyLimits data version is newer than this extension. Update before opening it.",
     );
   if (saved[ACTIVE_SCHEMA] === 2) {
-    const next = StoreSchema.parse(saved[STATE_V2]);
+    const next = migrateAlertDefaults(StoreSchema.parse(saved[STATE_V2]));
     await migrateHistory();
     if (JSON.stringify(next) !== JSON.stringify(saved[STATE_V2]))
       await storage.set({ [STATE_V2]: next });
@@ -128,7 +143,7 @@ export async function initializeV2(
   if (legacy !== undefined) V1StoreSchema.parse(legacy); // Never replace malformed saved data.
   const next =
     saved[STATE_V2] !== undefined
-      ? StoreSchema.parse(saved[STATE_V2])
+      ? migrateAlertDefaults(StoreSchema.parse(saved[STATE_V2]))
       : legacy === undefined
         ? emptyStore(salt())
         : migrateV1(legacy);

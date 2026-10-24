@@ -170,6 +170,24 @@ test("V2 recovery setting defaults additively without changing IDs, aliases, sna
     false,
   );
 });
+test("alert threshold migration updates the old default but preserves custom thresholds", async () => {
+  for (const [critical, expected] of [
+    [5, 10],
+    [7, 7],
+  ] as const) {
+    const m = new Memory();
+    const old = emptyStore("keep-salt");
+    old.settings.alertDefaultsVersion = undefined;
+    old.settings.warningRemaining = 20;
+    old.settings.criticalRemaining = critical;
+    m.values[ACTIVE_SCHEMA] = 2;
+    m.values[STATE_V2] = old;
+    await initializeV2(m, async () => {}, () => "unused");
+    const migrated = m.values[STATE_V2] as ReturnType<typeof emptyStore>;
+    assert.equal(migrated.settings.criticalRemaining, expected);
+    assert.equal(migrated.settings.alertDefaultsVersion, 1);
+  }
+});
 test("V2 connection metadata adds vault and ambient setup defaults without exposing private profile fields", () => {
   const old = migrateV1(legacy()),
     parsed = StoreSchema.parse(old);

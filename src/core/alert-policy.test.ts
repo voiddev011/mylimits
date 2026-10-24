@@ -72,7 +72,7 @@ test("reset alert requires a later fresh observed window and is deduplicated", (
   assert.equal(collectAlerts(result.store, now + 62000).alerts.length, 0);
 });
 test("legacy alert ledger is respected after migration and different scopes remain separate", () => {
-  const s = fixture();
+  const s = fixture(85);
   s.alertLedger["a/session"] = { window: String(now + 60000), sent: [20] };
   assert.equal(collectAlerts(s, now).alerts.length, 0);
   const m = s.accounts[0]!.meters[0]!;

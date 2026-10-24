@@ -1,1472 +1,74 @@
-import { BrandMark } from "./BrandMark";
-import {
-  accountStatusText,
-  connectionSource,
-  accountSource,
-} from "../core/presentation";
-import { useEffect, useState, type FormEvent } from "react";
-import { browser } from "wxt/browser";
-import {
-  Check,
-  ChevronDown,
-  ExternalLink,
-  History,
-  LayoutDashboard,
-  Pin,
-  Plus,
-  RefreshCw,
-  Search,
-  Settings as SettingsIcon,
-  ShieldCheck,
-  SlidersHorizontal,
-  X,
-} from "lucide-react";
-import {
-  accountName,
-  isFresh,
-  remainingPercent,
-  type Account,
-  type ProviderId,
-  type Settings,
-} from "../core/model";
-import { PROVIDER_IDS } from "../core/model";
-import { providers } from "../providers/catalog";
-import { type Command, type PublicStore } from "../platform/messages";
-import { HistoryView } from "./HistoryView";
-import { selectAccounts, type LimitSort } from "./overview";
-import { useMyLimits } from "./useMyLimits";
-import { CopilotSettings } from "./CopilotConnect";
-import { AccountConnect } from "./AccountConnect";
-import { countdown, age } from "./format";
-import { SupportSettings } from "./SupportSettings";
-import { needsAttention } from "../core/presentation";
-import { Reading } from "./Reading";
-import { ProviderMark as Mark } from "./ProviderMark";
-import { offerSavedSignIn, signInExpiry } from "../core/vault-ui";
-import "./styles.css";
-type Page = "overview" | "accounts" | "history" | "settings";
-type Run = (action: Command) => Promise<boolean>;
-function AccountDetails({
-  account,
-  store,
-  run,
-  busy,
-  now,
-  connect,
-  addAccount,
-}: {
-  account: Account;
-  store: PublicStore;
-  run: Run;
-  busy: boolean;
-  now: number;
-  connect: (p: ProviderId, on: boolean) => Promise<void>;
-  addAccount: (p: ProviderId) => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [alias, setAlias] = useState(account.alias);
-  const [warning, setWarning] = useState(String(account.alertRemaining ?? ""));
-  const [confirm, setConfirm] = useState(false);
-  const connections = store.connections.filter(
-    (c) => c.accountId === account.id,
-  );
-  async function rename(e: FormEvent) {
-    e.preventDefault();
-    if (await run({ type: "rename", accountId: account.id, alias }))
-      setEditing(false);
-  }
-  return (
-    <div className="account-detail">
-      <div className="detail-heading">
-        <div>
-          <strong>{accountName(account)}</strong>
-          <p>
-            {account.plan ?? "Plan not reported"} Â· Last reading{" "}
-            {account.updatedAt ? age(account.updatedAt, now) : "not available"}
-          </p>
-        </div>
-      </div>
-      {editing && !store.settings.privacyMode ? (
-        <form className="inline-form" onSubmit={(e) => void rename(e)}>
-          <label className="grow">
-            Account nickname
-            <input
-              autoFocus
-              maxLength={60}
-              value={alias}
-              onChange={(e) => setAlias(e.target.value)}
-            />
-          </label>
-          <button className="button" disabled={busy}>
-            Save nickname
-          </button>
-          <button
-            type="button"
-            className="icon-button"
-            aria-label="Cancel rename"
-            onClick={() => setEditing(false)}
-          >
-            <X size={16} />
-          </button>
-        </form>
-      ) : (
-        <div className="inline-actions">
-          <button
-            className="button button--small"
-            aria-label={`Rename ${accountName(account)}`}
-            disabled={!!store.settings.privacyMode}
-            onClick={() => setEditing(true)}
-          >
-            Rename
-          </button>
-          <button
-            className="button button--small"
-            disabled={busy}
-            aria-pressed={!!account.pinned}
-            onClick={() =>
-              void run({
-                type: "account-preferences",
-                accountId: account.id,
-                pinned: !account.pinned,
-              })
-            }
-          >
-            <Pin size={12} />
-            {account.pinned ? "Unpin account" : "Pin account"}
-          </button>
-        </div>
-      )}
-      {account.provider === "copilot" && (
-        <button
-          className="button button--small"
-          disabled={busy}
-          onClick={() => addAccount("copilot")}
-        >
-          <Plus size={15} />
-          Add another GitHub account
-        </button>
-      )}
-      <div className="detail-meters">
-        {account.meters.map((m) => (
-          <div className="detail-meter" key={`${m.scope}/${m.id}`}>
-            <Reading
-              account={account}
-              meter={m}
-              settings={store.settings}
-              now={now}
-              showResetClock
-            />
-            <button
-              className="button"
-              aria-label={`Show ${m.label} on toolbar`}
-              aria-pressed={
-                store.settings.badge?.mode === "meter" &&
-                store.settings.badge.accountId === account.id &&
-                store.settings.badge.meterId === m.id
-              }
-              disabled={busy}
-              onClick={() =>
-                void run({
-                  type: "settings",
-                  settings: {
-                    ...store.settings,
-                    badge:
-                      store.settings.badge?.mode === "meter" &&
-                      store.settings.badge.accountId === account.id &&
-                      store.settings.badge.meterId === m.id
-                        ? { mode: "auto" }
-                        : {
-                            mode: "meter",
-                            accountId: account.id,
-                            meterId: m.id,
-                          },
-                  },
-                })
-              }
-            >
-              {store.settings.badge?.mode === "meter" &&
-              store.settings.badge.accountId === account.id &&
-              store.settings.badge.meterId === m.id
-                ? "On toolbar"
-                : "Show on toolbar"}
-            </button>
-          </div>
-        ))}
-      </div>
-      <div className="connection-list">
-        {connections.map((c) => (
-          <div className="connection-item" key={c.id}>
-            <div>
-              <strong>
-                <span className="source-badge">
-                  {c.kind === "copilot" && c.copilotQuotaAccess
-                    ? "GitHub quotas (experimental)"
-                    : connectionSource(c.kind)}
-                </span>
-              </strong>
-              <p>
-                {c.message ??
-                  (c.kind === "copilot"
-                    ? c.copilotQuotaAccess
-                      ? "Experimental GitHub quota access Â· checks every 15 minutes."
-                      : "GitHub billing API Â· credit usage where available Â· checks every 15 minutes."
-                    : c.kind === "website"
-                      ? "Uses the current login in this browser."
-                      : c.kind === "vault"
-                        ? "Saved sign-in on this device. Session validity and logout survival depend on the provider."
-                        : "Independent authorization; live logout behavior is unverified.")}
-              </p>
-              {c.kind === "vault" && (
-                <>
-                  {c.savedSignIn?.method === "current" && (
-                    <p>
-                      Signing out of the website will probably end this
-                      connection.
-                    </p>
-                  )}
-                  {signInExpiry(c.savedSignIn?.notAfter, now) && (
-                    <small>{signInExpiry(c.savedSignIn?.notAfter, now)}</small>
-                  )}
-                </>
-              )}
-              {c.nextRetryAt && c.status !== "active" && (
-                <small>Next check: {countdown(c.nextRetryAt, now)}</small>
-              )}
-            </div>
-            <div className="inline-actions">
-              {c.kind === "website" ? (
-                <>
-                  <button
-                    className="button button--small"
-                    disabled={busy}
-                    onClick={() => void connect(c.provider, true)}
-                  >
-                    {c.enabled ? "Reconnect" : "Enable tracking"}
-                  </button>
-                  {offerSavedSignIn(c.provider, __MYLIMITS_BROWSER__) && (
-                    <button
-                      className="button button--small"
-                      disabled={busy}
-                      onClick={() => addAccount(c.provider)}
-                    >
-                      Save separate sign-in
-                    </button>
-                  )}
-                </>
-              ) : (
-                c.enabled && (
-                  <button
-                    className="button button--small"
-                    disabled={busy || (!!c.nextRetryAt && c.nextRetryAt > now)}
-                    onClick={() =>
-                      void run({ type: "refresh", connectionId: c.id })
-                    }
-                  >
-                    Refresh source
-                  </button>
-                )
-              )}
-              {(c.enabled || c.kind === "vault") && (
-                <button
-                  className="text-button"
-                  disabled={busy}
-                  onClick={() =>
-                    void run({ type: "disconnect", connectionId: c.id })
-                  }
-                >
-                  {c.kind === "vault" ? "Remove saved sign-in" : "Disconnect"}
-                </button>
-              )}
-            </div>
-            {c.kind === "copilot" && (
-              <CopilotSettings
-                connectionId={c.id}
-                accountId={account.id}
-                allowance={c.copilotAllowance ?? null}
-                quotaAccess={c.copilotQuotaAccess ?? false}
-                run={run}
-                busy={busy}
-              />
-            )}{" "}
-            {c.kind === "website" &&
-              c.provider === "claude" &&
-              c.workspaceIds.length > 0 && (
-                <label className="workspace-picker">
-                  Workspace
-                  <select
-                    aria-label={`Workspace for ${accountName(account)}`}
-                    value={c.workspaceId ?? ""}
-                    disabled={busy}
-                    onChange={(e) =>
-                      void run({
-                        type: "workspace",
-                        connectionId: c.id,
-                        workspaceId: e.target.value || null,
-                      })
-                    }
-                  >
-                    <option value="">Default workspace</option>
-                    {store.workspaces
-                      .filter((w) => c.workspaceIds.includes(w.id))
-                      .map((w) => (
-                        <option key={w.id} value={w.id}>
-                          {w.name}
-                        </option>
-                      ))}
-                  </select>
-                </label>
-              )}
-          </div>
-        ))}
-      </div>
-      {!connections.length && (
-        <p className="muted">
-          Remembered account. Sign into this account on its website, then
-          reconnect that provider. Other saved accounts keep their own
-          nicknames.
-        </p>
-      )}
-      <a
-        className="text-button"
-        href={providers[account.provider].home}
-        target="_blank"
-        rel="noreferrer"
-      >
-        Open {providers[account.provider].name}
-        <ExternalLink size={12} />
-      </a>
-      <form
-        className="account-alerts"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void run({
-            type: "account-settings",
-            accountId: account.id,
-            alertRemaining: warning === "" ? null : Number(warning),
-            alertsMuted: account.alertsMuted,
-          });
-        }}
-      >
-        <label>
-          Warning remaining (%)
-          <input
-            aria-label={`Warning for ${accountName(account)}`}
-            type="number"
-            min={1}
-            max={95}
-            placeholder={`Default ${store.settings.warningRemaining}`}
-            value={warning}
-            onChange={(e) => setWarning(e.target.value)}
-          />
-        </label>
-        <button className="button button--small" disabled={busy}>
-          Save threshold
-        </button>
-      </form>
-      <div className="inline-actions">
-        <label className="check-label">
-          <input
-            type="checkbox"
-            checked={account.alertsMuted}
-            disabled={busy}
-            onChange={(e) =>
-              void run({
-                type: "account-settings",
-                accountId: account.id,
-                alertRemaining: account.alertRemaining,
-                alertsMuted: e.target.checked,
-              })
-            }
-          />
-          Mute account alerts
-        </label>
-        <button
-          className="text-button"
-          disabled={busy}
-          onClick={() =>
-            void run({
-              type: "account-preferences",
-              accountId: account.id,
-              snoozedUntil:
-                (account.snoozedUntil ?? 0) > now ? null : now + 3600000,
-            })
-          }
-        >
-          {(account.snoozedUntil ?? 0) > now ? "End snooze" : "Snooze 1 hour"}
-        </button>
-      </div>
-      <div className="forget-line">
-        {confirm ? (
-          <>
-            <span>
-              Delete this accountâ€™s saved sign-ins, readings and history?
-            </span>
-            <button
-              className="text-button danger"
-              disabled={busy}
-              onClick={() =>
-                void run({ type: "forget", accountId: account.id })
-              }
-            >
-              Confirm forget
-            </button>
-            <button className="text-button" onClick={() => setConfirm(false)}>
-              Cancel
-            </button>
-          </>
-        ) : (
-          <button
-            className="text-button danger"
-            onClick={() => setConfirm(true)}
-          >
-            Forget saved account
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-function AccountRow({
-  account,
-  store,
-  now,
-  expanded,
-  onExpand,
-  run,
-  busy,
-  connect,
-  addAccount,
-}: {
-  account: Account;
-  store: PublicStore;
-  now: number;
-  expanded: boolean;
-  onExpand: () => void;
-  run: Run;
-  busy: boolean;
-  connect: (p: ProviderId, on: boolean) => Promise<void>;
-  addAccount: (p: ProviderId) => void;
-}) {
-  const meters = account.meters.slice(0, 2);
-  return (
-    <article
-      className={`account-row ${expanded ? "account-row--expanded" : ""}`}
-    >
-      <div className="account-summary">
-        <button
-          className="account-identity"
-          aria-label={`Details for ${accountName(account)}`}
-          aria-expanded={expanded}
-          onClick={onExpand}
-        >
-          <Mark provider={account.provider} />
-          <span className="account-copy">
-            <strong>
-              {account.pinned && <Pin size={10} />} {accountName(account)}
-              <span className="source-badge">
-                {accountSource(account, store)}
-              </span>
-            </strong>
-            <small>
-              {accountStatusText(account, store, now)}
-              {account.updatedAt
-                ? ` Â· last checked ${age(account.updatedAt, now)}`
-                : ""}
-            </small>
-          </span>
-          <ChevronDown size={13} className={expanded ? "chevron-open" : ""} />
-        </button>
-        <div className="row-meters">
-          {meters.map((m) => (
-            <Reading
-              key={`${m.scope}/${m.id}`}
-              account={account}
-              meter={m}
-              settings={store.settings}
-              now={now}
-            />
-          ))}
-          {!meters.length && (
-            <span className="no-quota">
-              {account.kind === "browser"
-                ? "No requests observed"
-                : "Quota not reported"}
-            </span>
-          )}
-        </div>
-      </div>
-      {expanded && (
-        <AccountDetails
-          account={account}
-          store={store}
-          run={run}
-          busy={busy}
-          now={now}
-          connect={connect}
-          addAccount={addAccount}
-        />
-      )}
-    </article>
-  );
-}
-function Preferences({
-  store,
-  run,
-  busy,
-  demo,
-  notify,
-}: {
-  store: PublicStore;
-  run: Run;
-  busy: boolean;
-  demo: boolean;
-  notify: (s: string) => void;
-}) {
-  const [draft, setDraft] = useState(store.settings);
-  const settingsKey = JSON.stringify(store.settings);
-  useEffect(() => setDraft(store.settings), [settingsKey]);
-  async function notifications() {
-    if (demo) {
-      notify("Sample mode never requests permissions.");
-      return;
-    }
-    const enabled = !store.settings.desktopAlerts;
-    if (
-      enabled &&
-      !(await browser.permissions.request({ permissions: ["notifications"] }))
-    ) {
-      notify("Notification permission was not granted.");
-      return;
-    }
-    if (
-      await run({
-        type: "settings",
-        settings: { ...store.settings, desktopAlerts: enabled },
-      })
-    ) {
-      if (!enabled)
-        await browser.permissions.remove({ permissions: ["notifications"] });
-    }
-  }
-  async function toggleDailyReminder(enabled: boolean) {
-    if (demo) {
-      notify("Sample mode never requests permissions.");
-      return;
-    }
-    if (
-      enabled &&
-      !(await browser.permissions.request({ permissions: ["notifications"] }))
-    ) {
-      notify("Notification permission was not granted.");
-      return;
-    }
-    setDraft({
-      ...draft,
-      dailyReminder: { ...dailyReminder, enabled },
-    });
-  }
-  const dailyReminder = draft.dailyReminder ?? {
-    enabled: false,
-    time: "09:00",
-  };
-  const quiet = draft.quietHours ?? {
-    enabled: false,
-    start: "22:00",
-    end: "08:00",
-  };
-  return (
-    <section className="panel">
-      <h2>Preferences</h2>
-      <p className="muted">
-        Settings stay in this browser. No MyLimits account is required.
-      </p>
-      <div className="setting-line">
-        <div>
-          <strong>Notifications</strong>
-          <p>Fresh reported limits only. Once per threshold and window.</p>
-        </div>
-        <button
-          role="switch"
-          aria-label="Enable notifications"
-          aria-checked={store.settings.desktopAlerts}
-          className={`switch ${store.settings.desktopAlerts ? "switch--on" : ""}`}
-          disabled={busy}
-          onClick={() =>
-            void notifications().catch(() =>
-              notify("Could not change notification access."),
-            )
-          }
-        >
-          <span />
-        </button>
-      </div>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          void run({ type: "settings", settings: draft }).then((ok) => {
-            if (ok) notify("Preferences saved.");
-          });
-        }}
-      >
-        <div className="form-grid">
-          <label>
-            Text size
-            <select
-              aria-label="Text size"
-              value={draft.textSize ?? "standard"}
-              onChange={(e) =>
-                setDraft({
-                  ...draft,
-                  textSize: e.target.value as Settings["textSize"],
-                })
-              }
-            >
-              <option value="standard">Standard</option>
-              <option value="large">Large</option>
-            </select>
-          </label>
-          <label>
-            Privacy mode
-            <select
-              aria-label="Privacy mode"
-              value={draft.privacyMode ? "on" : "off"}
-              onChange={(e) =>
-                setDraft({ ...draft, privacyMode: e.target.value === "on" })
-              }
-            >
-              <option value="off">Show account names</option>
-              <option value="on">Hide account names</option>
-            </select>
-          </label>
-          <label>
-            Early warning
-            <input
-              type="number"
-              min={1}
-              max={95}
-              required
-              value={draft.warningRemaining}
-              onChange={(e) =>
-                setDraft({ ...draft, warningRemaining: Number(e.target.value) })
-              }
-            />
-          </label>
-          <label>
-            Critical warning
-            <input
-              type="number"
-              min={1}
-              max={draft.warningRemaining}
-              required
-              value={draft.criticalRemaining}
-              onChange={(e) =>
-                setDraft({
-                  ...draft,
-                  criticalRemaining: Number(e.target.value),
-                })
-              }
-            />
-          </label>
-          <label>
-            Toolbar badge
-            <select
-              aria-label="Toolbar badge"
-              value={draft.badge?.mode ?? "auto"}
-              onChange={(e) =>
-                setDraft({
-                  ...draft,
-                  badge: {
-                    ...draft.badge,
-                    mode: e.target.value as "auto" | "meter" | "off",
-                  },
-                })
-              }
-            >
-              <option value="auto">Automatic (most-used limit)</option>
-              <option value="meter">Chosen limit</option>
-              <option value="off">Off</option>
-            </select>
-            {draft.badge?.mode === "meter" && (
-              <small>
-                {(() => {
-                  const a = store.accounts.find(
-                    (a) => a.id === draft.badge?.accountId,
-                  );
-                  const m = a?.meters.find(
-                    (m) => m.id === draft.badge?.meterId,
-                  );
-                  return a && m
-                    ? `${accountName(a)} Â· ${m.label}`
-                    : "Choose a limit in Accounts";
-                })()}
-              </small>
-            )}
-          </label>
-          <label>
-            Display
-            <select
-              aria-label="Display"
-              value={draft.displayMode ?? "remaining"}
-              onChange={(e) =>
-                setDraft({
-                  ...draft,
-                  displayMode: e.target.value as Settings["displayMode"],
-                })
-              }
-            >
-              <option value="remaining">Remaining</option>
-              <option value="used">Used</option>
-            </select>
-          </label>
-          <label>
-            Refresh interval
-            <select
-              value={draft.refreshMinutes}
-              onChange={(e) =>
-                setDraft({ ...draft, refreshMinutes: Number(e.target.value) })
-              }
-            >
-              {[2, 5, 10, 15, 30, 60].map((n) => (
-                <option key={n} value={n}>
-                  {n} minutes
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            History retention
-            <select
-              aria-label="History retention"
-              value={draft.historyRetentionDays ?? 30}
-              onChange={(e) =>
-                setDraft({
-                  ...draft,
-                  historyRetentionDays: Number(e.target.value) as 30 | 90,
-                })
-              }
-            >
-              <option value={30}>30 days</option>
-              <option value={90}>90 days</option>
-            </select>
-          </label>
-          <label>
-            Appearance
-            <select
-              value={draft.theme}
-              onChange={(e) =>
-                setDraft({
-                  ...draft,
-                  theme: e.target.value as Settings["theme"],
-                })
-              }
-            >
-              <option value="system">Follow device</option>
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-            </select>
-          </label>
-        </div>
-        <label className="check-label">
-          <input
-            type="checkbox"
-            checked={draft.autoRecoverTab ?? true}
-            onChange={(e) =>
-              setDraft({ ...draft, autoRecoverTab: e.target.checked })
-            }
-          />
-          Recover without opening the site (briefly opens a background tab)
-        </label>
-        <label className="check-label">
-          <input
-            type="checkbox"
-            checked={draft.resetAlerts ?? false}
-            onChange={(e) =>
-              setDraft({ ...draft, resetAlerts: e.target.checked })
-            }
-          />
-          Notify when a reset is confirmed by a fresh reading
-        </label>
-        <label className="check-label">
-          <input
-            type="checkbox"
-            aria-label="Daily usage reminder"
-            checked={dailyReminder.enabled}
-            onChange={(e) =>
-              void toggleDailyReminder(e.target.checked).catch(() =>
-                notify("Could not request notification access."),
-              )
-            }
-          />
-          Daily reminder to check your AI usage
-        </label>
-        <small className="reminder-help">
-          Runs each day at your chosen local time. MyLimits asks for notification
-          permission before turning it on.
-        </small>
-        {dailyReminder.enabled && (
-          <label className="daily-reminder-time">
-            Reminder time (local)
-            <input
-              type="time"
-              aria-label="Daily reminder time"
-              value={dailyReminder.time}
-              onChange={(e) =>
-                setDraft({
-                  ...draft,
-                  dailyReminder: {
-                    ...dailyReminder,
-                    time: e.target.value,
-                  },
-                })
-              }
-            />
-          </label>
-        )}
-        <label className="check-label">
-          <input
-            type="checkbox"
-            checked={quiet.enabled}
-            onChange={(e) =>
-              setDraft({
-                ...draft,
-                quietHours: { ...quiet, enabled: e.target.checked },
-              })
-            }
-          />
-          Quiet hours (local time)
-        </label>
-        {quiet.enabled && (
-          <div className="form-grid">
-            <label>
-              Quiet from
-              <input
-                type="time"
-                required
-                value={quiet.start}
-                onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    quietHours: { ...quiet, start: e.target.value },
-                  })
-                }
-              />
-            </label>
-            <label>
-              Quiet until
-              <input
-                type="time"
-                required
-                value={quiet.end}
-                onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    quietHours: { ...quiet, end: e.target.value },
-                  })
-                }
-              />
-            </label>
-          </div>
-        )}
-        <button className="button button--primary" disabled={busy}>
-          Save preferences
-          <Check size={14} />
-        </button>
-      </form>
-      <div className="privacy-note">
-        <ShieldCheck size={18} />
-        <p>
-          Provider access is optional. Website login expiry can stop tracking.
-          ChatGPT saved sign-in is experimental on Chromium browsers. Other
-          providers remain disabled.
-        </p>
-      </div>
-    </section>
-  );
-}
-export function App({
-  view = "dashboard",
-}: {
-  view?: "popup" | "dashboard" | "sidepanel";
-}) {
-  const {
-    store,
-    demo,
-    setDemo,
-    busy,
-    error,
-    setError,
-    toast,
-    notify: setToast,
-    now,
-    run,
-  } = useMyLimits();
-  const initial = new URLSearchParams(location.search).get("account");
-  const [page, setPage] = useState<Page>(
-    ["accounts", "history", "settings"].includes(location.hash.slice(1))
-      ? (location.hash.slice(1) as Page)
-      : "overview",
-  );
-  const [adding, setAdding] = useState(
-    location.hash === "#add" || location.hash === "#add-copilot",
-  );
-  const [addingProvider, setAddingProvider] = useState<ProviderId | null>(
-    location.hash === "#add-copilot" ? "copilot" : null,
-  );
-  const [expanded, setExpanded] = useState<string | null>(initial);
-  const [query, setQuery] = useState("");
-  const [lowOnly, setLowOnly] = useState(false);
-  const [attentionOnly, setAttentionOnly] = useState(false);
-  const [sort, setSort] = useState<LimitSort>("default");
-  const [filter, setFilter] = useState<ProviderId | "all">("all");
-  useEffect(() => {
-    const escape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        const button = document.querySelector<HTMLButtonElement>(
-          '[aria-expanded="true"]',
-        );
-        setExpanded(null);
-        button?.focus();
-      }
-    };
-    document.addEventListener("keydown", escape);
-    return () => document.removeEventListener("keydown", escape);
-  }, []);
-  useEffect(() => {
-    const navigate = () => {
-      const next = location.hash.slice(1);
-      if (["overview", "accounts", "history", "settings"].includes(next))
-        setPage(next as Page);
-      if (next === "add") {
-        setAddingProvider(null);
-        setAdding(true);
-      }
-      if (next === "add-copilot") {
-        setAddingProvider("copilot");
-        setAdding(true);
-      }
-      if (next === "guide") setPage("overview");
-    };
-    window.addEventListener("hashchange", navigate);
-    return () => window.removeEventListener("hashchange", navigate);
-  }, []);
-  async function connect(provider: ProviderId, on: boolean) {
-    if (demo) {
-      setToast("Exit preview to connect a website.");
-      return;
-    }
-    if (
-      on &&
-      !(await browser.permissions.request({
-        origins: [providers[provider].origin],
-      }))
-    ) {
-      setToast("Site access was not granted. Nothing was connected.");
-      return;
-    }
-    await run({ type: "enable", provider, enabled: on });
-  }
-  function fullDashboard() {
-    void browser.tabs.create({
-      url: browser.runtime.getURL("/dashboard.html"),
-    });
-  }
-  const fresh = (a: Account) =>
-    a.meters.filter(
-      (m) =>
-        m.evidence === "reported" &&
-        isFresh(a, m, now, store?.settings.refreshMinutes ?? 5),
-    );
-  const low =
-    store?.accounts.filter((a) =>
-      fresh(a).some(
-        (m) =>
-          (remainingPercent(m) ?? Infinity) <=
-          (a.alertRemaining ?? store.settings.warningRemaining),
-      ),
-    ).length ?? 0;
-  const nextReset = Math.min(
-    ...(store?.accounts.flatMap((a) =>
-      fresh(a).map((m) => m.resetsAt ?? Infinity),
-    ) ?? []),
-  );
-  const latest = Math.max(
-    0,
-    ...(store?.accounts.map((a) => a.updatedAt) ?? []),
-  );
-  const accounts = store
-    ? selectAccounts(
-        store.accounts.filter(
-          (a) =>
-            (filter === "all" || a.provider === filter) &&
-            (!attentionOnly || needsAttention(a, store.settings, now)),
-        ),
-        store.settings,
-        now,
-        store.settings.privacyMode ? "" : query,
-        lowOnly,
-        sort,
-      )
-    : [];
-  const filterCount =
-    Number(lowOnly) +
-    Number(attentionOnly) +
-    Number(sort !== "default") +
-    Number(filter !== "all");
-  const row = (a: Account) => (
-    <AccountRow
-      key={a.id}
-      account={a}
-      store={store!}
-      now={now}
-      expanded={expanded === a.id}
-      onExpand={() => setExpanded(expanded === a.id ? null : a.id)}
-      run={run}
-      busy={busy}
-      connect={connect}
-      addAccount={(provider) => {
-        setAddingProvider(provider);
-        setAdding(true);
-      }}
-    />
-  );
-  return (
-    <div className={`app app--${view}`}>
-      <header className="app-header">
-        <div className="brand">
-          <span className="brand-mark">
-            <BrandMark size={22} />
-          </span>
-          <div>
-            <h1>MyLimits</h1>
-          </div>
-        </div>
-        <div className="header-actions">
-          <button
-            className="icon-button"
-            aria-label="Refresh all limits"
-            title="Refresh all limits"
-            disabled={busy || demo || !store}
-            onClick={() => void run({ type: "refresh" })}
-          >
-            <RefreshCw size={16} className={busy ? "spin" : ""} />
-          </button>
-        </div>
-      </header>
-      {demo && (
-        <div className="preview-banner">
-          <span>Preview Â· sample accounts and readings</span>
-          <button
-            aria-label="Exit sample preview"
-            onClick={() => {
-              setDemo(false);
-              setExpanded(null);
-            }}
-          >
-            Exit preview
-            <X size={12} />
-          </button>
-        </div>
-      )}
-      <nav className="tabs" aria-label="Main navigation">
-        {(
-          [
-            ["overview", "Overview", LayoutDashboard],
-            ["accounts", "Accounts", SlidersHorizontal],
-            ["history", "History", History],
-            ["settings", "Settings", SettingsIcon],
-          ] as const
-        ).map(([id, label, Icon]) => (
-          <button
-            key={id}
-            aria-current={page === id ? "page" : undefined}
-            className={page === id ? "active" : ""}
-            onClick={() => {
-              setPage(id);
-              setAdding(false);
-              location.hash = id;
-              setExpanded(null);
-            }}
-          >
-            <Icon size={14} />
-            {label}
-          </button>
-        ))}
-      </nav>
-      {error && (
-        <div role="alert" className="error-banner">
-          <span>{error}</span>
-          <button
-            className="icon-button"
-            aria-label="Dismiss error"
-            onClick={() => setError("")}
-          >
-            <X size={14} />
-          </button>
-        </div>
-      )}
-      <main className="main-content">
-        {store && adding ? (
-          <AccountConnect
-            initialProvider={addingProvider}
-            store={store}
-            run={run}
-            busy={busy}
-            demo={demo}
-            notify={setToast}
-            onClose={() => {
-              setAdding(false);
-              location.hash = "overview";
-              setPage("overview");
-            }}
-          />
-        ) : !store ? (
-          <div className="empty">
-            <BrandMark size={28} />
-            <h2>
-              {error ? "Unable to load saved data" : "Opening your overviewâ€¦"}
-            </h2>
-            <p>
-              Saved data is preserved. Reload the extension if recovery is
-              needed.
-            </p>
-          </div>
-        ) : (
-          <>
-            {page === "overview" && (
-              <>
-                {store.accountSetup && (
-                  <div className="pending-setup">
-                    <span>Account setup in progress</span>
-                    <button
-                      className="text-button"
-                      onClick={() => {
-                        setAddingProvider(null);
-                        setAdding(true);
-                      }}
-                    >
-                      Continue setup
-                    </button>
-                  </div>
-                )}
-                {store.accounts.length > 0 ? (
-                  <>
-                    <div className="summary-strip">
-                      <span>
-                        <i
-                          className={
-                            low ? "status-dot status-dot--low" : "status-dot"
-                          }
-                        />
-                        {low
-                          ? `${low} account${low === 1 ? "" : "s"} running low`
-                          : `${store.accounts.filter((a) => fresh(a).length).length} with fresh limits`}
-                      </span>
-                      <span>
-                        Next reset{" "}
-                        <strong>
-                          {Number.isFinite(nextReset)
-                            ? countdown(nextReset, now)
-                            : "not reported"}
-                        </strong>
-                      </span>
-                    </div>
-                    <div className="overview-tools">
-                      <label className="search-box">
-                        <Search size={14} />
-                        <input
-                          aria-label="Search accounts"
-                          placeholder={
-                            store.settings.privacyMode
-                              ? "Names hidden"
-                              : "Find an accountâ€¦"
-                          }
-                          disabled={store.settings.privacyMode}
-                          value={store.settings.privacyMode ? "" : query}
-                          onChange={(e) => setQuery(e.target.value)}
-                        />
-                      </label>
-                      <button
-                        className={`filter-button ${lowOnly ? "selected" : ""}`}
-                        aria-pressed={lowOnly}
-                        onClick={() => setLowOnly(!lowOnly)}
-                      >
-                        Low only
-                      </button>
-                      {store.accounts.some((a) => a.provider === "copilot") && (
-                        <button
-                          className="button button--small"
-                          disabled={busy || demo}
-                          onClick={() => {
-                            setAddingProvider("copilot");
-                            setAdding(true);
-                          }}
-                        >
-                          <Plus size={15} />
-                          Add another GitHub account
-                        </button>
-                      )}
-                      <details className="overview-filters">
-                        <summary>
-                          Filters
-                          {filterCount > 0 && (
-                            <span
-                              className="filter-count"
-                              aria-label={`${filterCount} active filters`}
-                            >
-                              {filterCount}
-                            </span>
-                          )}
-                        </summary>
-                        <div className="filter-options">
-                          <button
-                            className={`filter-button ${attentionOnly ? "selected" : ""}`}
-                            aria-pressed={attentionOnly}
-                            onClick={() => setAttentionOnly(!attentionOnly)}
-                          >
-                            Needs attention
-                          </button>
-                          <label>
-                            Sort
-                            <select
-                              aria-label="Sort limits"
-                              value={sort}
-                              onChange={(e) =>
-                                setSort(e.target.value as LimitSort)
-                              }
-                            >
-                              <option value="default">Recommended</option>
-                              <option value="remaining">Least remaining</option>
-                              <option value="reset">Next reset</option>
-                              <option value="name">Name</option>
-                            </select>
-                          </label>
-                          <label>
-                            Service
-                            <select
-                              aria-label="Filter provider"
-                              value={filter}
-                              onChange={(e) =>
-                                setFilter(e.target.value as ProviderId | "all")
-                              }
-                            >
-                              <option value="all">All providers</option>
-                              {PROVIDER_IDS.map((p) => (
-                                <option value={p} key={p}>
-                                  {providers[p].name}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                          {filterCount > 0 && (
-                            <button
-                              className="text-button"
-                              onClick={() => {
-                                setLowOnly(false);
-                                setAttentionOnly(false);
-                                setSort("default");
-                                setFilter("all");
-                              }}
-                            >
-                              Reset filters
-                            </button>
-                          )}
-                        </div>
-                      </details>
-                    </div>
-                    <div className="account-list">
-                      {accounts.map(row)}
-                      {!accounts.length && (
-                        <div className="empty-small">
-                          No accounts match these filters.
-                        </div>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <div className="empty">
-                    <div className="empty-illustration">
-                      <BrandMark size={38} />
-                      <span>Ready when you are</span>
-                    </div>
-                    <h2>A clear view starts here.</h2>
-                    <p>
-                      Choose your AI websites. Your existing browser login does
-                      the rest.
-                    </p>
-                    <button
-                      className="button button--primary"
-                      onClick={() => {
-                        setAddingProvider(null);
-                        setAdding(true);
-                      }}
-                    >
-                      <Plus size={15} />
-                      Add a website
-                    </button>
-                    <button
-                      className="text-button"
-                      onClick={() => setDemo(true)}
-                    >
-                      Preview with sample data
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
-            {page === "accounts" && (
-              <div className="accounts-page">
-                <div className="section-heading">
-                  <h2>Services</h2>
-                </div>
-                {PROVIDER_IDS.map((p) => (
-                  <article className="website-card" key={p}>
-                    <div className="website-top">
-                      <Mark provider={p} />
-                      <div className="grow">
-                        <h3>{providers[p].name}</h3>
-                        <span className="small-note">
-                          {providers[p].support === "prototype"
-                            ? "Quota reader Â· prototype"
-                            : "Local activity only"}
-                        </span>
-                      </div>
-                      <button
-                        className={
-                          p === "copilot"
-                            ? "button button--small"
-                            : "icon-button"
-                        }
-                        aria-label={`Add ${providers[p].name} account`}
-                        disabled={busy}
-                        onClick={() => {
-                          setAddingProvider(p);
-                          setAdding(true);
-                        }}
-                      >
-                        <Plus size={20} />
-                        {p === "copilot" && <span>Add account</span>}
-                      </button>
-                    </div>
-                    <details className="connection-help">
-                      <summary>Connection details</summary>
-                      <p>{providers[p].detail}</p>
-                      <a
-                        className="text-button"
-                        href={providers[p].home}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Open website
-                        <ExternalLink size={12} />
-                      </a>
-                      {store.providers[p].enabled && (
-                        <button
-                          className="text-button"
-                          disabled={busy}
-                          onClick={() =>
-                            void run({ type: "refresh", provider: p })
-                          }
-                        >
-                          Refresh
-                        </button>
-                      )}
-                    </details>
-                    {store.providers[p].message && (
-                      <p className="provider-message">
-                        {store.providers[p].message}
-                      </p>
-                    )}
-                  </article>
-                ))}
-                <p className="privacy-note">
-                  <ShieldCheck size={17} />
-                  Website sessions can expire. Remembered accounts keep their
-                  dated readings.
-                </p>
-                {store.accounts.length > 0 && (
-                  <>
-                    <h2 className="section-heading">Saved accounts</h2>
-                    {store.accounts.map(row)}
-                  </>
-                )}
-              </div>
-            )}
-            {page === "history" && <HistoryView store={store} demo={demo} />}
-            {page === "settings" && (
-              <>
-                <Preferences
-                  store={store}
-                  run={run}
-                  busy={busy}
-                  demo={demo}
-                  notify={setToast}
-                />
-                <section className="panel">
-                  <h2>Website access</h2>
-                  <p>
-                    Disconnect tracking and revoke website permission. Saved
-                    readings stay dated.
-                  </p>
-                  {PROVIDER_IDS.filter((p) => store.providers[p].enabled).map(
-                    (p) => (
-                      <button
-                        key={p}
-                        className="button"
-                        disabled={busy}
-                        onClick={() =>
-                          void connect(p, false)
-                            .then(() =>
-                              browser.permissions.remove({
-                                origins: [providers[p].origin],
-                              }),
-                            )
-                            .catch(() =>
-                              setToast("Could not revoke website access."),
-                            )
-                        }
-                      >
-                        Disconnect {providers[p].name}
-                      </button>
-                    ),
-                  )}
-                </section>
-                <SupportSettings store={store} />
-              </>
-            )}
-          </>
-        )}
-      </main>
-      <footer className="app-footer">
-        <button
-          className="text-button"
-          onClick={() => {
-            setAddingProvider(null);
-            setAdding(true);
-          }}
-        >
-          <Plus size={13} />
-          Add account
-        </button>
-        <span className="footer-age">
-          {latest ? `Last reading ${age(latest, now)}` : "Local-first tracking"}
-        </span>
-        {view !== "dashboard" ? (
-          <button className="text-button" onClick={fullDashboard}>
-            Full dashboard
-            <ExternalLink size={12} />
-          </button>
-        ) : null}
-      </footer>
-      {toast && (
-        <div role="status" className="toast">
-          {toast}
-        </div>
-      )}
-      {store?.historyIssue && (
-        <div role="status" className="history-warning">
-          {store.historyIssue}
-        </div>
-      )}
-    </div>
-  );
-}
+YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×­xÑ:-jZ.¶›­–)Ş³V–×÷'B²'&æDÖ&²Òg&öÒ"âô'&æDÖ&²#°¦–×÷'B°¢66÷VçE7FGW5FW‡BÀ¢6öææV7F–öå6÷W&6RÀ¢66÷VçE6÷W&6RÀ§Òg&öÒ"ââö6÷&R÷&W6VçFF–öâ#°¦–×÷'B²W6TVffV7BÂW6U7FFRÂG—Rf÷&ÔWfVçBÒg&öÒ'&V7B#°¦–×÷'B²'&÷w6W"Òg&öÒ'w‡Bö'&÷w6W"#°¦–×÷'B°¢6†V6²À¢6†Wg&öäF÷vâÀ¢W‡FW&æÄÆ–æ²À¢†—7F÷'’À¢Æ–÷WDF6†&ö&BÀ¢–âÀ¢ÇW2À¢&Vg&W6„7rÀ¢6V&6‚À¢6WGF–æw226WGF–æw4–6öâÀ¢6†–VÆD6†V6²À¢6Æ–FW'4†÷&—¦öçFÂÀ¢‚À§Òg&öÒ&ÇV6–FR×&V7B#°¦–×÷'B°¢66÷VçDæÖRÀ¢—4g&W6‚À¢&VÖ–æ–æuW&6VçBÀ¢G—R66÷VçBÀ¢G—R&÷f–FW$–BÀ¢G—R6WGF–æw2À§Òg&öÒ"ââö6÷&RöÖöFVÂ#°¦–×÷'B²$õd”DU%ô”E2Òg&öÒ"ââö6÷&RöÖöFVÂ#°¦–×÷'B²&÷f–FW'2Òg&öÒ"ââ÷&÷f–FW'2ö6FÆör#°¦–×÷'B²G—R6öÖÖæBÂG—RV&Æ–57F÷&RÒg&öÒ"ââ÷ÆFf÷&ÒöÖW76vW2#°¦–×÷'B²†—7F÷'•f–WrÒg&öÒ"âô†—7F÷'•f–Wr#°¦–×÷'B²6VÆV7D66÷VçG2ÂG—RÆ–Ö—E6÷'BÒg&öÒ"âö÷fW'f–Wr#°¦–×÷'B²W6T×”Æ–Ö—G2Òg&öÒ"â÷W6T×”Æ–Ö—G2#°¦–×÷'B²6÷–Æ÷E6WGF–æw2Òg&öÒ"âô6÷–Æ÷D6öææV7B#°¦–×÷'B²66÷VçD6öææV7BÒg&öÒ"âô66÷VçD6öææV7B#°¦–×÷'B²6÷VçFF÷vâÂvRÒg&öÒ"âöf÷&ÖB#°¦–×÷'B²7W÷'E6WGF–æw2Òg&öÒ"âõ7W÷'E6WGF–æw2#°¦–×÷'B²æVVG4GFVçF–öâÒg&öÒ"ââö6÷&R÷&W6VçFF–öâ#°¦–×÷'B²&VF–ærÒg&öÒ"âõ&VF–ær#°¦–×÷'B²&÷f–FW$Ö&²2Ö&²Òg&öÒ"âõ&÷f–FW$Ö&²#°¦–×÷'B²öffW%6fVE6–vä–âÂ6–vä–äW‡—'’Òg&öÒ"ââö6÷&R÷fVÇB×V’#°¦–×÷'B"â÷7G–ÆW2æ772#°§G—RvRÒ&÷fW'f–Wr"Â&66÷VçG2"Â&†—7F÷'’"Â'6WGF–æw2#°§G—R'VâÒ†7F–öã¢6öÖÖæB’Óâ&öÖ—6SÆ&ööÆVãã°¦gVæ7F–öâ66÷VçDFWF–Ç2‡°¢66÷VçBÀ¢7F÷&RÀ¢'VâÀ¢'W7’À¢æ÷rÀ¢6öææV7BÀ¢FD66÷VçBÀ§Ó¢°¢66÷VçC¢66÷VçC°¢7F÷&S¢V&Æ–57F÷&S°¢'Vã¢'Vã°¢'W7“¢&ööÆVã°¢æ÷s¢çVÖ&W#°¢6öææV7C¢‡¢&÷f–FW$–BÂöã¢&ööÆVâ’Óâ&öÖ—6SÇfö–Cã°¢FD66÷VçC¢‡¢&÷f–FW$–B’Óâfö–C°§Ò’°¢6öç7B¶VF—F–ærÂ6WDVF—F–æuÒÒW6U7FFR†fÇ6R“°¢6öç7B¶Æ–2Â6WDÆ–5ÒÒW6U7FFR†66÷VçBæÆ–2“°¢6öç7B·v&æ–ærÂ6WEv&æ–æuÒÒW6U7FFR…7G&–ær†66÷VçBæÆW'E&VÖ–æ–æróò""’“°¢6öç7B¶6öæf—&ÒÂ6WD6öæf—&ÕÒÒW6U7FFR†fÇ6R“°¢6öç7B6öææV7F–öç2Ò7F÷&Ræ6öææV7F–öç2æf–ÇFW"€¢†2’Óâ2æ66÷VçD–BÓÓÒ66÷VçBæ–BÀ¢“°¢7–æ2gVæ7F–öâ&VæÖR†S¢f÷&ÔWfVçB’°¢Rç&WfVçDFVfVÇB‚“°¢–b†v—B'Vâ‡²G—S¢'&VæÖR"Â66÷VçD–C¢66÷VçBæ–BÂÆ–2Ò’¢6WDVF—F–ær†fÇ6R“°¢Ğ¢&WGW&â€¢ÆF—b6Æ74æÖSÒ&66÷VçBÖFWF–Â#à¢ÆF—b6Æ74æÖSÒ&FWF–ÂÖ†VF–ær#à¢ÆF—cà¢Ç7G&öæsç¶66÷VçDæÖR†66÷VçB—ÓÂ÷7G&öæsà¢Çà¢¶66÷VçBçÆâóò%Æâæ÷B&W÷'FVB'Ò+rÆ7B&VF–æw²"'Ğ¢¶66÷VçBçWFFVDBòvR†66÷VçBçWFFVDBÂæ÷r’¢&æ÷Bf–Æ&ÆR'Ğ¢Â÷à¢ÂöF—cà¢ÂöF—cà¢¶VF—F–ærbb7F÷&Rç6WGF–æw2ç&—f7”ÖöFRò€¢Æf÷&Ò6Æ74æÖSÒ&–æÆ–æRÖf÷&Ò"öå7V&Ö—C×²†R’Óâfö–B&VæÖR†R—Óà¢ÆÆ&VÂ6Æ74æÖSÒ&w&÷r#à¢66÷VçBæ–6¶æÖP¢Æ–çW@¢WFôfö7W0¢Ö„ÆVæwFƒ×³cĞ¢fÇVS×¶Æ–7Ğ¢öä6†ævS×²†R’Óâ6WDÆ–2†RçF&vWBçfÇVR—Ğ¢óà¢ÂöÆ&VÃà¢Æ'WGFöâ6Æ74æÖSÒ&'WGFöâ"F—6&ÆVC×¶'W7—Óà¢6fRæ–6¶æÖP¢Âö'WGFöãà¢Æ'WGFöà¢G—SÒ&'WGFöâ ¢6Æ74æÖSÒ&–6öâÖ'WGFöâ ¢&–ÖÆ&VÃÒ$6æ6VÂ&VæÖR ¢öä6Æ–6³×²‚’Óâ6WDVF—F–ær†fÇ6R—Ğ¢à¢Å‚6—¦S×³gÒóà¢Âö'WGFöãà¢Âöf÷&Óà¢’¢€¢ÆF—b6Æ74æÖSÒ&–æÆ–æRÖ7F–öç2#à¢Æ'WGFöà¢6Æ74æÖSÒ&'WGFöâ'WGFöâÒ×6ÖÆÂ ¢&–ÖÆ&VÃ×¶&VæÖRG¶66÷VçDæÖR†66÷VçB—ÖĞ¢F—6&ÆVC×²7F÷&Rç6WGF–æw2ç&—f7”ÖöFWĞ¢öä6Æ–6³×²‚’Óâ6WDVF—F–ær‡G'VR—Ğ¢à¢&VæÖP¢Âö'WGFöãà¢Æ'WGFöà¢6Æ74æÖSÒ&'WGFöâ'WGFöâÒ×6ÖÆÂ ¢F—6&ÆVC×¶'W7—Ğ¢&–×&W76VC×²66÷VçBç–ææVGĞ¢öä6Æ–6³×²‚’Óà¢fö–B'Vâ‡°¢G—S¢&66÷VçB×&VfW&Væ6W2"À¢66÷VçD–C¢66÷VçBæ–BÀ¢–ææVC¢66÷VçBç–ææVBÀ¢Ò¢Ğ¢à¢Å–â6—¦S×³'Òóà¢¶66÷VçBç–ææVBò%Vç–â66÷VçB"¢%–â66÷VçB'Ğ¢Âö'WGFöãà¢ÂöF—cà¢—Ğ¢¶66÷VçBç&÷f–FW"ÓÓÒ&6÷–Æ÷B"bb€¢Æ'WGFöà¢6Æ74æÖSÒ&'WGFöâ'WGFöâÒ×6ÖÆÂ ¢F—6&ÆVC×¶'W7—Ğ¢öä6Æ–6³×²‚’ÓâFD66÷VçB‚&6÷–Æ÷B"—Ğ¢à¢ÅÇW26—¦S×³WÒóà¢FBæ÷F†W"v—D‡V"66÷Vç@¢Âö'WGFöãà¢—Ğ¢ÆF—b6Æ74æÖSÒ&FWF–ÂÖÖWFW'2#à¢¶66÷VçBæÖWFW'2æÖ‚†Ò’Óâ€¢ÆF—b6Æ74æÖSÒ&FWF–ÂÖÖWFW""¶W“×¶G¶Òç66÷WÒòG¶Òæ–GÖÓà¢Å&VF–æp¢66÷VçC×¶66÷VçGĞ¢ÖWFW#×¶×Ğ¢6WGF–æw3×·7F÷&Rç6WGF–æw7Ğ¢æ÷s×¶æ÷wĞ¢6†÷u&W6WD6Æö6°¢óà¢Æ'WGFöà¢6Æ74æÖSÒ&'WGFöâ ¢&–ÖÆ&VÃ×¶6†÷rG¶ÒæÆ&VÇÒöâFööÆ&&Ğ¢&–×&W76VC×°¢7F÷&Rç6WGF–æw2æ&FvSòæÖöFRÓÓÒ&ÖWFW""b`¢7F÷&Rç6WGF–æw2æ&FvRæ66÷VçD–BÓÓÒ66÷VçBæ–Bb`¢7F÷&Rç6WGF–æw2æ&FvRæÖWFW$–BÓÓÒÒæ–@¢Ğ¢F—6&ÆVC×¶'W7—Ğ¢öä6Æ–6³×²‚’Óà¢fö–B'Vâ‡°¢G—S¢'6WGF–æw2"À¢6WGF–æw3¢°¢ââç7F÷&Rç6WGF–æw2À¢&FvS ¢7F÷&Rç6WGF–æw2æ&FvSòæÖöFRÓÓÒ&ÖWFW""b`¢7F÷&Rç6WGF–æw2æ&FvRæ66÷VçD–BÓÓÒ66÷VçBæ–Bb`¢7F÷&Rç6WGF–æw2æ&FvRæÖWFW$–BÓÓÒÒæ–@¢ò²ÖöFS¢&WFò"Ğ¢¢°¢ÖöFS¢&ÖWFW""À¢66÷VçD–C¢66÷VçBæ–BÀ¢ÖWFW$–C¢Òæ–BÀ¢ÒÀ¢ÒÀ¢Ò¢Ğ¢à¢·7F÷&Rç6WGF–æw2æ&FvSòæÖöFRÓÓÒ&ÖWFW""b`¢7F÷&Rç6WGF–æw2æ&FvRæ66÷VçD–BÓÓÒ66÷VçBæ–Bb`¢7F÷&Rç6WGF–æw2æ&FvRæÖWFW$–BÓÓÒÒæ–@¢ò$öâFööÆ&" ¢¢%6†÷röâFööÆ&"'Ğ¢Âö'WGFöãà¢ÂöF—cà¢’—Ğ¢ÂöF—cà¢ÆF—b6Æ74æÖSÒ&6öææV7F–öâÖÆ—7B#à¢¶6öææV7F–öç2æÖ‚†2’Óâ€¢ÆF—b6Æ74æÖSÒ&6öææV7F–öâÖ—FVÒ"¶W“×¶2æ–GÓà¢ÆF—cà¢Ç7G&öæsà¢Ç7â6Æ74æÖSÒ'6÷W&6RÖ&FvR#à¢¶2æ¶–æBÓÓÒ&6÷–Æ÷B"bb2æ6÷–Æ÷EV÷F66W70¢ò$v—D‡V"V÷F2†W‡W&–ÖVçFÂ’ ¢¢6öææV7F–öå6÷W&6R†2æ¶–æB—Ğ¢Â÷7ãà¢Â÷7G&öæsà¢Çà¢¶2æÖW76vRóğ¢†2æ¶–æBÓÓÒ&6÷–Æ÷B ¢ò2æ6÷–Æ÷EV÷F66W70¢ò$W‡W&–ÖVçFÂv—D‡V"V÷F66W72+r6†V6·2WfW'’RÖ–çWFW2â ¢¢$v—D‡V"&–ÆÆ–ær’+r7&VF—BW6vRv†W&Rf–Æ&ÆR+r6†V6·2WfW'’RÖ–çWFW2â ¢¢2æ¶–æBÓÓÒ'vV'6—FR ¢ò%W6W2F†R7W'&VçBÆöv–â–âF†—2'&÷w6W"â ¢¢2æ¶–æBÓÓÒ'fVÇB ¢ò%6fVB6–vâÖ–âöâF†—2FWf–6Râ6W76–öâfÆ–F—G’æBÆöv÷WB7W'f—fÂFWVæBöâF†R&÷f–FW"â ¢¢$–æFWVæFVçBWF†÷&—¦F–öã²Æ—fRÆöv÷WB&V†f–÷"—2VçfW&–f–VBâ"—Ğ¢Â÷à¢¶2æ¶–æBÓÓÒ'fVÇB"bb€¢Ãà¢¶2ç6fVE6–vä–ãòæÖWF†öBÓÓÒ&7W'&VçB"bb€¢Çà¢6–væ–ær÷WBöbF†RvV'6—FRv–ÆÂ&ö&&Ç’VæBF†—0¢6öææV7F–öâà¢Â÷à¢—Ğ¢·6–vä–äW‡—'’†2ç6fVE6–vä–ãòææ÷DgFW"Âæ÷r’bb€¢Ç6ÖÆÃç·6–vä–äW‡—'’†2ç6fVE6–vä–ãòææ÷DgFW"Âæ÷r—ÓÂ÷6ÖÆÃà¢—Ğ¢Âóà¢—Ğ¢¶2ææW‡E&WG'”Bbb2ç7FGW2ÓÒ&7F—fR"bb€¢Ç6ÖÆÃäæW‡B6†V6³¢¶6÷VçFF÷vâ†2ææW‡E&WG'”BÂæ÷r—ÓÂ÷6ÖÆÃà¢—Ğ¢ÂöF—cà¢ÆF—b6Æ74æÖSÒ&–æÆ–æRÖ7F–öç2#à¢¶2æ¶–æBÓÓÒ'vV'6—FR"ò€¢Ãà¢Æ'WGFöà¢6Æ74æÖSÒ&'WGFöâ'WGFöâÒ×6ÖÆÂ ¢F—6&ÆVC×¶'W7—Ğ¢öä6Æ–6³×²‚’Óâfö–B6öææV7B†2ç&÷f–FW"ÂG'VR—Ğ¢à¢¶2æVæ&ÆVBò%&V6öææV7B"¢$Væ&ÆRG&6¶–ær'Ğ¢Âö'WGFöãà¢¶öffW%6fVE6–vä–â†2ç&÷f–FW"ÂõôÕ”Ä”Ô•E5ô%$õu4U%õò’bb€¢Æ'WGFöà¢6Æ74æÖSÒ&'WGFöâ'WGFöâÒ×6ÖÆÂ ¢F—6&ÆVC×¶'W7—Ğ¢öä6Æ–6³×²‚’ÓâFD66÷VçB†2ç&÷f–FW"—Ğ¢à¢6fR6W&FR6–vâÖ–à¢Âö'WGFöãà¢—Ğ¢Âóà¢’¢€¢2æVæ&ÆVBbb€¢Æ'WGFöà¢6Æ74æÖSÒ&'WGFöâ'WGFöâÒ×6ÖÆÂ ¢F—6&ÆVC×¶'W7’ÇÂ‚2ææW‡E&WG'”Bbb2ææW‡E&WG'”Bâæ÷r—Ğ¢öä6Æ–6³×²‚’Óà¢fö–B'Vâ‡²G—S¢'&Vg&W6‚"Â6öææV7F–öä–C¢2æ–BÒ¢Ğ¢à¢&Vg&W6‚6÷W&6P¢Âö'WGFöãà¢¢—Ğ¢²†2æVæ&ÆVBÇÂ2æ¶–æBÓÓÒ'fVÇB"’bb€¢Æ'WGFöà¢6Æ74æÖSÒ'FW‡BÖ'WGFöâ ¢F—6&ÆVC×¶'W7—Ğ¢öä6Æ–6³×²‚’Óà¢fö–B'Vâ‡²G—S¢&F—66öææV7B"Â6öææV7F–öä–C¢2æ–BÒ¢Ğ¢à¢¶2æ¶–æBÓÓÒ'fVÇB"ò%&VÖ÷fR6fVB6–vâÖ–â"¢$F—66öææV7B'Ğ¢Âö'WGFöãà¢—Ğ¢ÂöF—cà¢¶2æ¶–æBÓÓÒ&6÷–Æ÷B"bb€¢Ä6÷–Æ÷E6WGF–æw0¢6öææV7F–öä–C×¶2æ–GĞ¢66÷VçD–C×¶66÷VçBæ–GĞ¢ÆÆ÷væ6S×¶2æ6÷–Æ÷DÆÆ÷væ6RóòçVÆÇĞ¢V÷F66W73×¶2æ6÷–Æ÷EV÷F66W72óòfÇ6WĞ¢'Vã×·'VçĞ¢'W7“×¶'W7—Ğ¢óà¢—×²"'Ğ¢¶2æ¶–æBÓÓÒ'vV'6—FR"b`¢2ç&÷f–FW"ÓÓÒ&6ÆVFR"b`¢2çv÷&·76T–G2æÆVæwF‚âbb€¢ÆÆ&VÂ6Æ74æÖSÒ'v÷&·76R×–6¶W"#à¢v÷&·76P¢Ç6VÆV7@¢&–ÖÆ&VÃ×¶v÷&·76Rf÷"G¶66÷VçDæÖR†66÷VçB—ÖĞ¢fÇVS×¶2çv÷&·76T–Bóò"'Ğ¢F—6&ÆVC×¶'W7—Ğ¢öä6†ævS×²†R’Óà¢fö–B'Vâ‡°¢G—S¢'v÷&·76R"À¢6öææV7F–öä–C¢2æ–BÀ¢v÷&·76T–C¢RçOuãKh‘éì¶»§q«^t\ÈÚ^™O^ÌM_HÏ‚ˆY[›İ\ˆÚ]XˆXØÛİ[ˆØ]Û‚ˆ
+_Bˆ]Z[ÈÛ\ÜÓ˜[YOH›İ™\šY]ËYš[\œÈ‚ˆİ[[X\O‚ˆš[\œÂˆÙš[\Ûİ[ˆ	‰ˆ
+ˆÜ[‚ˆÛ\ÜÓ˜[YOH™š[\‹XÛİ[‚ˆ\šXK[X™[^Ø	Ùš[\Ûİ[HXİ]™Hš[\œØBˆ‚ˆÙš[\Ûİ[BˆÜÜ[‚ˆ
+_BˆÜİ[[X\O‚ˆ]ˆÛ\ÜÓ˜[YOH™š[\‹[Ü[ÛœÈ‚ˆ]Û‚ˆÛ\ÜÓ˜[YO^Øš[\‹X]Ûˆ	Ø][[Û“Û›HÈœÙ[XİYˆˆˆŸXBˆ\šXK\™\ÜÙY^Ø][[Û“Û›_BˆÛÛXÚÏ^Ê
+HOˆÙ]][[Û“Û›JX][[Û“Û›J_Bˆ‚ˆ™YYÈ][[Û‚ˆØ]Û‚ˆX™[‚ˆÛÜˆÙ[Xİˆ\šXK[X™[H”ÛÜ[Z]È‚ˆ˜[YO^ÜÛÜBˆÛÚ[™ÙO^ÊJHO‚ˆÙ]ÛÜ
+K\™Ù]˜[YH\È[Z]ÛÜ
+BˆBˆ‚ˆÜ[Ûˆ˜[YOH™Y˜][”™XÛÛ[Y[™YÛÜ[Û‚ˆÜ[Ûˆ˜[YOHœ™[XZ[š[™È“X\İ™[XZ[š[™ÏÛÜ[Û‚ˆÜ[Ûˆ˜[YOHœ™\Ù]“™^™\Ù]ÛÜ[Û‚ˆÜ[Ûˆ˜[YOH›˜[YH“˜[YOÛÜ[Û‚ˆÜÙ[Xİ‚ˆÛX™[‚ˆX™[‚ˆÙ\šXÙBˆÙ[Xİˆ\šXK[X™[H‘š[\ˆ›İšY\ˆ‚ˆ˜[YO^Ùš[\ŸBˆÛÚ[™ÙO^ÊJHO‚ˆÙ]š[\ŠK\™Ù]˜[YH\È›İšY\’Y˜[ŠBˆBˆ‚ˆÜ[Ûˆ˜[YOH˜[[›İšY\œÏÛÜ[Û‚ˆÔ“Õ’QT—ÒQË›X\
+
+
+HOˆ
+ˆÜ[Ûˆ˜[YO^ÜHÙ^O^ÜO‚ˆÜ›İšY\œÖÜK›˜[Y_BˆÛÜ[Û‚ˆ
+J_BˆÜÙ[Xİ‚ˆÛX™[‚ˆÙš[\Ûİ[ˆ	‰ˆ
+ˆ]Û‚ˆÛ\ÜÓ˜[YOH^X]Ûˆ‚ˆÛÛXÚÏ^Ê
+HOˆÂˆÙ]İÓÛ›J˜[ÙJNÂˆÙ]][[Û“Û›J˜[ÙJNÂˆÙ]ÛÜ
+™Y˜][ŠNÂˆÙ]š[\Š˜[ŠNÂˆ_Bˆ‚ˆ™\Ù]š[\œÂˆØ]Û‚ˆ
+_BˆÙ]‚ˆÙ]Z[Ï‚ˆÙ]‚ˆ]ˆÛ\ÜÓ˜[YOH˜XØÛİ[[\İ‚ˆØXØÛİ[Ë›X\
+›İÊ_BˆÈXXØÛİ[Ë›[™İ	‰ˆ
+ˆ]ˆÛ\ÜÓ˜[YOH™[\K\ÛX[‚ˆ›ÈXØÛİ[ÈX]Ú\ÙHš[\œË‚ˆÙ]‚ˆ
+_BˆÙ]‚ˆÏ‚ˆ
+Hˆ
+ˆ]ˆÛ\ÜÓ˜[YOH™[\H‚ˆ]ˆÛ\ÜÓ˜[YOH™[\KZ[\İ˜][Ûˆ‚ˆœ˜[™X\šÈÚ^™O^ÌÎHÏ‚ˆÜ[”™XYHÚ[ˆ[İH\™OÜÜ[‚ˆÙ]‚ˆHÛX\ˆšY]Èİ\È\™KÚ‚ˆ‚ˆÚÛÜÙH[İ\ˆRHÙXœÚ]\Ëˆ[İ\ˆ^\İ[™Èœ›İÜÙ\ˆÙÚ[ˆÙ\ÂˆH™\İ‚ˆÜ‚ˆ]Û‚ˆÛ\ÜÓ˜[YOH˜]Ûˆ]Û‹K\š[X\H‚ˆÛÛXÚÏ^Ê
+HOˆÂˆÙ]Y[™Ô›İšY\Š[
+NÂˆÙ]Y[™ÊYJNÂˆ_Bˆ‚ˆ\ÈÚ^™O^ÌM_HÏ‚ˆYHÙXœÚ]BˆØ]Û‚ˆ]Û‚ˆÛ\ÜÓ˜[YOH^X]Ûˆ‚ˆÛÛXÚÏ^Ê
+HOˆÙ][[ÊYJ_Bˆ‚ˆ™]šY]ÈÚ]Ø[\H]BˆØ]Û‚ˆÙ]‚ˆ
+_BˆÏ‚ˆ
+_BˆÜYÙHOOH˜XØÛİ[Èˆ	‰ˆ
+ˆ]ˆÛ\ÜÓ˜[YOH˜XØÛİ[Ë\YÙH‚ˆ]ˆÛ\ÜÓ˜[YOHœÙXİ[Û‹ZXY[™È‚ˆ”Ù\šXÙ\ÏÚ‚ˆÙ]‚ˆÔ“Õ’QT—ÒQË›X\
+
+
+HOˆ
+ˆ\XÛHÛ\ÜÓ˜[YOHÙXœÚ]KXØ\™ˆÙ^O^ÜO‚ˆ]ˆÛ\ÜÓ˜[YOHÙXœÚ]K]Ü‚ˆX\šÈ›İšY\^ÜHÏ‚ˆ]ˆÛ\ÜÓ˜[YOH™Ü›İÈ‚ˆÏÜ›İšY\œÖÜK›˜[Y_OÚÏ‚ˆÜ[ˆÛ\ÜÓ˜[YOHœÛX[[›İH‚ˆÜ›İšY\œÖÜKœİ\ÜOOHœ›İİ\H‚ˆÈ”][İH™XY\ˆ0­È›İİ\H‚ˆˆ“ØØ[Xİ]š]HÛ›HŸBˆÜÜ[‚ˆÙ]‚ˆ]Û‚ˆÛ\ÜÓ˜[YO^ÂˆOOH˜ÛÜ[İ‚ˆÈ˜]Ûˆ]Û‹K\ÛX[‚ˆˆšXÛÛ‹X]Ûˆ‚ˆBˆ\šXK[X™[^ØY	Ü›İšY\œÖÜK›˜[Y_HXØÛİ[Bˆ\ØX›Y^Ø\Ş_BˆÛÛXÚÏ^Ê
+HOˆÂˆÙ]Y[™Ô›İšY\Š
+NÂˆÙ]Y[™ÊYJNÂˆ_Bˆ‚ˆ\ÈÚ^™O^ÌŒHÏ‚ˆÜOOH˜ÛÜ[İˆ	‰ˆÜ[YXØÛİ[ÜÜ[ŸBˆØ]Û‚ˆÙ]‚ˆ]Z[ÈÛ\ÜÓ˜[YOH˜ÛÛ›™Xİ[Û‹Z[‚ˆİ[[X\OÛÛ›™Xİ[Ûˆ]Z[ÏÜİ[[X\O‚ˆÜ›İšY\œÖÜK™]Z[OÜ‚ˆBˆÛ\ÜÓ˜[YOH^X]Ûˆ‚ˆ™Y^Ü›İšY\œÖÜKšÛY_Bˆ\™Ù]H—Ø›[šÈ‚ˆ™[H››Ü™Y™\œ™\ˆ‚ˆ‚ˆÜ[ˆÙXœÚ]Bˆ^\›˜[[šÈÚ^™O^ÌLŸHÏ‚ˆØO‚ˆÜİÜ™Kœ›İšY\œÖÜK™[˜X›Y	‰ˆ
+ˆ]Û‚ˆÛ\ÜÓ˜[YOH^X]Ûˆ‚ˆ\ØX›Y^Ø\Ş_BˆÛÛXÚÏ^Ê
+HO‚ˆ›ÚY[ŠÈ\Nˆœ™Yœ™\Ú‹›İšY\ˆJBˆBˆ‚ˆ™Yœ™\ÚˆØ]Û‚ˆ
+_BˆÙ]Z[Ï‚ˆÜİÜ™Kœ›İšY\œÖÜK›Y\ÜØYÙH	‰ˆ
+ˆÛ\ÜÓ˜[YOHœ›İšY\‹[Y\ÜØYÙH‚ˆÜİÜ™Kœ›İšY\œÖÜK›Y\ÜØYÙ_BˆÜ‚ˆ
+_BˆØ\XÛO‚ˆ
+J_BˆÛ\ÜÓ˜[YOHœš]˜XŞK[›İH‚ˆÚY[ÚXÚÈÚ^™O^ÌMßHÏ‚ˆÙXœÚ]HÙ\ÜÚ[ÛœÈØ[ˆ^\™Kˆ™[Y[X™\™YXØÛİ[ÈÙY\Z\‚ˆ]Y™XY[™ÜË‚ˆÜ‚ˆÜİÜ™K˜XØÛİ[Ë›[™İˆ	‰ˆ
+ˆ‚ˆˆÛ\ÜÓ˜[YOHœÙXİ[Û‹ZXY[™È”Ø]™YXØÛİ[ÏÚ‚ˆÜİÜ™K˜XØÛİ[Ë›X\
+›İÊ_BˆÏ‚ˆ
+_BˆÙ]‚ˆ
+_BˆÜYÙHOOHš\İÜHˆ	‰ˆ\İÜUšY]ÈİÜ™O^ÜİÜ™_H[[Ï^Ù[[ßHÏŸBˆÜYÙHOOHœÙ][™ÜÈˆ	‰ˆ
+ˆ‚ˆ™Y™\™[˜Ù\ÂˆİÜ™O^ÜİÜ™_Bˆ[^Ü[ŸBˆ\ŞO^Ø\Ş_Bˆ[[Ï^Ù[[ßBˆ›İYO^ÜÙ]Ø\İBˆÏ‚ˆÙXİ[ÛˆÛ\ÜÓ˜[YOHœ[™[‚ˆ•ÙXœÚ]HXØÙ\ÜÏÚ‚ˆ‚ˆ\ØÛÛ›™Xİ˜XÚÚ[™È[™™]›ÚÙHÙXœÚ]H\›Z\ÜÚ[Û‹ˆØ]™Yˆ™XY[™ÜÈİ^H]Y‚ˆÜ‚ˆÔ“Õ’QT—ÒQË™š[\Š
+
+HOˆİÜ™Kœ›İšY\œÖÜK™[˜X›Y
+K›X\
+ˆ
+
+HOˆ
+ˆ]Û‚ˆÙ^O^ÜBˆÛ\ÜÓ˜[YOH˜]Ûˆ‚ˆ\ØX›Y^Ø\Ş_BˆÛÛXÚÏ^Ê
+HO‚ˆ›ÚYÛÛ›™Xİ
+˜[ÙJBˆ[Š
+
+HO‚ˆœ›İÜÙ\‹œ\›Z\ÜÚ[ÛœËœ™[[İ™JÂˆÜšYÚ[œÎˆÜ›İšY\œÖÜK›ÜšYÚ[—KˆJKˆ
+Bˆ˜Ø]Ú
+
+
+HO‚ˆÙ]Ø\İ
+Ûİ[›İ™]›ÚÙHÙXœÚ]HXØÙ\ÜËˆŠKˆ
+BˆBˆ‚ˆ\ØÛÛ›™XİÜ›İšY\œÖÜK›˜[Y_BˆØ]Û‚ˆ
+Kˆ
+_BˆÜÙXİ[Û‚ˆİ\ÜÙ][™ÜÈİÜ™O^ÜİÜ™_HÏ‚ˆÏ‚ˆ
+_BˆÏ‚ˆ
+_BˆÛXZ[‚ˆ›Ûİ\ˆÛ\ÜÓ˜[YOH˜\Y›Ûİ\ˆ‚ˆ]Û‚ˆÛ\ÜÓ˜[YOH^X]Ûˆ‚ˆÛÛXÚÏ^Ê
+HOˆÂˆÙ]Y[™Ô›İšY\Š[
+NÂˆÙ]Y[™ÊYJNÂˆ_Bˆ‚ˆ\ÈÚ^™O^ÌLßHÏ‚ˆYXØÛİ[ˆØ]Û‚ˆÜ[ˆÛ\ÜÓ˜[YOH™›Ûİ\‹XYÙH‚ˆÛ]\İÈ\İ™XY[™È	ØYÙJ]\İ›İÊ_Xˆ“ØØ[Yš\œİ˜XÚÚ[™ÈŸBˆÜÜ[‚ˆİšY]ÈOOH™\Ú›Ø\™ˆÈ
+ˆ]ÛˆÛ\ÜÓ˜[YOH^X]ÛˆˆÛÛXÚÏ^Ù[\Ú›Ø\™O‚ˆ[\Ú›Ø\™ˆ^\›˜[[šÈÚ^™O^ÌLŸHÏ‚ˆØ]Û‚ˆ
+Hˆ[BˆÙ›Ûİ\‚ˆİØ\İ	‰ˆ
+ˆ]ˆ›ÛOHœİ]\ÈˆÛ\ÜÓ˜[YOHØ\İ‚ˆİØ\İBˆÙ]‚ˆ
+_BˆÜİÜ™OËš\İÜR\ÜİYH	‰ˆ
+ˆ]ˆ›ÛOHœİ]\ÈˆÛ\ÜÓ˜[YOHš\İÜK]Ø\›š[™È‚ˆÜİÜ™Kš\İÜR\ÜİY_BˆÙ]‚ˆ
+_BˆÙ]‚ˆ
+NÂŸB

@@ -98,6 +98,8 @@ test("unknown quota stays unknown, while zero used is a valid reading", () => {
   assert.equal(remainingPercent(meter(null, { used: 12, total: 20 })), 40);
 });
 test("one warning fires at the threshold and repeated refreshes do not repeat it", () => {
+  assert.equal(emptyStore("defaults").settings.warningRemaining, 20);
+  assert.equal(emptyStore("defaults").settings.criticalRemaining, 10);
   const first = collectAlerts(withAccount(), NOW);
   assert.equal(first.alerts.length, 1);
   assert.match(first.alerts[0]!.message, /20% left/);
@@ -111,7 +113,7 @@ test("first seeing a critical balance sends one critical alert, not two notifica
     result.store.alertLedger[
       "claude:first/legacy/subscription/session"
     ]!.sent.sort((a, b) => a - b),
-    [5, 20],
+    [10, 20],
   );
 });
 test("critical warning can follow an earlier low-balance warning", () => {
