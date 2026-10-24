@@ -59,11 +59,11 @@ export function HistoryView({
   privateNow.current = privacy;
   const retention = store.settings.historyRetentionDays ?? 30,
     days = Math.min(range.days, retention),
-    quickFrom = Math.max(range.to - days * DAY, Date.now() - retention * DAY),
+    quickFrom = range.to - days * DAY,
     customFrom = customDates.from || localDate(quickFrom),
     customTo = customDates.to || localDate(range.to),
     from = customActive ? dateStart(customFrom) : quickFrom,
-    to = customActive ? Math.min(dateEnd(customTo), Date.now()) : range.to,
+    to = customActive ? Math.min(dateEnd(customTo), range.to) : range.to,
     invalidRange = from > to;
   const accountIds = store.accounts.map((a) => a.id).join("|");
   const visibleAccounts = store.accounts.filter(
