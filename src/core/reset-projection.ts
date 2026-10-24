@@ -12,6 +12,7 @@ export function projectRememberedReset(
 ): DisplayMeter {
   if (
     !remembered ||
+    meter.unlimited ||
     meter.evidence !== "reported" ||
     meter.resetsAt === null ||
     meter.resetsAt > now

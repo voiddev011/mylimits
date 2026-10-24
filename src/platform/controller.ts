@@ -281,6 +281,7 @@ const collectConnection = createConnectionRefresh({
         Date.now(),
         (url, options) => fetch(url, options),
         signal,
+        connection.copilotQuotaAccess ?? false,
       );
     }
     if (connection.kind === "vault")
@@ -461,7 +462,11 @@ async function handle(
       )
         throw new Error("Connect from the normal MyLimits dashboard.");
       try {
-        await copilotAccounts.connect(command.token, command.connectionId);
+        await copilotAccounts.connect(
+          command.token,
+          command.connectionId,
+          command.quotaAccess,
+        );
       } catch (e) {
         if (e instanceof AdapterError || e instanceof CopilotAccountError)
           throw e;
@@ -469,6 +474,31 @@ async function handle(
           "Copilot connection could not be saved. Verify the token belongs to this account and try again.",
         );
       }
+      break;
+    case "copilot-quota-access":
+      coordinator.cancel(command.connectionId);
+      await updateStore((store) => {
+        const source = store.connections.find(
+          (c) => c.id === command.connectionId && c.kind === "copilot",
+        );
+        if (!source) throw new Error("Copilot connection is no longer saved.");
+        return {
+          store: changeConnection(
+            store,
+            source.id,
+            {
+              copilotQuotaAccess: command.enabled,
+              status:
+                source.status === "needs-auth" ? "needs-auth" : "unavailable",
+              message:
+                "Reading source changed. Waiting for the next eligible refresh.",
+            },
+            true,
+          ),
+          value: undefined,
+        };
+      });
+      await refreshConnection(command.connectionId, true);
       break;
     case "copilot-allowance":
       coordinator.cancel(command.connectionId);
@@ -482,18 +512,25 @@ async function handle(
             ? s
             : {
                 ...s,
-                meters: s.meters.map((m) => ({
-                  ...m,
-                  total: command.allowance,
-                  usedPercent:
-                    command.allowance === null || m.used === null
-                      ? null
-                      : Math.min(1000, (m.used / command.allowance) * 100),
-                  remaining:
-                    command.allowance === null || m.used === null
-                      ? null
-                      : Math.max(0, command.allowance - m.used),
-                })),
+                meters: s.meters.map((m) =>
+                  m.id !== "premium-requests"
+                    ? m
+                    : {
+                        ...m,
+                        total: command.allowance,
+                        usedPercent:
+                          command.allowance === null || m.used === null
+                            ? null
+                            : Math.min(
+                                1000,
+                                (m.used / command.allowance) * 100,
+                              ),
+                        remaining:
+                          command.allowance === null || m.used === null
+                            ? null
+                            : Math.max(0, command.allowance - m.used),
+                      },
+                ),
               },
         );
         return {
@@ -506,7 +543,9 @@ async function handle(
             ),
             snapshots,
             accounts: store.accounts.map((a) =>
-              a.id === source.accountId
+              a.id === source.accountId &&
+              a.meters.some((m) => m.id === "premium-requests") &&
+              !source.copilotQuotaAccess
                 ? {
                     ...a,
                     plan:

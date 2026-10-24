@@ -1,7 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { webcrypto } from "node:crypto";
-import { parseCopilot, copilotIdentity } from "../core/copilot";
+import {
+  parseCopilot,
+  copilotIdentity,
+  parseCopilotCredits,
+  parseCopilotQuotas,
+} from "../core/copilot";
 import { readCopilot } from "./copilot";
 import { createTokenVault, TOKEN_KEY } from "./token-vault";
 import { createCopilotAccounts, CopilotAccountError } from "./copilot-accounts";
@@ -11,6 +16,8 @@ import { toPublicState } from "../core/public";
 import { diagnostics } from "../core/presentation";
 import { exportReadings, historyPoint } from "../core/history-data";
 import { shouldRefresh } from "../core/scheduler";
+import { meterValue } from "../core/meter-display";
+import { projectRememberedReset } from "../core/reset-projection";
 import type { Store } from "../core/model";
 const now = Date.UTC(2026, 9, 24),
   secret = "github_pat_FAKE_TEST_SECRET_12345",
@@ -73,13 +80,18 @@ test("official REST only, explicit month, required headers, identity verified ar
     const h = options.headers as Record<string, string>;
     assert.equal(h.Authorization, `Bearer ${secret}`);
     assert.equal(h.Accept, "application/vnd.github+json");
-    assert.equal(h["X-GitHub-Api-Version"], "2022-11-28");
+    assert.equal(h["X-GitHub-Api-Version"], "2026-03-10");
     return response(
-      url.includes("/usage?") ? usage([row(20)]) : { id: 1, login: "alice" },
+      url.includes("/ai_credit/")
+        ? usage()
+        : url.includes("/usage?")
+          ? usage([row(20)])
+          : { id: 1, login: "alice" },
     );
   });
-  assert.equal(calls.length, 3);
-  assert.match(calls[1]!, /year=2026&month=10&product=Copilot/);
+  assert.equal(calls.length, 4);
+  assert.match(calls[1]!, /ai_credit\/usage\?year=2026&month=10/);
+  assert.match(calls[2]!, /year=2026&month=10&product=Copilot/);
   assert.equal(reading.meters[0]!.used, 20);
   let i = 0;
   await assert.rejects(
@@ -87,7 +99,7 @@ test("official REST only, explicit month, required headers, identity verified ar
       response(
         ++i === 1
           ? { id: 1, login: "alice" }
-          : i === 2
+          : i === 2 || i === 3
             ? usage()
             : { id: 2, login: "bob" },
       ),
@@ -198,9 +210,11 @@ test("pre-Copilot v2 state migrates additively and credentials remain outside st
     lock: async (_, fn) => fn(),
     request: async (url) =>
       response(
-        url.includes("/usage?")
-          ? usage([row(1)])
-          : { id: remote, login: "alice" },
+        url.includes("/ai_credit/")
+          ? usage()
+          : url.includes("/usage?")
+            ? usage([row(1)])
+            : { id: remote, login: "alice" },
       ),
   });
   await service.connect(secret);
@@ -303,7 +317,11 @@ test("another token for the same GitHub identity reports a duplicate without ove
     lock: async (_, fn) => fn(),
     request: async (url) =>
       response(
-        url.includes("/usage?") ? usage([row(12)]) : { id: 1, login: "alice" },
+        url.includes("/ai_credit/")
+          ? usage()
+          : url.includes("/usage?")
+            ? usage([row(12)])
+            : { id: 1, login: "alice" },
       ),
   });
   await service.connect(secret);
@@ -364,7 +382,11 @@ test("simultaneous additions of one GitHub identity keep one connection and eras
     lock: async (_, fn) => fn(),
     request: async (url) =>
       response(
-        url.includes("/usage?") ? usage([row(12)]) : { id: 1, login: "alice" },
+        url.includes("/ai_credit/")
+          ? usage()
+          : url.includes("/usage?")
+            ? usage([row(12)])
+            : { id: 1, login: "alice" },
       ),
   });
   const result = await Promise.allSettled([
@@ -384,4 +406,273 @@ test("simultaneous additions of one GitHub identity keep one connection and eras
   assert.ok(
     tokens.has(state.connections.find((c) => c.kind === "copilot")!.profileId!),
   );
+});
+
+test("AI credit reports use credit units, preserve missing quota, and never infer a Free zero from empty billing", () => {
+  const identity = { id: "1", login: "alice" };
+  const raw = usage([
+    {
+      product: "Copilot AI Credits",
+      unitType: "ai-credits",
+      grossQuantity: 12.5,
+    },
+    { product: "Other", unitType: "requests", grossQuantity: 999 },
+  ]);
+  const m = parseCopilotCredits(identity, raw, now).meters[0]!;
+  assert.equal(m.used, 12.5);
+  assert.equal(m.total, null);
+  assert.equal(m.usedPercent, null);
+  assert.equal(m.resetsAt, null);
+  assert.equal(m.unit, "credits");
+  assert.equal(
+    parseCopilotCredits(identity, usage(), now).meters[0]!.used,
+    null,
+  );
+  assert.equal(
+    parseCopilotCredits(
+      identity,
+      usage([
+        {
+          product: "Copilot AI Credits",
+          unitType: "ai-credits",
+          grossQuantity: 0,
+        },
+      ]),
+      now,
+    ).meters[0]!.used,
+    0,
+  );
+  assert.throws(() =>
+    parseCopilotCredits(identity, { ...raw, user: "bob" }, now),
+  );
+  assert.throws(() =>
+    parseCopilotCredits(
+      identity,
+      usage([
+        {
+          product: "Copilot AI Credits",
+          unitType: "requests",
+          grossQuantity: 12,
+        },
+      ]),
+      now,
+    ),
+  );
+  assert.throws(() =>
+    parseCopilotCredits(
+      identity,
+      usage([
+        {
+          product: "Copilot AI Credits",
+          unitType: "ai-credits",
+          grossQuantity: -1,
+        },
+      ]),
+      now,
+    ),
+  );
+});
+const quotaFixture = () => ({
+  copilot_plan: "free",
+  token_based_billing: true,
+  quota_reset_date_utc: "2026-11-01T00:00:00Z",
+  quota_snapshots: {
+    chat: {
+      entitlement: "100",
+      credits_used: "12",
+      quota_remaining: "88",
+      percent_remaining: 88,
+      unlimited: false,
+    },
+    completions: {
+      entitlement: 2000,
+      quota_remaining: 2000,
+      percent_remaining: 100,
+      unlimited: false,
+    },
+    premium_interactions: {
+      entitlement: 0,
+      percent_remaining: 100,
+      unlimited: false,
+    },
+  },
+});
+test("experimental entitlement parser separates Free credits and completions, reads actual reset, and ignores unallocated quotas", () => {
+  const snapshot = parseCopilotQuotas(
+    { id: "1", login: "alice" },
+    quotaFixture(),
+  );
+  assert.equal(snapshot.plan, "free");
+  assert.equal(snapshot.meters.length, 2);
+  const [credit, suggestions] = snapshot.meters;
+  assert.equal(credit!.label, "Credits");
+  assert.equal(credit!.usedPercent, 12);
+  assert.equal(credit!.used, 12);
+  assert.equal(credit!.total, 100);
+  assert.equal(credit!.resetsAt, Date.UTC(2026, 10, 1));
+  assert.equal(suggestions!.label, "Inline suggestions");
+  assert.equal(suggestions!.usedPercent, 0);
+  assert.equal(suggestions!.total, 2000);
+});
+test("quota parsing handles unlimited paid plans, legacy Free quotas, absent values and malformed identity without guessed quotas", () => {
+  const identity = { id: "1", login: "alice" };
+  const paid = parseCopilotQuotas(identity, {
+    copilot_plan: "pro",
+    quota_snapshots: { completions: { unlimited: true, entitlement: 0 } },
+  }).meters[0]!;
+  assert.equal(paid.unlimited, true);
+  assert.equal(paid.total, null);
+  assert.equal(paid.usedPercent, null);
+  const legacy = parseCopilotQuotas(identity, {
+    monthly_quotas: { chat: 50, completions: 2000 },
+    limited_user_quotas: { chat: 30, completions: 1700 },
+  });
+  assert.equal(legacy.meters[0]!.usedPercent, 40);
+  assert.equal(legacy.meters[1]!.usedPercent, 15);
+  assert.equal(legacy.meters[0]!.resetsAt, null);
+  const unknown = parseCopilotQuotas(identity, {
+    quota_snapshots: { chat: { percent_remaining: 70 } },
+  }).meters[0]!;
+  assert.equal(unknown.usedPercent, 30);
+  assert.equal(unknown.total, null);
+  assert.equal(unknown.used, null);
+  assert.throws(() => parseCopilotQuotas(identity, {}));
+  assert.throws(() =>
+    parseCopilotQuotas(identity, { ...quotaFixture(), id: 2 }),
+  );
+  assert.throws(() =>
+    parseCopilotQuotas(identity, { ...quotaFixture(), login: "bob" }),
+  );
+  assert.throws(() =>
+    parseCopilotQuotas(identity, {
+      quota_snapshots: { chat: { percent_remaining: 101 } },
+    }),
+  );
+});
+test("quota access is opt-in, verifies identity around the read, never spoofs an IDE and never falls back after denial or throttling", async () => {
+  const calls: string[] = [];
+  const snapshot = await readCopilot(
+    secret,
+    300,
+    now,
+    async (url, opts) => {
+      calls.push(new URL(url).pathname);
+      const headers = new Headers(opts.headers);
+      assert.equal(headers.has("Editor-Version"), false);
+      assert.equal(headers.has("Editor-Plugin-Version"), false);
+      assert.equal(headers.has("Cookie"), false);
+      return response(
+        url.endsWith("/copilot_internal/user")
+          ? quotaFixture()
+          : { id: 1, login: "alice" },
+      );
+    },
+    undefined,
+    true,
+  );
+  assert.deepEqual(calls, ["/user", "/copilot_internal/user", "/user"]);
+  assert.equal(snapshot.meters[0]!.usedPercent, 12);
+  for (const status of [401, 403, 404, 429]) {
+    const attempted: string[] = [];
+    await assert.rejects(
+      readCopilot(
+        secret,
+        null,
+        now,
+        async (url) => {
+          attempted.push(url);
+          return url.endsWith("/user") && !url.includes("copilot_internal")
+            ? response({ id: 1, login: "alice" })
+            : response(
+                { message: secret },
+                status,
+                status === 429 ? { "retry-after": "3600" } : {},
+              );
+        },
+        undefined,
+        true,
+      ),
+      (e) => {
+        assert.ok(e instanceof Error && !e.message.includes(secret));
+        if (status === 403 || status === 404)
+          assert.match(e.message, /denied experimental quota access/);
+        return true;
+      },
+    );
+    assert.equal(attempted.length, 2);
+    assert.ok(!attempted.some((u) => u.includes("/billing/")));
+  }
+  let userChecks = 0;
+  await assert.rejects(
+    readCopilot(
+      secret,
+      null,
+      now,
+      async (url) =>
+        response(
+          url.includes("copilot_internal")
+            ? quotaFixture()
+            : ++userChecks === 1
+              ? { id: 1, login: "alice" }
+              : { id: 2, login: "bob" },
+        ),
+      undefined,
+      true,
+    ),
+  );
+});
+test("public billing reads current credits first and treats empty reports as unavailable, not zero", async () => {
+  const called: string[] = [];
+  const result = await readCopilot(secret, 300, now, async (url) => {
+    called.push(url);
+    return response(
+      url.endsWith("/user")
+        ? { id: 1, login: "alice" }
+        : usage([
+            {
+              product: "Copilot AI Credits",
+              unitType: "ai-credits",
+              grossQuantity: 12,
+            },
+          ]),
+    );
+  });
+  assert.equal(result.meters[0]!.id, "ai-credits");
+  assert.equal(result.meters[0]!.total, null);
+  assert.ok(
+    !called.some(
+      (url) =>
+        url.includes("premium_request") || url.includes("copilot_internal"),
+    ),
+  );
+  const empty = await readCopilot(secret, 50, now, async (url) =>
+    response(url.endsWith("/user") ? { id: 1, login: "alice" } : usage()),
+  );
+  assert.equal(empty.meters[0]!.id, "ai-credits");
+  assert.equal(empty.meters[0]!.used, null);
+  assert.equal(empty.meters[0]!.total, null);
+});
+
+test("quota displays preserve unlimited and numeric credits without projecting an unlimited reset", () => {
+  const paid = parseCopilotQuotas(
+    { id: "1", login: "alice" },
+    {
+      quota_reset_date_utc: "2020-01-01T00:00:00Z",
+      quota_snapshots: { completions: { unlimited: true, entitlement: 0 } },
+    },
+  ).meters[0]!;
+  assert.equal(meterValue(paid), "Unlimited");
+  assert.equal(projectRememberedReset(paid, true, now).projected, false);
+  const credit = parseCopilotCredits(
+    { id: "1", login: "alice" },
+    usage([
+      {
+        product: "Copilot AI Credits",
+        unitType: "ai-credits",
+        grossQuantity: 12,
+      },
+    ]),
+    now,
+  ).meters[0]!;
+  assert.equal(meterValue(credit), "12 credits used");
 });

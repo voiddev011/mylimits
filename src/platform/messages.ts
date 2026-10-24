@@ -20,6 +20,7 @@ export const CommandSchema = z.discriminatedUnion("type", [
     .object({
       type: z.literal("copilot-connect"),
       token: z.string().regex(/^github_pat_[A-Za-z0-9_]{10,490}$/),
+      quotaAccess: z.boolean().optional(),
       connectionId: z
         .string()
         .regex(/^copilot:[0-9a-f-]{36}$/i)
@@ -31,6 +32,13 @@ export const CommandSchema = z.discriminatedUnion("type", [
       type: z.literal("copilot-allowance"),
       connectionId: z.string().min(1).max(240),
       allowance: z.number().finite().positive().max(1000000000).nullable(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("copilot-quota-access"),
+      connectionId: z.string().min(1).max(240),
+      enabled: z.boolean(),
     })
     .strict(),
   z.object({ type: z.literal("state") }),

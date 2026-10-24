@@ -55,10 +55,16 @@ export function createCopilotAccounts(p: Port) {
   }
   return {
     disconnect: (id: string) => p.lock(id, () => disconnect(id)),
-    connect: (token: string, reconnectId?: string) =>
-      p.lock(reconnectId ?? p.uuid(), () => connect(token, reconnectId)),
+    connect: (token: string, reconnectId?: string, quotaAccess?: boolean) =>
+      p.lock(reconnectId ?? p.uuid(), () =>
+        connect(token, reconnectId, quotaAccess),
+      ),
   };
-  async function connect(token: string, reconnectId?: string) {
+  async function connect(
+    token: string,
+    reconnectId?: string,
+    quotaAccess?: boolean,
+  ) {
     if (!(await p.permitted())) throw Error("Allow GitHub API access first.");
     const initial = await p.readStore(),
       old = reconnectId
@@ -77,6 +83,8 @@ export function createCopilotAccounts(p: Port) {
       old?.copilotAllowance ?? null,
       now,
       p.request,
+      undefined,
+      quotaAccess ?? old?.copilotQuotaAccess ?? false,
     );
     const identity = await accountId(
       "copilot",
@@ -136,6 +144,7 @@ export function createCopilotAccounts(p: Port) {
           message: null,
           profileId: slot,
           copilotAllowance: old?.copilotAllowance ?? null,
+          copilotQuotaAccess: quotaAccess ?? old?.copilotQuotaAccess ?? false,
         };
         const base = {
           ...s,

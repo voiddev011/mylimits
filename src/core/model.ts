@@ -10,6 +10,7 @@ export interface Meter {
   used: number | null;
   total: number | null;
   remaining?: number | null;
+  unlimited?: boolean;
   unit:
     | "percent"
     | "messages"
@@ -228,6 +229,7 @@ export interface ConnectionRecord {
   profileId?: string;
   authFailures?: number;
   copilotAllowance?: number | null;
+  copilotQuotaAccess?: boolean;
   savedSignIn?: { method: "private" | "current"; notAfter: number | null };
 }
 export interface Workspace {

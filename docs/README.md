@@ -8,7 +8,7 @@ No separate application or MyLimits account is required.
 | Claude / Claude Code  | Website-reported subscription/workspace windows                     |
 | ChatGPT / Codex       | Available Work/Codex buckets, not every ChatGPT limit               |
 | Cursor                | Reported coding-plan allowance and spend                            |
-| GitHub Copilot (beta) | Premium requests through official REST, with a token per connection |
+| GitHub Copilot (beta) | Credit billing or experimental account quotas, with a token per connection |
 
 Website login switches automatically remember earlier accounts. Only the current
 browser login refreshes; remembered cards keep dated readings. Projected resets

@@ -73,17 +73,24 @@ export function Reading({
             {showResetClock && meter.resetsAt
               ? `Reset ${new Date(meter.resetsAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} · `
               : ""}
-            {meter.evidence === "observed"
-              ? "This browser only"
-              : meter.id === "premium-requests" && meter.total === null
-                ? "Choose an allowance in account settings"
-                : remaining === null
-                  ? meter.remaining !== null && meter.remaining !== undefined
-                    ? "Reset not reported"
-                    : meter.unit === "currency"
-                      ? "Cap not reported"
-                      : "Quota not reported"
-                  : `${fresh ? "" : "Last · "}${countdown(meter.resetsAt, now)}`}
+            {meter.unlimited
+              ? "No usage cap reported"
+              : meter.id === "ai-credits" && meter.used === null
+                ? "Quota unavailable through billing API"
+                : meter.id === "ai-credits" && meter.total === null
+                  ? "Total allowance not provided by billing API"
+                  : meter.evidence === "observed"
+                    ? "This browser only"
+                    : meter.id === "premium-requests" && meter.total === null
+                      ? "Choose an allowance in account settings"
+                      : remaining === null
+                        ? meter.remaining !== null &&
+                          meter.remaining !== undefined
+                          ? "Reset not reported"
+                          : meter.unit === "currency"
+                            ? "Cap not reported"
+                            : "Quota not reported"
+                        : `${fresh ? "" : "Last · "}${countdown(meter.resetsAt, now)}`}
           </>
         )}
       </small>

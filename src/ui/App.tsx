@@ -198,12 +198,18 @@ function AccountDetails({
           <div className="connection-item" key={c.id}>
             <div>
               <strong>
-                <span className="source-badge">{connectionSource(c.kind)}</span>
+                <span className="source-badge">
+                  {c.kind === "copilot" && c.copilotQuotaAccess
+                    ? "GitHub quotas (experimental)"
+                    : connectionSource(c.kind)}
+                </span>
               </strong>
               <p>
                 {c.message ??
                   (c.kind === "copilot"
-                    ? "Official GitHub API · encrypted token · checks every 15 minutes."
+                    ? c.copilotQuotaAccess
+                      ? "Experimental GitHub quota access · checks every 15 minutes."
+                      : "GitHub billing API · credit usage where available · checks every 15 minutes."
                     : c.kind === "website"
                       ? "Uses the current login in this browser."
                       : c.kind === "vault"
@@ -277,6 +283,7 @@ function AccountDetails({
                 connectionId={c.id}
                 accountId={account.id}
                 allowance={c.copilotAllowance ?? null}
+                quotaAccess={c.copilotQuotaAccess ?? false}
                 run={run}
                 busy={busy}
               />

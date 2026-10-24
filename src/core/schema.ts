@@ -37,6 +37,7 @@ export const MeterSchema: z.ZodType<Meter> = z
     ]),
     resetsAt: time.positive().nullable(),
     source: z.string().max(160),
+    unlimited: z.boolean().optional(),
     currency: z
       .string()
       .regex(/^[A-Z]{3}$/)
@@ -139,6 +140,7 @@ export const ConnectionRecordSchema: z.ZodType<ConnectionRecord> = z
     failures: z.number().int().min(0),
     message: z.string().max(300).nullable(),
     profileId: z.string().uuid().optional(),
+    copilotQuotaAccess: z.boolean().optional(),
     copilotAllowance: z
       .number()
       .finite()
