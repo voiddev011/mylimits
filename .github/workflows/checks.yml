@@ -22,10 +22,6 @@ jobs:
         run: npm ci
       - name: Core tests and extension build
         run: npm run check
-      - name: Install server dependencies
-        run: npm ci --prefix server
-      - name: Type-check server
-        run: npm run typecheck --prefix server
 
   verify:
     runs-on: ubuntu-latest
@@ -38,13 +34,6 @@ jobs:
         run: npm ci
       - name: Core tests, type checking and extension build
         run: npm run check
-      - name: Account proof subprocess and PTY regressions (fictional accounts)
-        timeout-minutes: 3
-        run: npm run test:account-proof
-      - name: Hosted transport observation redaction and lifecycle regressions
-        run: npm run test:hosted-probe
-      - name: Desktop bootstrapper payload checks
-        run: npm run test:desktop-package
       - name: Install Chromium for browser tests
         run: npx playwright install --with-deps chromium
       - name: Browser tests
@@ -84,91 +73,3 @@ jobs:
           name: browser-test-results
           path: test-results/
           include-hidden-files: true
-
-  windows-logic:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-      - run: npm ci
-      - name: Compile the owned Windows Claude browser launcher
-        shell: powershell
-        run: ./companion/windows/compile-claude-browser.ps1 -Source ./companion/windows/claude-browser.cs -Output ./companion/windows/claude-browser.exe
-      - name: Official Claude browser interface (no account sign-in)
-        timeout-minutes: 3
-        run: node scripts/check-claude-browser.mjs
-      - name: Windows integrated checks
-        timeout-minutes: 4
-        shell: powershell
-        run: |
-          New-Item -ItemType Directory -Force artifacts | Out-Null
-          cmd /d /c "npm run check > artifacts\windows-check.log 2>&1"
-          $checkExit = $LASTEXITCODE
-          Get-Content artifacts/windows-check.log
-          exit $checkExit
-      - name: Retain Windows check diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-check-diagnostics
-          path: artifacts/windows-check.log
-          if-no-files-found: ignore
-      - name: Account proof Windows ConPTY regressions (fictional accounts)
-        timeout-minutes: 3
-        run: npm run test:account-proof
-      - name: Parse Windows scripts and construct setup GUI without installing
-        shell: powershell
-        run: ./scripts/test-windows-setup.ps1
-      - name: Install NSIS compiler
-        run: choco install nsis --no-progress -y
-      - name: Desktop bootstrapper payload checks
-        run: npm run test:desktop-package
-      - name: Package unsigned Windows Desktop setup
-        run: npm run package:desktop
-      - uses: actions/upload-artifact@v4
-        with:
-          name: mylimits-desktop-windows-x64-unsigned
-          path: |
-            artifacts/mylimits-desktop-windows-x64-unsigned.exe
-            artifacts/mylimits-desktop-windows-x64-unsigned.exe.sha256
-            artifacts/mylimits-desktop-windows-x64-unsigned.exe.json
-          if-no-files-found: error
-
-  connected-services:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_USER: mylimits
-          POSTGRES_PASSWORD: isolated-ci-fixture-only
-          POSTGRES_DB: mylimits_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U mylimits -d mylimits_test"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 12
-    env:
-      MYLIMITS_TEST_DATABASE_URL: postgresql://mylimits:isolated-ci-fixture-only@127.0.0.1:5432/mylimits_test
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-      - run: npm ci
-      - run: npm ci --prefix server
-      - name: Authenticated API, real PostgreSQL migrations and job/credential tests
-        run: npm run check --prefix server
-      - run: npx playwright install --with-deps chromium
-      - name: Responsive phone dashboard fixture
-        run: npm run test:web --prefix server
-      - name: Build local transport fixture
-        run: npm run build
-        env:
-          MYLIMITS_SYNC_ORIGIN: http://127.0.0.1:8789
-      - name: Pairing, upload and deletion through actual extension transport
-        run: npm run test:transport --prefix server

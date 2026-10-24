@@ -154,7 +154,7 @@ export function createSpikeSession(port:SpikePort){
     return {capture:captureInfo()};
    }
    if(command.type==='compare'){
-    if(provider==='gemini')fail('endpoint-unavailable');await waitForProvider(provider);
+    await waitForProvider(provider);
     const rows:unknown[]=[],summaries=[];
     for(const variant of ['ambient','headers','replay'] as const){
      if(controller.signal.aborted)fail('cancelled');

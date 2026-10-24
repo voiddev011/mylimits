@@ -59,11 +59,6 @@ test('coalescing and late disconnected generations cannot accept a new quota',as
  f.set(changeConnection(f.read(),f.connections[0]!,{enabled:false,status:'disabled'},true));wait.resolve();await Promise.all([a,b]);
  assert.equal(f.read().accounts[0]!.updatedAt,now-60000);assert.equal(f.read().accounts[0]!.connection,'inactive');assert.equal(f.history.length,0);
 });
-test('connection refresh respects persisted waits and never sends imported data to the provider reader',async()=>{
- const f=await fixture();f.read().connections.find(c=>c.id===f.connections[0])!.nextRetryAt=now+60000;
- f.read().connections.find(c=>c.id===f.connections[1])!.kind='snapshot-import';
- await Promise.all(f.connections.map(id=>f.refresh(id,'manual')));assert.equal(f.calls.length,0);
-});
 test('three consecutive saved-source 401s park only that source and retain its original reading time',async()=>{
  const f=await fixture(),id=f.connections[0]!,before=structuredClone(f.read().accounts),peer=structuredClone(f.read().connections.find(c=>c.id===f.connections[1]));let requests=0;
  f.port.cookieState=async()=>{throw Error('Vault must never inspect ambient authentication')};

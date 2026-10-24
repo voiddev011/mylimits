@@ -11,14 +11,12 @@ export interface StoragePort { get(keys: string | string[]): Promise<Record<stri
 const lifecycle: Record<string,ConnectionStatus>={active:'active',inactive:'disabled','signed-out':'needs-auth','waiting-for-tab':'needs-tab',unavailable:'unavailable',error:'error',disabled:'disabled',checking:'checking'};
 export function migrateV1(raw: unknown): Store {
  const old=V1StoreSchema.parse(raw); const base=emptyStore(old.installSalt);
- const next:Store={...base,...old,version:2,providers:{...base.providers,...old.providers,grok:{...old.providers.grok,readingMode:'activity'},perplexity:{...old.providers.perplexity,readingMode:'activity'}},settings:{...base.settings,...old.settings},connections:base.connections,
-  accounts:old.accounts.map((a,i)=>({...a,order:i,pinned:false,pinnedMeterIds:[],snoozedUntil:null,workspaceId:null})), snapshots:[],workspaces:[],historyIssue:null};
+ const next:Store={...base,...old,version:2,providers:{...base.providers,claude:old.providers.claude,chatgpt:old.providers.chatgpt},settings:{...base.settings,...old.settings},connections:base.connections,
+  accounts:old.accounts.filter(a=>(a.provider==='claude'||a.provider==='chatgpt')&&!a.companionProfile).map((a,i)=>({...a,provider:a.provider as Store['accounts'][number]['provider'],order:i,pinned:false,pinnedMeterIds:[],snoozedUntil:null,workspaceId:null})), snapshots:[],workspaces:[],historyIssue:null};
  next.connections=next.connections.map(c=>{const p=c.provider==='cursor'?undefined:old.providers[c.provider];if(!p)return c;return {...c,enabled:p.enabled,status:lifecycle[p.status]??'unavailable',accountId:p.activeAccountId,
   lastAttemptAt:p.checkedAt,lastSuccessAt:old.accounts.find(a=>a.id===p.activeAccountId)?.updatedAt??null,nextRetryAt:p.nextRetryAt,failures:p.failures,message:p.message};});
  for(const a of next.accounts){
-  const id=a.companionProfile?`companion:${a.companionProfile}`:`website:${a.provider}`;
-  if(a.companionProfile)next.connections.push({id,provider:a.provider,kind:'companion',accountId:a.id,workspaceId:null,workspaceIds:[],profileId:a.companionProfile,
-   enabled:a.connection!=='inactive',status:lifecycle[a.connection]??'unavailable',generation:0,lastAttemptAt:null,lastSuccessAt:a.updatedAt,nextRetryAt:null,failures:0,message:null});
+  const id=`website:${a.provider}`;
   if(a.updatedAt>0)next.snapshots.push({schemaVersion:2,snapshotId:`legacy:${a.id}`,providerId:a.provider,accountId:a.id,connectionId:id,workspaceId:null,
    observedAt:a.updatedAt,receivedAt:a.updatedAt,connectorVersion:'legacy-v1',meters:a.meters.map(m=>({...m,observedAt:a.updatedAt,connectionId:id}))});
  }

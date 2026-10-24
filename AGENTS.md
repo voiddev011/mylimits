@@ -1,21 +1,19 @@
 # Agent rules for MyLimits
 
-Plan: docs/MYLIMITS-PERSISTENT-ACCOUNTS-PLAN-v2.md. Follow §0 rules 1–12 and every [R2] note.
+Task U1 replaces the archived persistent-accounts execution sequence.
+Project Markdown belongs directly in docs/ (this instruction file is the exception).
 
-## Commands
-- Install: `npm ci` (Node 24+).
-- Fast loop: `npm run typecheck && npm test`.
-- Before reporting done: `npm run check`, then `npm run test:browser`
-  (after `npx playwright install chromium`). If Chromium cannot run in your
-  environment, say so in the report. Never skip silently.
-
-## Hard rules
-- One task group (§11.1) per task, one branch, one PR into feat/persistent-accounts.
-- Never log, store in Store, export or sync a secret (cookie values, tokens, ciphertext).
-- Schema changes additive; Store.version stays 2; add a migration test.
-- No new dependencies unless the plan says so.
-- Register new test files in scripts/run-tests.mjs.
-- Inject browser APIs into new platform modules; test with fakes; no live provider traffic.
-- Never touch feature/desktop-independent-accounts.
-- Stop and report if the plan contradicts the code.
-- PR description = handoff report in plan §11.3.
+- Preserve user changes and work on a task branch; PR into main.
+- No new dependencies or features during simplification.
+- Keep Claude, ChatGPT/Codex and Cursor website tracking, diagnostics, backoff,
+  sign-in signals, temporary-tab recovery, history and gated saved-sign-in code.
+- Keep every saved-sign-in provider policy off; never infer live provider behavior
+  from fixtures. Never log, expose or export credentials/ciphertext.
+- Store.version stays 2. Compatibility cleanup must preserve remaining accounts,
+  aliases/preferences/history and retry safely after interruption.
+- Inject browser APIs into new platform modules. No live provider traffic in tests.
+- Register new unit test files in scripts/run-tests.mjs.
+- Before reporting done: npm run check, then npm run test:browser.
+- Handoff PR body includes changed/deleted files, actual checks, migration behavior,
+  permission list before/after, limitations and manual checks.
+- Never modify archive/pre-simplify or feature/desktop-independent-accounts.

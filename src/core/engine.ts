@@ -67,26 +67,6 @@ export function markProvider(store: Store, provider: ProviderId, status: Failure
   return markConnection(store,websiteId(provider),status,message,now);
 }
 
-export function recordObservation(store: Store, provider: ProviderId, id: string, eventId: string, now: number): Store {
-  if (store.observationLedger.includes(eventId) || store.providers[provider].activeAccountId !== id) return store;
-  const account = store.accounts.find(item => item.id === id && item.connection === 'active');
-  if (!account) return store;
-  const start = new Date(now);
-  start.setUTCHours(0, 0, 0, 0);
-  const resetsAt = start.getTime() + 86_400_000;
-  const existing = account.meters.find(meter => meter.id === 'browser-requests');
-  const used = existing?.resetsAt === resetsAt ? (existing.used ?? 0) + 1 : 1;
-  const meter: Meter = {
-    id: 'browser-requests', label: 'Requests observed today (UTC)', scope: 'local', evidence: 'observed',
-    usedPercent: null, used, total: null, unit: 'requests', resetsAt,
-    source: 'This browser only. Request count is not an account quota.', observedAt: now, connectionId: `website:${provider}`,
-  };
-  return { ...store,
-    accounts: store.accounts.map(item => item.id === id ? { ...item, meters: [...item.meters.filter(m => m.id !== meter.id), meter] } : item),
-    snapshots: store.snapshots.map(s => s.accountId === id && s.connectionId === `website:${provider}` ? { ...s, snapshotId: `observation:${eventId}`, receivedAt: now, observedAt: s.meters.some(m => m.evidence === 'reported') ? s.observedAt : now, meters: [...s.meters.filter(m => m.id !== meter.id), meter] } : s),
-    observationLedger: [...store.observationLedger, eventId].slice(-300),
-  };
-}
 
 export interface LimitAlert { id: string; title: string; message: string; accountId: string; meterId: string; ledgerKey: string; kind: 'low' | 'reset'; }
 export function collectAlerts(store: Store, now: number): { store: Store; alerts: LimitAlert[] } {

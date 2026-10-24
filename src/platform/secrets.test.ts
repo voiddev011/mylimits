@@ -7,7 +7,6 @@ import { vaultId } from '../core/connection-id';
 import { toPublicState } from '../core/public';
 import { diagnostics } from '../core/presentation';
 import { historyPoint,exportReadings } from '../core/history-data';
-import { syncItem } from '../core/sync-contracts';
 import { createRequestDiagnostics,type DiagnosticInput } from './diagnostics';
 const secret='FICTIONAL_C11_COOKIE_MUST_STAY_PRIVATE',slot='10000000-0000-4000-8000-000000000001',now=1800000000000;
 async function fixture(){
@@ -20,11 +19,11 @@ async function fixture(){
  return {port,vault,data,state};
 }
 function safe(value:unknown){const text=typeof value==='string'?value:JSON.stringify(value);for(const field of [secret,'ciphertext','nonce'])assert.ok(!text.includes(field),`Output exposed a private field: ${field===secret?'fixture value':field}`);}
-test('separate encrypted credentials never enter Store, public state, JSON/CSV exports or sync payloads',async()=>{
+test('separate encrypted credentials never enter Store, public state, JSON/CSV exports ',async()=>{
  const f=await fixture();assert.ok(!JSON.stringify(f.data).includes(secret));assert.deepEqual(Object.keys(f.data),[VAULT_KEY]);
  safe(f.state);safe(toPublicState(f.state));safe(await f.vault.listVault());
+ assert.equal((await f.vault.getVault('10000000-0000-4000-8000-000000000001'))?.payload.cookies[0]?.value,secret);
  for(const format of ['json','csv'] as const)safe(exportReadings(f.state.accounts,f.state.snapshots.map(historyPoint),format,now).text);
- safe(syncItem(f.state.accounts[0]!,f.state.snapshots[0]!));assert.equal((await f.vault.getVault(slot))!.payload.cookies[0]!.value,secret);
 });
 test('request and support diagnostics discard credential-bearing headers, query text and unknown fields',async()=>{
  const f=await fixture(),request=createRequestDiagnostics({now:()=>now});

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { emptyStore, remainingPercent, isFresh, type Meter } from './model';
-import { accountId, applySnapshot, badge, collectAlerts, markProvider, recordObservation, type Snapshot } from './engine';
+import { accountId, applySnapshot, badge, collectAlerts, markProvider,  type Snapshot } from './engine';
 
 const NOW = Date.parse('2026-10-14T10:00:00Z');
 const meter = (usedPercent: number | null = 80, overrides: Partial<Meter> = {}): Meter => ({
@@ -118,29 +118,6 @@ test('failed refresh preserves the last reading and suppresses its badge', () =>
   assert.equal(failed.providers.claude.activeAccountId, null);
   assert.equal(badge(failed, NOW + 1000).text, '');
   assert.equal(collectAlerts(failed, NOW + 1000).alerts.length, 0);
-});
-test('observation retries are deduplicated and counts restart at UTC midnight', () => {
-  let store = withAccount([]);
-  store = recordObservation(store, 'claude', 'claude:first', 'event-a', NOW);
-  store = recordObservation(store, 'claude', 'claude:first', 'event-a', NOW);
-  assert.equal(store.accounts[0]!.meters[0]!.used, 1);
-  store = recordObservation(store, 'claude', 'claude:first', 'event-b', NOW + 1000);
-  assert.equal(store.accounts[0]!.meters[0]!.used, 2);
-  assert.equal(remainingPercent(store.accounts[0]!.meters[0]!), null);
-  store = recordObservation(store, 'claude', 'claude:first', 'event-c', NOW + 86400_000);
-  assert.equal(store.accounts[0]!.meters[0]!.used, 1);
-});
-test('observations cannot mutate another account or a disabled source', () => {
-  const store = withAccount([]);
-  assert.deepEqual(recordObservation(store, 'claude', 'claude:other', 'event-a', NOW), store);
-  const disabled = markProvider(store, 'claude', 'disabled', 'Tracking off', NOW);
-  assert.deepEqual(recordObservation(disabled, 'claude', 'claude:first', 'event-a', NOW), disabled);
-});
-test('reported refresh does not erase independent local observations', () => {
-  let store = recordObservation(withAccount(), 'claude', 'claude:first', 'event-a', NOW);
-  store = applySnapshot(store, 'claude', 'claude:first', snapshot([meter(10)]), NOW + 1000);
-  assert.equal(store.accounts[0]!.meters.length, 2);
-  assert.equal(store.accounts[0]!.meters.find(meter => meter.evidence === 'observed')!.used, 1);
 });
 test('badge reflects the most constrained fresh reported allowance, not summed percentages', () => {
   const store = withAccount([meter(30), meter(85, { id: 'weekly' })]);

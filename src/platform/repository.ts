@@ -1,16 +1,17 @@
 import { browser } from 'wxt/browser';
 import { type Store } from '../core/model';
 import { StoreSchema } from '../core/schema';
+import { cleanupRetiredState } from '../core/simplify-cleanup';
 import { toPublicState } from '../core/public';
 
 import { initializeV2, STATE_V2 } from '../core/migrations';
-import { ensureHistory } from './history';
+import { ensureHistory,removeRetiredHistory } from './history';
 const KEY = STATE_V2;
 let queue: Promise<unknown> = Promise.resolve();
 let initialisation: Promise<void> | undefined;
 
 export async function readStore(): Promise<Store> {
-  initialisation ??= initializeV2(browser.storage.local, ensureHistory, () => crypto.randomUUID()).catch(error => { initialisation = undefined; throw new Error(error instanceof Error ? `Saved data needs recovery: ${error.message}` : 'Saved data needs recovery.'); });
+  initialisation ??= cleanupRetiredState(browser.storage.local, async()=>initializeV2(browser.storage.local, ensureHistory, () => crypto.randomUUID()), removeRetiredHistory).catch(error => { initialisation = undefined; throw new Error(error instanceof Error ? `Saved data needs recovery: ${error.message}` : 'Saved data needs recovery.'); });
   await initialisation;
   const saved = (await browser.storage.local.get(KEY))[KEY];
   if (saved !== undefined) {

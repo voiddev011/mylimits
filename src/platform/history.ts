@@ -62,3 +62,12 @@ export async function pruneHistory(retentionDays:30|90){
   cursor.onsuccess=()=>{const row=cursor.result;if(row){row.delete();row.continue()}};tx.oncomplete=()=>resolve();tx.onerror=()=>reject(new Error('History retention could not be applied.'));
  });}finally{db.close()}
 }
+
+// First-load removal covers orphan rows by their retired source prefix as well.
+export async function removeRetiredHistory(ids:string[],sourceIds:string[]=[]):Promise<void>{
+ const removed=new Set(ids),sources=new Set(sourceIds),db=await database();try{await new Promise<void>((resolve,reject)=>{
+ const tx=db.transaction('readings','readwrite'),cursor=tx.objectStore('readings').openCursor();
+ cursor.onsuccess=()=>{const row=cursor.result;if(row){if(removed.has(row.value.accountId)||sources.has(row.value.connectionId)||/^(companion|cloud|snapshot-import|independent-local):/.test(row.value.connectionId??''))row.delete();row.continue()}};
+ tx.oncomplete=()=>resolve();tx.onerror=()=>reject(new Error('Retired history cleanup failed.'));tx.onabort=()=>reject(new Error('Retired history cleanup interrupted.'));
+ });}finally{db.close()}
+}

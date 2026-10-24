@@ -29,8 +29,6 @@ export interface RequestTrace {
 const paths: Partial<Record<ProviderId, readonly string[]>> = {
   chatgpt: ['/api/auth/session', '/backend-api/wham/usage'],
   claude: ['/api/account', '/api/organizations'],
-  grok: ['/rest/subscriptions', '/rest/rate-limits'],
-  perplexity: ['/api/auth/session', '/rest/rate-limit/all'],
   cursor: ['/api/auth/me', '/api/usage-summary'],
 };
 function safePath(provider: ProviderId, value: unknown): string {

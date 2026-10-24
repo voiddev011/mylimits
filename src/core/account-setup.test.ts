@@ -49,13 +49,6 @@ test('saving rejects an old setup, a switched identity, a disabled connection an
   assert.equal(setupCandidate(checked), null);
 });
 
-test('local activity cannot masquerade as another account; current account must be detected first', () => {
-  assert.throws(() => startAccountSetup(emptyStore('test'), 'gemini', 'detect', '', setupId, now), /browser activity/);
-  assert.throws(() => startAccountSetup(emptyStore('test'), 'chatgpt', 'another', '', setupId, now), /Detect your current account first/);
-  const store = emptyStore('test'); store.providers.grok.readingMode = 'activity';
-  assert.throws(() => startAccountSetup(store, 'grok', 'another', '', setupId, now), /browser activity/);
-});
-
 test('blank setup nickname preserves an existing alias and old V2 stores stay compatible', () => {
   let store = initial(); store.accounts[0]!.alias = 'Keep me';
   assert.equal(StoreSchema.parse(store).accountSetup, undefined);

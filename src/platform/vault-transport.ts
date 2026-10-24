@@ -41,9 +41,8 @@ export function createVaultTransport(port:VaultTransportPort){
   try{
   if(!port.enabled(provider))throw new VaultError('disabled');
   if(!VaultSlotSchema.safeParse(slot).success)throw new VaultError('invalid-slot');
-  if(!providerEndpointAllowed(provider,path)||request&&(provider!=='grok'||path!=='/rest/rate-limits'||request.method!=='POST')||provider==='grok'&&path==='/rest/rate-limits'&&!request)throw new VaultError('invalid-request');
+  if(!providerEndpointAllowed(provider,path)||request)throw new VaultError('invalid-request');
   for(const [name,value] of Object.entries(headers))if(name.toLowerCase()!=='authorization'||!/^Bearer [\x21-\x7E]{1,20000}$/.test(value))throw new VaultError('invalid-request');
-  if(request&&JSON.stringify(request.body).length>1000)throw new VaultError('invalid-request');
   await initialize();if(poisoned)throw new VaultError('rule-cleanup-failed');
   const host=new URL(providers[provider].home).hostname;
   return await port.lock(host,async()=>{
@@ -59,8 +58,8 @@ export function createVaultTransport(port:VaultTransportPort){
     await port.dnr.updateSessionRules({removeRuleIds:[rule.id],addRules:[rule]});
     if(signal?.aborted)throw new VaultError('cancelled');
     const response=await readJsonResponse(await port.request(new URL(path,providers[provider].home).href,{credentials:'omit',redirect:'error',
-     signal:AbortSignal.any([...(signal?[signal]:[]),AbortSignal.timeout(12000)]),method:request?.method??'GET',
-     headers:{...headers,...(request?{'Content-Type':'application/json'}:{})},body:request?JSON.stringify(request.body):undefined}));
+     signal:AbortSignal.any([...(signal?[signal]:[]),AbortSignal.timeout(12000)]),method:'GET',
+     headers}));
     await trace?.record({provider,path,transport:'vault',status:response.status,contentType:response.contentType,
      cfMitigated:response.cfMitigated,retryAfter:response.retryAfter,lastSuccessAt:trace.lastSuccessAt});
     const error=responseError(response,providers[provider].name,port.now());

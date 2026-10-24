@@ -1,6 +1,5 @@
-import type { IndependentMetadata } from './independent-contract';
 // Pure domain types and calculations. No browser APIs or package dependencies.
-export const PROVIDER_IDS = ['claude', 'chatgpt', 'gemini', 'grok', 'perplexity', 'cursor'] as const;
+export const PROVIDER_IDS = ['claude', 'chatgpt', 'cursor'] as const;
 export type ProviderId = typeof PROVIDER_IDS[number];
 export interface Meter {
   id: string;
@@ -24,7 +23,6 @@ export interface Account {
   id: string;
   provider: ProviderId;
   kind: 'account' | 'browser';
-  companionProfile?: string;
   alias: string;
   defaultName: string;
   plan: string | null;
@@ -55,7 +53,6 @@ export interface Settings {
   quietHours?: { enabled: boolean; start: string; end: string }; 
 }
 export interface ProviderState {
-  readingMode?: 'quota' | 'activity';
   enabled: boolean;
   status: 'disabled' | 'checking' | Connection;
   activeAccountId: string | null;
@@ -84,17 +81,16 @@ export interface Store {
   providers: Record<ProviderId, ProviderState>;
   settings: Settings;
   alertLedger: Record<string, { window: string; sent: number[] }>;
-  observationLedger: string[];
 }
 export function emptyStore(salt: string): Store {
   return {
     version: 2, installSalt: salt, accounts: [],
     connections: PROVIDER_IDS.map(provider => websiteConnection(provider)), workspaces: [], snapshots: [], historyIssue: null, resetLedger: {},
     providers: Object.fromEntries(PROVIDER_IDS.map(id => [id, {
-      readingMode: id==='grok'||id==='perplexity'?'quota':undefined, enabled: false, status: 'disabled', activeAccountId: null, checkedAt: null, message: null, failures: 0, nextRetryAt: null,
+      enabled: false, status: 'disabled', activeAccountId: null, checkedAt: null, message: null, failures: 0, nextRetryAt: null,
     }])) as Store['providers'],
     settings: { warningRemaining: 20, criticalRemaining: 5, desktopAlerts: false, refreshMinutes: 5, theme: 'system', textSize: 'standard', privacyMode: false, historyRetentionDays:30, displayMode: 'remaining', autoRecoverTab:true, resetAlerts: false, quietHours: { enabled: false, start: '22:00', end: '08:00' } },
-    alertLedger: {}, observationLedger: [],
+    alertLedger: {},
   };
 }
 export function accountName(account: Pick<Account, 'alias' | 'defaultName'>): string {
@@ -115,14 +111,14 @@ export function alertThresholds(account: Account, settings: Settings): { warning
   return { warning, critical: Math.min(warning, settings.criticalRemaining) };
 }
 
-export type ConnectionKind = 'website' | 'vault' | 'companion' | 'independent-local' | 'cloud' | 'snapshot-import';
+export type ConnectionKind = 'website' | 'vault';
 export type ConnectionStatus = 'disabled' | 'checking' | 'active' | 'needs-auth' | 'needs-tab' | 'unavailable' | 'offline' | 'error';
 export interface ConnectionRecord {
   id: string; provider: ProviderId; kind: ConnectionKind; accountId: string | null;
   workspaceId: string | null; workspaceIds: string[]; enabled: boolean;
   status: ConnectionStatus; generation: number; lastAttemptAt: number | null;
   lastSuccessAt: number | null; nextRetryAt: number | null; failures: number;
-  message: string | null; profileId?: string; independent?: IndependentMetadata;
+  message: string | null; profileId?: string;
   authFailures?:number;
   savedSignIn?:{method:'private'|'current';notAfter:number|null};
 }

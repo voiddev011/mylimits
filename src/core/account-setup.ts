@@ -12,9 +12,6 @@ export function setupConnectionId(setup:AccountSetup):string|null{
 export function startAccountSetup(store: Store, provider: ProviderId, mode: AccountSetup['mode'], nickname: string, id: string, now: number,options:Pick<AccountSetup,'method'|'slotId'>={}): Store {
   const method=options.method??'ambient';
   if(method==='ambient'&&store.accountSetup?.method==='private')throw new Error('Finish or cancel saved sign-in setup first.');
-  if (provider === 'gemini' || method==='ambient'&&store.providers[provider].readingMode === 'activity') {
-    throw new Error('This source observes browser activity, not separate account identities. Choose account quota tracking first.');
-  }
   const connectionId=method==='private'&&options.slotId?vaultId(provider,options.slotId):websiteId(provider);
   const connection=store.connections.find(c=>c.id===connectionId&&c.provider===provider);
   if(method==='private'&&(!options.slotId||connection?.kind!=='vault'))throw new Error('Saved sign-in setup is not available for this slot.');
