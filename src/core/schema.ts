@@ -82,6 +82,7 @@ export const SettingsSchema: z.ZodType<Settings> = z
   .object({
     warningRemaining: z.number().int().min(1).max(95),
     criticalRemaining: z.number().int().min(1).max(95),
+    alertDefaultsVersion: z.literal(1).optional(),
     desktopAlerts: z.boolean(),
     refreshMinutes: z.number().int().min(2).max(60),
     theme: z.enum(["system", "dark", "light"]),

@@ -55,6 +55,8 @@ export interface Account {
 export interface Settings {
   warningRemaining: number;
   criticalRemaining: number;
+  /** Marks the one-time migration to the current default alert thresholds. */
+  alertDefaultsVersion?: 1;
   /** Legacy storage key for browser notifications; not a native application. */
   desktopAlerts: boolean;
   refreshMinutes: number;
@@ -151,7 +153,8 @@ export function emptyStore(salt: string): Store {
     ) as Store["providers"],
     settings: {
       warningRemaining: 20,
-      criticalRemaining: 5,
+      criticalRemaining: 10,
+      alertDefaultsVersion: 1,
       desktopAlerts: false,
       refreshMinutes: 5,
       theme: "system",

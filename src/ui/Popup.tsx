@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ArrowUpRight, Bell, Plus, RefreshCw, Search, X } from "lucide-react";
 import {
   accountName,
+  alertThresholds,
   isFresh,
   remainingPercent,
   type Account,
@@ -51,6 +52,15 @@ export function Popup() {
           (a.alertRemaining ?? store.settings.warningRemaining),
       ),
     ).length ?? 0;
+  const criticalAccounts = store?.accounts.filter((a) =>
+    fresh(a).some((m) => {
+      const remaining = remainingPercent(m);
+      return (
+        remaining !== null &&
+        remaining <= alertThresholds(a, store.settings).critical
+      );
+    }),
+  ) ?? [];
   const nextReset = Math.min(
     ...(store?.accounts.flatMap((a) =>
       fresh(a).flatMap((m) => (m.resetsAt === null ? [] : [m.resetsAt])),
@@ -140,6 +150,18 @@ export function Popup() {
           </div>
         ) : (
           <>
+            {!!criticalAccounts.length && (
+              <div className="quick-critical" role="alert">
+                <strong>Critical limit reached</strong>
+                <span>
+                  {store.settings.privacyMode
+                    ? `${criticalAccounts.length} account${criticalAccounts.length === 1 ? " is" : "s are"} at a critical limit.`
+                    : `${criticalAccounts
+                        .map(accountName)
+                        .join(", ")} ${criticalAccounts.length === 1 ? "is" : "are"} at a critical limit.`}
+                </span>
+              </div>
+            )}
             {!!store.accounts.length && (
               <div className="quick-summary">
                 <button

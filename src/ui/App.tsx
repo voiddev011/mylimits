@@ -583,7 +583,10 @@ function Preferences({
       <div className="setting-line">
         <div>
           <strong>Notifications</strong>
-          <p>Fresh reported limits only. Once per threshold and window.</p>
+          <p>
+            Fresh reported limits only. Once per threshold and window. Enable
+            this for desktop pop-ups; critical warnings default to 10% remaining.
+          </p>
         </div>
         <button
           role="switch"
