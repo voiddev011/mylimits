@@ -50,7 +50,7 @@ key for compatibility; it is a browser notification preference, not an app route
 ## Checks and package maintenance
 
 Run `npm ci`, `npm run check`, `npx playwright install chromium`, then
-`npm run test:browser`. Latest completed baseline: 222 unit/platform tests and 69
+`npm run test:browser`. Latest completed baseline: 224 unit/platform tests and 70
 extension/site browser tests. Fixtures do not establish real provider behavior.
 
 Build variants with `npm run build:edge` / `npm run build:firefox`. Package using

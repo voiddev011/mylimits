@@ -4,7 +4,7 @@ import { webcrypto } from "node:crypto";
 import { parseCopilot, copilotIdentity } from "../core/copilot";
 import { readCopilot } from "./copilot";
 import { createTokenVault, TOKEN_KEY } from "./token-vault";
-import { createCopilotAccounts } from "./copilot-accounts";
+import { createCopilotAccounts, CopilotAccountError } from "./copilot-accounts";
 import { emptyStore } from "../core/model";
 import { StoreSchema } from "../core/schema";
 import { toPublicState } from "../core/public";
@@ -281,4 +281,107 @@ test("token vault fails closed on corrupt storage and sanitizes browser/key-stor
       action(),
       (e) => e instanceof Error && !e.message.includes(secret),
     );
+});
+
+test("another token for the same GitHub identity reports a duplicate without overwriting the first account", async () => {
+  const f = await tokenFixture();
+  let state = emptyStore("duplicate-test"),
+    i = 0;
+  const service = createCopilotAccounts({
+    readStore: async () => state,
+    updateStore: async (fn) => {
+      const result = fn(state);
+      state = StoreSchema.parse(result.store);
+      return result.value;
+    },
+    tokens: f.vault,
+    uuid: () => `30000000-0000-4000-8000-${String(++i).padStart(12, "0")}`,
+    now: () => now,
+    cancel: () => {},
+    accepted: async () => {},
+    permitted: async () => true,
+    lock: async (_, fn) => fn(),
+    request: async (url) =>
+      response(
+        url.includes("/usage?") ? usage([row(12)]) : { id: 1, login: "alice" },
+      ),
+  });
+  await service.connect(secret);
+  state.accounts[0]!.alias = "Personal";
+  const before = structuredClone(state),
+    encrypted = structuredClone(f.data);
+  await assert.rejects(
+    service.connect(secret + "DUPLICATE"),
+    (e) =>
+      e instanceof CopilotAccountError &&
+      e.code === "duplicate-account" &&
+      !e.message.includes(secret),
+  );
+  assert.deepEqual(state, before);
+  assert.deepEqual(f.data, encrypted);
+  assert.equal(state.accounts.length, 1);
+  assert.equal(
+    await f.vault.get(
+      state.connections.find((c) => c.kind === "copilot")!.profileId!,
+    ),
+    secret,
+  );
+});
+test("simultaneous additions of one GitHub identity keep one connection and erase the losing token", async () => {
+  let state = emptyStore("duplicate-race"),
+    i = 0,
+    writes = 0,
+    accepted = 0;
+  const tokens = new Map<string, string>();
+  let release!: () => void;
+  const ready = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const service = createCopilotAccounts({
+    readStore: async () => structuredClone(state),
+    updateStore: async (fn) => {
+      const result = fn(state);
+      state = StoreSchema.parse(result.store);
+      return result.value;
+    },
+    tokens: {
+      put: async (slot, token) => {
+        tokens.set(slot, token);
+        if (++writes === 2) release();
+        await ready;
+      },
+      delete: async (slot) => {
+        tokens.delete(slot);
+      },
+    },
+    uuid: () => `40000000-0000-4000-8000-${String(++i).padStart(12, "0")}`,
+    now: () => now,
+    cancel: () => {},
+    accepted: async () => {
+      accepted++;
+    },
+    permitted: async () => true,
+    lock: async (_, fn) => fn(),
+    request: async (url) =>
+      response(
+        url.includes("/usage?") ? usage([row(12)]) : { id: 1, login: "alice" },
+      ),
+  });
+  const result = await Promise.allSettled([
+    service.connect(secret),
+    service.connect(secret + "OTHER"),
+  ]);
+  assert.equal(result.filter((r) => r.status === "fulfilled").length, 1);
+  const error = result.find(
+    (r) => r.status === "rejected",
+  ) as PromiseRejectedResult;
+  assert.ok(error.reason instanceof CopilotAccountError);
+  assert.equal(error.reason.code, "duplicate-account");
+  assert.equal(state.accounts.length, 1);
+  assert.equal(state.connections.filter((c) => c.kind === "copilot").length, 1);
+  assert.equal(tokens.size, 1);
+  assert.equal(accepted, 1);
+  assert.ok(
+    tokens.has(state.connections.find((c) => c.kind === "copilot")!.profileId!),
+  );
 });

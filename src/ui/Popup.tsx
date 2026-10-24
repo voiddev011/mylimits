@@ -246,6 +246,18 @@ export function Popup() {
                 );
               })}
             </div>
+            {store.accounts.some((a) => a.provider === "copilot") && (
+              <div className="quick-provider-add">
+                <button
+                  className="text-button"
+                  disabled={busy || demo}
+                  onClick={() => dashboard("add-copilot")}
+                >
+                  <Plus size={14} />
+                  Add another GitHub account
+                </button>
+              </div>
+            )}
             {!store.accounts.length && (
               <div className="quick-empty">
                 <Gauge size={29} />

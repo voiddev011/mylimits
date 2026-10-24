@@ -55,7 +55,7 @@ function AccountDetails({
   busy,
   now,
   connect,
-  saveSignIn,
+  addAccount,
 }: {
   account: Account;
   store: PublicStore;
@@ -63,7 +63,7 @@ function AccountDetails({
   busy: boolean;
   now: number;
   connect: (p: ProviderId, on: boolean) => Promise<void>;
-  saveSignIn: (p: ProviderId) => void;
+  addAccount: (p: ProviderId) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [alias, setAlias] = useState(account.alias);
@@ -167,6 +167,16 @@ function AccountDetails({
           </button>
         </div>
       )}
+      {account.provider === "copilot" && (
+        <button
+          className="button button--small"
+          disabled={busy}
+          onClick={() => addAccount("copilot")}
+        >
+          <Plus size={15} />
+          Add another GitHub account
+        </button>
+      )}
       <div className="detail-meters">
         {account.meters.map((m) => (
           <div className="detail-meter" key={`${m.scope}/${m.id}`}>
@@ -251,7 +261,7 @@ function AccountDetails({
                     <button
                       className="button button--small"
                       disabled={busy}
-                      onClick={() => saveSignIn(c.provider)}
+                      onClick={() => addAccount(c.provider)}
                     >
                       Save separate sign-in
                     </button>
@@ -285,6 +295,7 @@ function AccountDetails({
             {c.kind === "copilot" && (
               <CopilotSettings
                 connectionId={c.id}
+                accountId={account.id}
                 allowance={c.copilotAllowance ?? null}
                 run={run}
                 busy={busy}
@@ -437,7 +448,7 @@ function AccountRow({
   run,
   busy,
   connect,
-  saveSignIn,
+  addAccount,
 }: {
   account: Account;
   store: PublicStore;
@@ -447,7 +458,7 @@ function AccountRow({
   run: Run;
   busy: boolean;
   connect: (p: ProviderId, on: boolean) => Promise<void>;
-  saveSignIn: (p: ProviderId) => void;
+  addAccount: (p: ProviderId) => void;
 }) {
   const pinned =
     account.pinnedMeterIds?.flatMap(
@@ -510,7 +521,7 @@ function AccountRow({
           busy={busy}
           now={now}
           connect={connect}
-          saveSignIn={saveSignIn}
+          addAccount={addAccount}
         />
       )}
     </article>
@@ -819,8 +830,12 @@ export function App({
       ? (location.hash.slice(1) as Page)
       : "overview",
   );
-  const [adding, setAdding] = useState(location.hash === "#add");
-  const [addingProvider, setAddingProvider] = useState<ProviderId | null>(null);
+  const [adding, setAdding] = useState(
+    location.hash === "#add" || location.hash === "#add-copilot",
+  );
+  const [addingProvider, setAddingProvider] = useState<ProviderId | null>(
+    location.hash === "#add-copilot" ? "copilot" : null,
+  );
   const [expanded, setExpanded] = useState<string | null>(initial);
   const [query, setQuery] = useState("");
   const [lowOnly, setLowOnly] = useState(false);
@@ -845,7 +860,14 @@ export function App({
       const next = location.hash.slice(1);
       if (["overview", "accounts", "history", "settings"].includes(next))
         setPage(next as Page);
-      if (next === "add") setAdding(true);
+      if (next === "add") {
+        setAddingProvider(null);
+        setAdding(true);
+      }
+      if (next === "add-copilot") {
+        setAddingProvider("copilot");
+        setAdding(true);
+      }
       if (next === "guide") setPage("overview");
     };
     window.addEventListener("hashchange", navigate);
@@ -925,7 +947,7 @@ export function App({
       run={run}
       busy={busy}
       connect={connect}
-      saveSignIn={(provider) => {
+      addAccount={(provider) => {
         setAddingProvider(provider);
         setAdding(true);
       }}
@@ -1094,6 +1116,19 @@ export function App({
                       >
                         Low only
                       </button>
+                      {store.accounts.some((a) => a.provider === "copilot") && (
+                        <button
+                          className="button button--small"
+                          disabled={busy || demo}
+                          onClick={() => {
+                            setAddingProvider("copilot");
+                            setAdding(true);
+                          }}
+                        >
+                          <Plus size={15} />
+                          Add another GitHub account
+                        </button>
+                      )}
                       <details className="overview-filters">
                         <summary>
                           Filters
@@ -1220,7 +1255,11 @@ export function App({
                         </span>
                       </div>
                       <button
-                        className="icon-button"
+                        className={
+                          p === "copilot"
+                            ? "button button--small"
+                            : "icon-button"
+                        }
                         aria-label={`Add ${providers[p].name} account`}
                         disabled={busy}
                         onClick={() => {
@@ -1229,6 +1268,7 @@ export function App({
                         }}
                       >
                         <Plus size={20} />
+                        {p === "copilot" && <span>Add account</span>}
                       </button>
                     </div>
                     <details className="connection-help">

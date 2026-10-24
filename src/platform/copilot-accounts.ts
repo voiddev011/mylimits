@@ -17,6 +17,17 @@ interface Port {
   accepted(account: string, source: string): Promise<void>;
   lock<T>(id: string, fn: () => Promise<T>): Promise<T>;
 }
+export class CopilotAccountError extends Error {
+  readonly code: "duplicate-account" | "wrong-account";
+  constructor(code: "duplicate-account" | "wrong-account") {
+    super(
+      code === "duplicate-account"
+        ? "This GitHub account is already connected. Create a token for your other GitHub account, or replace the existing token."
+        : "This token belongs to another GitHub account. Add it as a new account instead.",
+    );
+    this.code = code;
+  }
+}
 /** Tokens are passed directly to the encrypted vault; never materialized in Store. */
 export function createCopilotAccounts(p: Port) {
   async function disconnect(id: string) {
@@ -73,12 +84,20 @@ export function createCopilotAccounts(p: Port) {
       initial.installSalt,
     );
     if (old?.accountId && old.accountId !== identity)
-      throw Error(
-        "This token belongs to another GitHub account. Add it as a new account instead.",
-      );
+      throw new CopilotAccountError("wrong-account");
+    const checkDuplicate = (s: Store) => {
+      if (
+        !old &&
+        s.connections.some(
+          (c) => c.kind === "copilot" && c.accountId === identity && c.enabled,
+        )
+      )
+        throw new CopilotAccountError("duplicate-account");
+    };
     // Fence in-flight quota reads before replacement; lifecycle mutations share a per-source lock.
     p.cancel(id);
     const generation = await p.updateStore((s) => {
+      checkDuplicate(s);
       const current = s.connections.find((c) => c.id === id);
       if (old && (!current || current.generation !== old.generation))
         throw Error("Connection changed. Try again.");
@@ -96,6 +115,7 @@ export function createCopilotAccounts(p: Port) {
     await p.tokens.put(slot, token);
     try {
       await p.updateStore((s) => {
+        checkDuplicate(s);
         const current = s.connections.find((c) => c.id === id);
         if (old && (!current || current.generation !== generation))
           throw Error("Connection changed. Try again.");

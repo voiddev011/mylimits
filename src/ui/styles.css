@@ -1205,14 +1205,9 @@ th {
   margin-top: 12px;
 }
 
-/* Official Octicons are monochrome; keep the Copilot mark legible in both themes. */
-:root[data-theme="dark"] .provider-mark img[src$="/copilot.svg"] {
-  filter: invert(1);
-}
-@media (prefers-color-scheme: dark) {
-  :root[data-theme="system"] .provider-mark img[src$="/copilot.svg"] {
-    filter: invert(1);
-  }
+/* Every logo tile stays light, including dark mode: keep the official Copilot mark black. */
+.provider-mark img[src$="/copilot.svg"] {
+  filter: none;
 }
 
 /* History: readable limits first, details and management second. */

@@ -210,3 +210,12 @@
 .quick-meters .meter-chip small {
   line-height: 1.25;
 }
+
+.quick-provider-add {
+  padding: 8px 14px;
+  border-top: 1px solid var(--line);
+}
+.quick-provider-add .text-button {
+  font-size: 0.8125rem;
+  min-height: 32px;
+}

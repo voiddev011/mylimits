@@ -162,10 +162,11 @@ test.describe("bounded temporary-tab recovery (fictional provider)", () => {
     );
     store.accounts[0]!.alias = "Personal saved";
     store.providers.claude.enabled = true;
-    Object.assign(
-      store.connections.find((c) => c.id === "website:claude")!,
-      { enabled: true, lastAttemptAt: null, nextRetryAt: null },
-    );
+    Object.assign(store.connections.find((c) => c.id === "website:claude")!, {
+      enabled: true,
+      lastAttemptAt: null,
+      nextRetryAt: null,
+    });
     await worker.evaluate(async (store) => {
       globalThis.fetch = async () =>
         new Response(null, {
@@ -324,10 +325,10 @@ test.describe("bounded temporary-tab recovery (fictional provider)", () => {
         "mylimits:state:v2"
       ] as Store;
       data.settings.autoRecoverTab = false;
-      Object.assign(
-        data.connections.find((c) => c.id === "website:claude")!,
-        { lastAttemptAt: null, nextRetryAt: null },
-      );
+      Object.assign(data.connections.find((c) => c.id === "website:claude")!, {
+        lastAttemptAt: null,
+        nextRetryAt: null,
+      });
       await chrome.storage.local.set({ "mylimits:state:v2": data });
     });
     await page.evaluate(() =>
@@ -2434,15 +2435,12 @@ test.describe("optional cookie signals (fictional cookies and provider)", () => 
     const page = await context.newPage();
     await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
     const store = emptyStore("fictional-c3-cookie-salt");
-    Object.assign(
-      store.connections.find((c) => c.id === "website:claude")!,
-      {
-        enabled: true,
-        status: "needs-auth",
-        lastAttemptAt: Date.now() - 60000,
-        nextRetryAt: Date.now() + 3600000,
-      },
-    );
+    Object.assign(store.connections.find((c) => c.id === "website:claude")!, {
+      enabled: true,
+      status: "needs-auth",
+      lastAttemptAt: Date.now() - 60000,
+      nextRetryAt: Date.now() + 3600000,
+    });
     Object.assign(store.providers.claude, {
       enabled: true,
       status: "signed-out",
@@ -2818,10 +2816,11 @@ test.describe("Copilot official API token connections (simulated)", () => {
     });
     const page = await context.newPage();
     await page.goto(`chrome-extension://${extensionId}/dashboard.html#add`);
-    async function add(token: string) {
-      await page
-        .getByRole("button", { name: "GitHub Copilot", exact: false })
-        .click();
+    async function add(token: string, chooseProvider = true) {
+      if (chooseProvider)
+        await page
+          .getByRole("button", { name: "GitHub Copilot", exact: false })
+          .click();
       await page.getByLabel("Fine-grained personal access token").fill(token);
       await page
         .getByRole("button", { name: "Connect GitHub Copilot", exact: true })
@@ -2833,16 +2832,33 @@ test.describe("Copilot official API token connections (simulated)", () => {
     const token = "github_pat_FICTIONAL_BROWSER_SECRET_FIRST";
     await add(token);
     await page
-      .getByRole("button", { name: "Add account", exact: true })
+      .locator(".overview-tools")
+      .getByRole("button", { name: "Add another GitHub account", exact: true })
       .click();
-    await add(token + "SECOND");
+    await expect(
+      page.getByRole("heading", {
+        name: "Add another GitHub account",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await add(token + "SECOND", false);
     await expect(page.locator(".account-row")).toHaveCount(2);
     await page.evaluate(
       () => (document.documentElement.dataset.theme = "dark"),
     );
     await expect(
       page.locator('.account-row img[src$="/copilot.svg"]').first(),
-    ).toHaveCSS("filter", "invert(1)");
+    ).toHaveCSS("filter", "none");
+    expect(
+      await page
+        .locator('.account-row img[src$="/copilot.svg"]')
+        .first()
+        .evaluate(
+          (img) =>
+            (img as HTMLImageElement).complete &&
+            (img as HTMLImageElement).naturalWidth > 0,
+        ),
+    ).toBe(true);
     await page.evaluate(
       () => (document.documentElement.dataset.theme = "light"),
     );
@@ -3069,11 +3085,9 @@ test("History groups accounts, filters ranges, exposes tooltips and reset lines,
   await expect(page.getByLabel("History account")).toHaveValue("");
   await expect(page.locator(".history-account")).toHaveCount(2);
   await page.getByRole("button", { name: "24 h", exact: true }).click();
-  const personal = page
-    .locator(".history-account")
-    .filter({
-      has: page.getByRole("heading", { name: "Personal", exact: true }),
-    });
+  const personal = page.locator(".history-account").filter({
+    has: page.getByRole("heading", { name: "Personal", exact: true }),
+  });
   await expect(personal.locator(".history-limit")).toHaveCount(2);
   await expect(personal.locator(".history-current strong").first()).toHaveText(
     "62 % used",
@@ -3307,4 +3321,180 @@ test("History keeps unknown percentages unknown and masks account names when pri
   await expect(
     page.getByText("Turn privacy mode off to view or export history."),
   ).toBeVisible();
+});
+
+test.describe("Copilot add-another shortcut and account identity (simulated)", () => {
+  test.use({ grantedProviderOrigin: "https://api.github.com/*" });
+  test("popup opens a new-token flow; a duplicate stays an error and another identity adds its own card", async ({
+    context,
+    worker,
+    extensionId,
+  }) => {
+    await worker.evaluate(() => {
+      globalThis.fetch = async (input, options) => {
+        const url = new URL(String(input));
+        if (url.origin !== "https://api.github.com")
+          throw Error("Fixture blocks other network");
+        const second = new Headers(options?.headers)
+            .get("Authorization")
+            ?.endsWith("SECOND"),
+          id = second ? 2 : 1,
+          login = second ? "bob" : "alice";
+        return new Response(
+          JSON.stringify(
+            url.pathname === "/user"
+              ? { id, login }
+              : {
+                  user: login,
+                  timePeriod: {
+                    year: new Date().getUTCFullYear(),
+                    month: new Date().getUTCMonth() + 1,
+                  },
+                  usageItems: [
+                    {
+                      product: "Copilot",
+                      unitType: "requests",
+                      grossQuantity: id * 10,
+                    },
+                  ],
+                },
+          ),
+        );
+      };
+    });
+    const token = "github_pat_FICTIONAL_COPILOT_ADD_ACCOUNT";
+    const first = await context.newPage();
+    await first.goto(
+      `chrome-extension://${extensionId}/dashboard.html#add-copilot`,
+    );
+    await first.getByLabel("Fine-grained personal access token").fill(token);
+    await first
+      .getByRole("button", { name: "Connect GitHub Copilot", exact: true })
+      .click();
+    await expect(first.locator(".account-row")).toHaveCount(1);
+    const before = await worker.evaluate(
+      async () =>
+        (await chrome.storage.local.get("mylimits:state:v2"))[
+          "mylimits:state:v2"
+        ] as Store,
+    );
+    const popup = await context.newPage();
+    await popup.goto(`chrome-extension://${extensionId}/popup.html`);
+    await expect(
+      popup.getByRole("button", {
+        name: "Add another GitHub account",
+        exact: true,
+      }),
+    ).toBeVisible();
+    const opened = context.waitForEvent("page");
+    await popup
+      .getByRole("button", { name: "Add another GitHub account", exact: true })
+      .click();
+    const page = await opened;
+    await expect(page).toHaveURL(/dashboard\.html#add-copilot$/);
+    await expect(
+      page.getByRole("heading", {
+        name: "Add another GitHub account",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await page
+      .getByLabel("Fine-grained personal access token")
+      .fill(token + "DUPLICATE");
+    await page
+      .getByRole("button", { name: "Connect GitHub Copilot", exact: true })
+      .click();
+    await expect(page.getByRole("alert")).toContainText("already connected");
+    await expect(
+      page.getByLabel("Fine-grained personal access token"),
+    ).toHaveValue("");
+    const duplicate = await worker.evaluate(
+      async () =>
+        await chrome.storage.local.get([
+          "mylimits:state:v2",
+          "mylimits:tokens:v1",
+        ]),
+    );
+    expect((duplicate["mylimits:state:v2"] as Store).accounts).toEqual(
+      before.accounts,
+    );
+    expect(Object.keys(duplicate["mylimits:tokens:v1"] as object)).toHaveLength(
+      1,
+    );
+    expect(JSON.stringify(duplicate)).not.toContain(token);
+    await page
+      .getByLabel("Fine-grained personal access token")
+      .fill(token + "SECOND");
+    await page
+      .getByRole("button", { name: "Connect GitHub Copilot", exact: true })
+      .click();
+    await expect(page.locator(".account-row")).toHaveCount(2);
+    const after = await worker.evaluate(
+      async () =>
+        (await chrome.storage.local.get("mylimits:state:v2"))[
+          "mylimits:state:v2"
+        ] as Store,
+    );
+    const a = after.connections.find(
+      (c) => c.id === before.connections.find((c) => c.kind === "copilot")!.id,
+    )!;
+    expect(a.accountId).toBe(before.accounts[0]!.id);
+    expect(after.accounts.find((x) => x.id === a.accountId)!.meters).toEqual(
+      before.accounts[0]!.meters,
+    );
+    expect(
+      new Set(
+        after.connections
+          .filter((c) => c.kind === "copilot")
+          .map((c) => c.accountId),
+      ).size,
+    ).toBe(2);
+    await page.emulateMedia({ colorScheme: "dark" });
+    for (const theme of ["light", "dark", "system"]) {
+      await page.evaluate(
+        (t) => (document.documentElement.dataset.theme = t),
+        theme,
+      );
+      await expect(page.locator('img[src$="/copilot.svg"]').first()).toHaveCSS(
+        "filter",
+        "none",
+      );
+      await expect(page.locator(".provider-mark").first()).toHaveCSS(
+        "background-color",
+        "rgb(247, 248, 247)",
+      );
+    }
+    await page.evaluate(
+      () => (document.documentElement.dataset.theme = "dark"),
+    );
+    await page.screenshot({
+      path: "artifacts/copilot-multiple-accounts-dark.png",
+      fullPage: true,
+    });
+    const side = await context.newPage(),
+      fromSide = context.waitForEvent("page");
+    await side.goto(
+      `chrome-extension://${extensionId}/sidepanel.html#add-copilot`,
+    );
+    const sideSetup = await fromSide;
+    await expect(sideSetup).toHaveURL(/dashboard\.html#add-copilot$/);
+    await expect(
+      sideSetup.getByLabel("Fine-grained personal access token"),
+    ).toBeVisible();
+    await sideSetup.close();
+    await side.close();
+    await page
+      .getByRole("button", { name: "Details for GitHub Copilot · alice" })
+      .click();
+    await page
+      .locator(".account-detail")
+      .getByRole("button", { name: "Add another GitHub account", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", {
+        name: "Add another GitHub account",
+        exact: true,
+      }),
+    ).toBeVisible();
+  });
 });

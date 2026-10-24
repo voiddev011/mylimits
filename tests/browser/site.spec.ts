@@ -117,9 +117,9 @@ test("store configuration enables only valid HTTPS links", async ({ page }) => {
     await route.fulfill({
       contentType: "text/javascript",
       body: source
-        .replace("chrome: ''", "chrome: 'https://example.com/chrome'")
-        .replace("edge: ''", "edge: 'javascript:alert(1)'")
-        .replace("firefox: ''", "firefox: 'https://example.com/firefox'"),
+        .replace(/chrome:\s*['"]{2}/, 'chrome: "https://example.com/chrome"')
+        .replace(/edge:\s*['"]{2}/, 'edge: "javascript:alert(1)"')
+        .replace(/firefox:\s*['"]{2}/, 'firefox: "https://example.com/firefox"'),
     });
   });
   await page.goto(`${origin}/mylimits/index.html`);

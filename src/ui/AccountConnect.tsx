@@ -170,7 +170,12 @@ export function AccountConnect({
           ))}
         </div>
       ) : provider === "copilot" ? (
-        <CopilotConnect run={run} busy={busy || demo} onSaved={onClose} />
+        <CopilotConnect
+          run={run}
+          busy={busy || demo}
+          onSaved={onClose}
+          another={store.accounts.some((a) => a.provider === "copilot")}
+        />
       ) : pending?.method === "private" ? (
         <PrivateSignIn
           provider={provider}

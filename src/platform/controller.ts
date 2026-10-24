@@ -1,6 +1,6 @@
 import { createTokenVault } from "./token-vault";
 import { createIndexedDBVaultKeys } from "./vault-key-store";
-import { createCopilotAccounts } from "./copilot-accounts";
+import { createCopilotAccounts, CopilotAccountError } from "./copilot-accounts";
 import { readCopilot } from "./copilot";
 import { projectAccounts } from "../core/connections";
 import { browser } from "wxt/browser";
@@ -466,7 +466,8 @@ async function handle(
       try {
         await copilotAccounts.connect(command.token, command.connectionId);
       } catch (e) {
-        if (e instanceof AdapterError) throw e;
+        if (e instanceof AdapterError || e instanceof CopilotAccountError)
+          throw e;
         throw new Error(
           "Copilot connection could not be saved. Verify the token belongs to this account and try again.",
         );
