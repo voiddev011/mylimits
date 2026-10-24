@@ -16,7 +16,9 @@ are labelled assumptions, not provider-confirmed values. Independent saved GPT/
 Claude website sign-ins remain disabled. Copilot real-token acceptance is pending.
 
 The popup shows daily essentials. The dashboard adds aliases, preferences, privacy,
-notifications and History with charts, filters and CSV/JSON downloads.
+notifications and History with charts, filters and CSV/JSON downloads. Choose one
+limit with **Show on toolbar**, or use Preferences → Toolbar badge for Automatic
+or Off. Previews show each account’s first two limits; account pins remain available.
 
 - [Install or update](INSTALL.md)
 - [Launch: immediate beta or browser-store submission](LAUNCH.md)

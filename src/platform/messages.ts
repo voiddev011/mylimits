@@ -70,12 +70,7 @@ export const CommandSchema = z.discriminatedUnion("type", [
     type: z.literal("account-preferences"),
     accountId: z.string().min(1).max(240),
     pinned: z.boolean().optional(),
-    pinnedMeterIds: z.array(z.string().max(120)).max(10).optional(),
     snoozedUntil: z.number().finite().min(0).nullable().optional(),
-  }),
-  z.object({
-    type: z.literal("order"),
-    ids: z.array(z.string().min(1).max(240)).max(100),
   }),
   z.object({
     type: z.literal("disconnect"),

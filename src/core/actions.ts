@@ -81,27 +81,13 @@ export function setWorkspace(
 export function accountPreferences(
   store: Store,
   id: string,
-  patch: Pick<Partial<Account>, "pinned" | "pinnedMeterIds" | "snoozedUntil">,
+  patch: Pick<Partial<Account>, "pinned" | "snoozedUntil">,
 ): Store {
   const a = store.accounts.find((a) => a.id === id);
   if (!a) throw new Error("This account is no longer saved.");
-  if (patch.pinnedMeterIds?.some((id) => !a.meters.some((m) => m.id === id)))
-    throw new Error("A selected meter is not available for this account.");
   return {
     ...store,
     accounts: store.accounts.map((a) => (a.id === id ? { ...a, ...patch } : a)),
-  };
-}
-export function orderAccounts(store: Store, ids: string[]): Store {
-  if (
-    ids.length !== store.accounts.length ||
-    new Set(ids).size !== ids.length ||
-    ids.some((id) => !store.accounts.some((a) => a.id === id))
-  )
-    throw new Error("Account order changed. Reload and try again.");
-  return {
-    ...store,
-    accounts: store.accounts.map((a) => ({ ...a, order: ids.indexOf(a.id) })),
   };
 }
 export function forgetAccount(store: Store, id: string): Store {

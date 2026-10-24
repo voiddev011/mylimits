@@ -27,7 +27,6 @@ import {
   enableWebsite,
   setWorkspace,
   accountPreferences,
-  orderAccounts,
   forgetAccount,
   providerAccessInUse,
 } from "../core/actions";
@@ -156,9 +155,7 @@ async function renderBadge(): Promise<void> {
   await browser.action.setBadgeText({ text: value.text });
   await browser.action.setBadgeBackgroundColor({ color: value.color });
   await browser.action.setTitle({
-    title: value.text
-      ? `MyLimits · ${value.text} ${(await readStore()).settings.displayMode === "used" ? "used" : "left"} in the most constrained reported allowance`
-      : "MyLimits · your usage, in one place",
+    title: value.title,
   });
 }
 
@@ -551,12 +548,6 @@ async function handle(
       }));
       break;
     }
-    case "order":
-      await updateStore((store) => ({
-        store: orderAccounts(store, command.ids),
-        value: undefined,
-      }));
-      break;
     case "workspace":
       coordinator.cancel(command.connectionId);
       await updateStore((store) => ({
