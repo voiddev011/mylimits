@@ -17,7 +17,6 @@ import { historyPoint, exportReadings } from '../core/history-data';
 import { readStore, publicStore, updateStore, forgetLegacyAccount } from './repository';
 import { readHistory, readHistoryPage, readHistorySeries, pruneHistory, historyExport, clearHistory, removeHistory, saveHistory } from './history';
 import { CommandSchema, type Command } from './messages';
-import { startAccountSetup, saveAccountSetup } from '../core/account-setup';
 import { createRequestDiagnostics } from './diagnostics';
 import { createSessionCookies } from './session-cookies';
 import { createTabRecovery } from './bootstrap-tab';
@@ -113,6 +112,8 @@ export async function refreshProvider(provider:ProviderId,manual=false,reason:Re
   await Promise.allSettled(connections.map(c=>refreshConnection(c.id,manual,reason)));
 }
 async function refreshAll(manual=false,reason:RefreshReason=manual?'manual':'scheduled'):Promise<void>{
+  const setup=(await readStore()).accountSetup;
+  if(setup&&setup.method!=='private')await updateStore(store=>({store:store.accountSetup?.id===setup.id?{...store,accountSetup:null}:store,value:undefined}));
   await expiryWatchdog.check().catch(()=>{});
   const connections=(await readStore()).connections.filter(c=>c.enabled);
   const results=await Promise.allSettled([...connections.map(c=>refreshConnection(c.id,manual,reason))]);
@@ -148,18 +149,6 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
   switch (command.type) {
     case 'state': return publicStore();
     case 'request-diagnostics': return { version: 1, entries: await requestDiagnostics.list() };
-    case 'account-setup-start': {
-      if((await readStore()).accountSetup?.method==='private')throw new Error('Finish or cancel saved sign-in setup first.');
-      if (!await browser.permissions.contains({origins:[providers[command.provider].origin]})) throw new Error('Allow site access before detecting an account.');
-      await updateStore(store => ({store:startAccountSetup(store,command.provider,command.mode,command.nickname,crypto.randomUUID(),Date.now()),value:undefined}));
-      const state = await readStore();
-      if (!state.providers[command.provider].enabled) await setProvider(command.provider,true);
-      else void refreshConnection(websiteId(command.provider),true).catch(()=>{});
-      break;
-    }
-    case 'account-setup-save':
-      if((await readStore()).accountSetup?.method==='private')throw new Error('Saved sign-in requires explicit confirmation and consent.');
-      await updateStore(store => ({store:saveAccountSetup(store,command.setupId,command.accountId),value:undefined})); break;
     case 'account-setup-cancel':
       if((await readStore()).accountSetup?.method==='private')throw new Error('Use saved sign-in cancellation for this setup.');
       await updateStore(store => ({store:store.accountSetup?.id===command.setupId?{...store,accountSetup:null}:store,value:undefined})); break;

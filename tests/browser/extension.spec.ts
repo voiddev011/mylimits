@@ -423,50 +423,6 @@ test('Guide is removed and its legacy link lands on Overview without prompt tool
 });
 
 // Account setup is deliberately exercised through real extension messages and storage.
-test('legacy website setup resumes without becoming an independent connection', async ({context, worker, extensionId}) => {
-  await worker.evaluate(() => {
-    const scope=globalThis as typeof globalThis & {fixtureIdentity:string}; scope.fixtureIdentity='account-a';
-    const contains=chrome.permissions.contains.bind(chrome.permissions);
-    chrome.permissions.contains=async p=>p.origins?.includes('https://claude.ai/*')?true:contains(p);
-    globalThis.fetch=async input=>{
-      const path=new URL(String(input)).pathname;
-      const data=path==='/api/account'?{uuid:scope.fixtureIdentity}:path==='/api/organizations'?[{uuid:'fixture-org-'+scope.fixtureIdentity,name:'Personal space',capabilities:['chat']}]:{five_hour:{utilization:25,resets_at:new Date(Date.now()+3600000).toISOString()}};
-      return new Response(JSON.stringify(data),{status:200,headers:{'content-type':'application/json'}});
-    };
-  });
-  const page=await context.newPage(); await page.goto(`chrome-extension://${extensionId}/dashboard.html#add`);
-  await page.evaluate(()=>{chrome.permissions.request=async()=>true});
-   await page.getByRole('button',{name:/Claude \/ Claude Code/}).click();
-  await page.evaluate(()=>chrome.runtime.sendMessage({type:'account-setup-start',provider:'claude',mode:'detect',nickname:'Personal'}));
-  await expect(page.getByRole('button',{name:'Save detected account',exact:true})).toBeVisible();
-  await page.getByRole('button',{name:'Save detected account',exact:true}).click();
-  await expect(page.getByRole('button',{name:'Details for Personal',exact:true})).toBeVisible();
-  await page.locator('.app-footer').getByRole('button',{name:'Add account',exact:true}).click();
-  await page.getByRole('button',{name:/Claude \/ Claude Code/}).click();
-  await page.evaluate(()=>chrome.runtime.sendMessage({type:'account-setup-start',provider:'claude',mode:'another',nickname:'Work'}));
-  await expect(page.getByText('Uses the account signed into this browser.',{exact:false})).toBeVisible();
-  await expect(page.getByRole('button',{name:'Save detected account'})).toHaveCount(0);
-  await page.reload();
-  await page.getByRole('button',{name:'Continue setup',exact:true}).click();
-  await expect(page.getByText('Detecting this browser’s account',{exact:true})).toBeVisible();
-  await worker.evaluate(async()=>{
-    (globalThis as typeof globalThis & {fixtureIdentity:string}).fixtureIdentity='account-b';
-    const store=(await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store;
-    store.connections.find(c=>c.id==='website:claude')!.lastAttemptAt=null;
-    await chrome.storage.local.set({'mylimits:state:v2':store});
-  });
-  await page.getByRole('button',{name:'Check account',exact:true}).click();
-  await expect(page.getByRole('button',{name:'Save detected account',exact:true})).toBeVisible();
-  await page.getByRole('button',{name:'Save detected account',exact:true}).click();
-  await expect(page.getByRole('button',{name:'Details for Work',exact:true})).toBeVisible();
-  await expect(page.getByRole('button',{name:'Details for Personal',exact:true})).toBeVisible();
-  const saved=await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);
-  expect(saved.accounts).toHaveLength(2); expect(saved.accountSetup).toBeNull();
-  expect(saved.accounts.find(a=>a.alias==='Personal')!.connection).toBe('inactive');
-  expect(saved.accounts.find(a=>a.alias==='Work')!.connection).toBe('active');
-  expect(JSON.stringify(saved.accounts)).not.toContain('fixture-org'); // private workspace ids are absent from account records
-});
-
 test('popup opens the selected account in the full dashboard and keeps six rows visible',async({context,worker,extensionId})=>{
   const fixture={...emptyStore('compact-six'),accounts:demoState().accounts};
   fixture.accounts.push({...fixture.accounts[0]!,id:'sixth',alias:'Sixth account'});
@@ -606,7 +562,7 @@ test.describe('current website account',()=>{
   const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html#add`);
   await page.getByRole('button',{name:/Claude \/ Claude Code/}).click();await page.evaluate(()=>{chrome.permissions.request=async()=>true;});
   const before=context.pages().length;await page.getByRole('button',{name:'Use current browser login',exact:true}).click();
-  await expect(page.getByText('Detecting this browser’s account',{exact:true})).toBeVisible();
+  await expect(page.getByRole('region',{name:'Add an account'})).toHaveCount(0);
   expect(context.pages().length).toBe(before);expect(existing.url()).toBe('https://claude.ai/');
  });
 });
@@ -648,7 +604,7 @@ test.describe('request diagnostics (fictional providers only)', () => {
   await page.getByRole('button',{name:/Claude \/ Claude Code/}).click();
   await page.getByRole('button',{name:'Use current browser login',exact:true}).click();
   await page.getByRole('button',{name:'Continue without sign-in detection',exact:true}).click();
-  await expect(page.getByRole('button',{name:'Save detected account',exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Details for Claude account 1',exact:true})).toBeVisible();
   expect(await page.evaluate(()=>(window as typeof window & {permissionRequests:unknown[]}).permissionRequests)).toEqual([
    {origins:['https://claude.ai/*'],permissions:['cookies']},{origins:['https://claude.ai/*'],permissions:['cookies']},{origins:['https://claude.ai/*']},
   ]);
@@ -770,4 +726,27 @@ test('U1 first load deletes retired provider/source history and keys while retai
   expect(result.version).toBe(2);expect(result.accounts).toEqual(fixture.accounts);expect(result.rows.map(r=>r.accountId)).toEqual([fixture.accounts[0]!.id]);
   for(const key of ['mylimits:widget:v1','mylimits:sync:private:v1','mylimits:hosted:attempt:v1'])expect(result.keys).not.toContain(key);
  }finally{await reopened.close()}
+});
+
+test('website A B A is remembered automatically with separate cards and real history only',async({context,worker,extensionId})=>{
+ await worker.evaluate(()=>{
+  const state=globalThis as typeof globalThis&{switchIdentity:string};state.switchIdentity='A';
+  const contains=chrome.permissions.contains.bind(chrome.permissions);chrome.permissions.contains=async p=>p.origins?.includes('https://cursor.com/*')?true:contains(p);
+  globalThis.fetch=async input=>new Response(JSON.stringify(new URL(String(input)).pathname==='/api/auth/me'?{sub:state.switchIdentity}:{individualUsage:{plan:{autoPercentUsed:state.switchIdentity==='A'?30:80}}}),{headers:{'content-type':'application/json'}});
+ });
+ const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
+ await page.evaluate(()=>chrome.runtime.sendMessage({type:'enable',provider:'cursor',enabled:true}));
+ await expect(page.getByRole('button',{name:'Details for Cursor account 1',exact:true})).toBeVisible();
+ for(const identity of ['B','A']){
+  await worker.evaluate(async identity=>{(globalThis as typeof globalThis&{switchIdentity:string}).switchIdentity=identity;const s=(await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store;s.connections.find(c=>c.id==='website:cursor')!.lastAttemptAt=null;await chrome.storage.local.set({'mylimits:state:v2':s})},identity);
+  expect((await page.evaluate(()=>chrome.runtime.sendMessage({type:'refresh',provider:'cursor'}))).ok).toBe(true);
+ }
+ const s=await worker.evaluate(async()=>(await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);
+ expect(s.accounts).toHaveLength(2);expect(s.accounts.find(a=>a.defaultName==='Cursor account 1')!.connection).toBe('active');expect(s.accounts.find(a=>a.defaultName==='Cursor account 2')!.connection).toBe('inactive');
+ await expect(page.getByRole('button',{name:'Save detected account'})).toHaveCount(0);
+ await expect(page.getByText(/Remembered · last checked/)).toBeVisible();
+ await worker.evaluate(async()=>{const saved=(await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store;const b=saved.accounts.find(a=>a.defaultName==='Cursor account 2')!;b.meters[0]!.resetsAt=Date.now()-1000;await chrome.storage.local.set({'mylimits:state:v2':saved})});
+ await expect(page.getByText('Projected · Reset · full limit available',{exact:true})).toBeVisible();
+ const history=await page.evaluate(async id=>chrome.runtime.sendMessage({type:'history-page',accountId:id}),s.accounts[0]!.id);
+ expect(history.data.points.every((p:{meters:{evidence:string}[]})=>p.meters.every(m=>m.evidence==='reported'))).toBe(true);
 });

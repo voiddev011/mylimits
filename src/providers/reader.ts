@@ -4,7 +4,7 @@ import { providers } from './catalog';
 import { object, parseClaude, parseChatGPT } from './parsers';
 import { AdapterError } from './errors';
 import { parseCursor,cursorIdentity } from './additional';
-export interface ReaderOptions { workspaceRemoteId?: string | null; }
+export interface ReaderOptions { workspaceRemoteId?: string | null; allowWorkspaceSwitch?:boolean; }
 export interface QuotaRequest {method:'POST';body:Record<string,unknown>;}
 export type ReadJSON=(path:string,headers?:Record<string,string>,request?:QuotaRequest)=>Promise<unknown>;
 export async function readAccountProvider(provider:ProviderId,options:ReaderOptions,read:ReadJSON):Promise<Snapshot>{
@@ -20,7 +20,7 @@ export async function readAccountProvider(provider:ProviderId,options:ReaderOpti
  if(provider==='claude'){
   const account=await read('/api/account'); const organizations=await read('/api/organizations');
   const list=(Array.isArray(organizations)?organizations.map(object):[]).filter(o=>typeof o.uuid==='string'&&o.uuid.length>0&&o.uuid.length<=180&&(!Array.isArray(o.capabilities)||o.capabilities.includes('chat')));
-  const organization=options.workspaceRemoteId?list.find(o=>o.uuid===options.workspaceRemoteId):list[0];
+  const organization=options.workspaceRemoteId?(list.find(o=>o.uuid===options.workspaceRemoteId)??(options.allowWorkspaceSwitch?list[0]:undefined)):list[0];
   if(!organization)throw new AdapterError('unavailable',options.workspaceRemoteId?'The selected workspace is unavailable. Choose Default workspace and refresh.':'No eligible Claude workspace could be verified.',null,'scope');
   try{parseClaude(account,organization,{})}catch{throw new AdapterError('unavailable','Claude account identity could not be verified.',null,'identity')}
   const usage=await read(`/api/organizations/${encodeURIComponent(String(organization.uuid))}/usage`);

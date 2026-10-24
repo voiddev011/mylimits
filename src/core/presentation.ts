@@ -22,8 +22,9 @@ export function needsAttention(account: Account, settings: Settings, now: number
   return account.kind !== 'browser' && accountStatus(account, now, settings.refreshMinutes) !== 'Current';
 }
 export function accountStatusText(account:Account,store:PublicState,now:number):string{
-  const recovering=store.connections.some(c=>c.kind==='website'&&c.accountId===account.id&&c.enabled&&c.status==='checking'&&c.message==='Retrying in the background');
-  return recovering?'Retrying in the background':accountStatus(account,now,store.settings.refreshMinutes);
+  const current=store.connections.some(c=>c.enabled&&c.accountId===account.id);
+  const recovering=store.connections.some(c=>c.accountId===account.id&&c.message==='Retrying in the background');
+  return `${current?'Live':'Remembered'}${current?' · '+(recovering?'Retrying in the background':accountStatus(account,now,store.settings.refreshMinutes)):''}`;
 }
 export function connectionSource(kind:ConnectionKind):string{
  return kind==='website'?'Browser login':'Saved sign-in';

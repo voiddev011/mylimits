@@ -41,7 +41,7 @@ export function Popup() {
         const status = accountStatusText(account, store, now);
         const source = `${accountSource(account,store)}${account.provider==='chatgpt'?' · Codex':''}`;
         return <button className="quick-account" key={account.id} aria-label={`View ${accountName(account)} in full dashboard`} onClick={() => dashboard('overview', account.id)}>
-          <span className="quick-identity"><ProviderMark provider={account.provider}/><span className="quick-copy"><strong>{accountName(account)}</strong><small title={`${source ? source + ' · ' : ''}${status}${account.updatedAt ? ' · ' + age(account.updatedAt, now) : ''}`}>{source && `${source} · `}{status === 'Current' ? age(account.updatedAt, now) : status}{account.meters.length > 2 && ` · +${account.meters.length - 2} limits`}</small></span></span>
+          <span className="quick-identity"><ProviderMark provider={account.provider}/><span className="quick-copy"><strong>{accountName(account)}</strong><small title={`${source ? source + ' · ' : ''}${status}${account.updatedAt ? ' · ' + age(account.updatedAt, now) : ''}`}>{source && `${source} · `}{`${status} · last checked ${age(account.updatedAt,now)}`}{account.meters.length > 2 && ` · +${account.meters.length - 2} limits`}</small></span></span>
           <span className="quick-meters">{meters.map(m => <Reading key={`${m.scope}/${m.id}`} account={account} meter={m} settings={store.settings} now={now} compact/>)}{!meters.length && <span className="no-quota">{account.kind === 'browser' ? 'Local activity only' : 'Quota not reported'}</span>}</span>
         </button>;
       })}</div>

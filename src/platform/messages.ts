@@ -10,8 +10,6 @@ export const CommandSchema = z.discriminatedUnion('type', [
   PrivateStartSchema,PrivateSaveSchema,PrivateCancelSchema,PrivateCheckSchema,
   z.object({ type: z.literal('state') }),
   z.object({ type: z.literal('request-diagnostics') }).strict(),
-  z.object({ type: z.literal('account-setup-start'), provider: ProviderSchema, mode: z.enum(['detect','another']), nickname: z.string().trim().max(60) }),
-  z.object({ type: z.literal('account-setup-save'), setupId: z.string().uuid(), accountId: z.string().min(1).max(240) }),
   z.object({ type: z.literal('account-setup-cancel'), setupId: z.string().uuid() }),
   z.object({ type: z.literal('opened') }),
   z.object({type:z.literal('history-insights'),accountIds:z.array(z.string().min(1).max(240)).min(1).max(2),from:ms.optional(),to:ms.optional()}),

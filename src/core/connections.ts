@@ -9,7 +9,7 @@ export function projectAccounts(store: Store): Store {
   const accounts = store.accounts.map(account => {
     const sources = store.connections.filter(c => c.accountId === account.id);
     const readings = store.snapshots.filter(s => s.accountId === account.id);
-    if (!readings.length) return account;
+    if (!readings.length) return sources.some(c=>c.enabled)?account:{...account,connection:'inactive' as const};
     const live = (s: UsageSnapshot) => sources.some(c => c.id === s.connectionId && c.workspaceId === s.workspaceId && c.enabled && ['active','checking'].includes(c.status));
     const sorted = [...readings].sort((a,b) => Number(live(b))-Number(live(a)) || b.observedAt-a.observedAt);
     const chosen = sorted[0]!;
@@ -18,7 +18,7 @@ export function projectAccounts(store: Store): Store {
     const meters = sorted.filter(s => live(chosen) ? live(s) : true).flatMap(s => s.meters.map(m => ({ ...m, observedAt: m.observedAt ?? s.observedAt, connectionId: s.connectionId })))
       .filter(m => { const key = `${m.scope}/${m.id}`; if (seen.has(key)) return false; seen.add(key); return true; });
     return { ...account, meters, workspaceId: chosen.workspaceId, updatedAt: chosen.observedAt,
-      connection: connection ? legacyStatus(connection.status) : 'inactive' as const };
+      connection: connection?.accountId===account.id ? legacyStatus(connection.status) : 'inactive' as const };
   });
   return { ...store, accounts };
 }

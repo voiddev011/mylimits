@@ -13,3 +13,9 @@ The initial browser iteration used an outdated build and still contained deleted
 Required permissions remain storage, alarms, scripting and idle, plus Chromium sidePanel. Optional permissions reduce to notifications/cookies; optional origins reduce from six to the three retained providers. The separate evidence build keeps its explicit diagnostic permissions.
 
 The compatibility-only parser recognizes retired provider/kind names to delete their old records safely. Those names do not reintroduce providers or routes. Unknown/malformed current data still fails validation. Both account IDs and source IDs are journaled before rewriting state; cleanup retries on history failure.
+
+## U4 integration
+
+Auto-remembered website accounts and display-only reset projection are included.
+Website logins switched A → B → A retain both cards; only the current login is Live.
+Saved sign-ins remain off. See AUTO-REMEMBER.md; live provider behavior is unverified.
