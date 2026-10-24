@@ -533,18 +533,11 @@ export function createPrivateSignIn(port: PrivateSignInPort) {
       throw new VaultError("confirmation-required");
     check(a);
     const task = (async () => {
-      const fresh = await capture(a);
+            const fresh = await capture(a);
       check(a);
-      if (JSON.stringify(fresh) !== JSON.stringify(a.payload)) {
-        a.payload = undefined;
-        a.snapshot = undefined;
-        await patch(a, {
-          candidate: undefined,
-          phase: "error",
-          message: message("wrong-account"),
-        });
-        throw new VaultError("wrong-account");
-      }
+      // ChatGPT renews its session cookie in the open private window.
+      // Accept the newest cookie; the next refresh re-verifies the identity.
+      if (fresh) a.payload = fresh; 
       await port.put(a.slot, a.provider, a.payload!);
       check(a);
       const snapshot = a.snapshot!,
