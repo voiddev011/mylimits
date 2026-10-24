@@ -37,7 +37,7 @@ export function createConnectionRefresh(port:ConnectionRefreshPort){
    try{
     const switching=before.accountSetup&&setupConnectionId(before.accountSetup)===connectionId;
     const selected=switching?undefined:before.workspaces.find(w=>w.id===connection.workspaceId);
-    const snapshot=await port.read(connection,{workspaceRemoteId:selected?.remoteId,readingMode:connection.kind==='website'?before.providers[provider].readingMode:'quota'},signal,async()=>{
+    const snapshot=await port.read(connection,{workspaceRemoteId:selected?.remoteId,allowWorkspaceSwitch:connection.kind==='website',readingMode:connection.kind==='website'?before.providers[provider].readingMode:'quota'},signal,async()=>{
      await port.updateStore(store=>{
       if(!valid(store)||signal.aborted||store.settings.autoRecoverTab===false)throw new AdapterError('error','Refresh was cancelled.',null,'cancelled');
       return {store:{...store,connections:store.connections.map(c=>c.id===connectionId?{...c,message:'Retrying in the background'}:c)},value:undefined};

@@ -27,7 +27,7 @@ export function applySnapshot(store: Store, provider: ProviderId, id: string, sn
   const account: Account = {
     ...previous, id, provider, kind: snapshot.kind,
     alias: previous?.alias ?? '',
-    defaultName: snapshot.displayName,
+    defaultName: previous?.defaultName ?? (store.connections.find(c=>c.id===(options.connectionId??`website:${provider}`))?.kind==='website'&&['claude','chatgpt','cursor'].includes(provider)?`${provider==='chatgpt'?'ChatGPT':provider==='claude'?'Claude':'Cursor'} account ${Math.max(store.accounts.filter(a=>a.provider===provider).length,...store.accounts.filter(a=>a.provider===provider).map(a=>Number(a.defaultName.match(/account (\d+)$/)?.[1]??0)))+1}`:snapshot.displayName),
     plan: snapshot.plan,
     connection: 'active',
     meters: [...snapshot.meters, ...localMeters.filter(meter => !incomingIds.has(meter.id))],

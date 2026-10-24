@@ -69,12 +69,12 @@ test('Firefox container and incognito tabs cannot establish the ordinary default
  f.state.tabs[0]!.cookieStoreId='firefox-default';assert.equal(await f.manager.sessionCookieState('claude'),'present');f.stop();
 });
 
-test('normal sign-in events debounce and can recover needs-auth or needs-tab but never loop for active accounts',async()=>{
+test('normal sign-in events debounce and can recover needs-auth or needs-tab and check active accounts for identity switches',async()=>{
  const f=fixture();await f.emit();await f.emit({cause:'overwrite'});assert.equal(f.timers.size,1);
  await f.fire();assert.deepEqual(f.state.calls,['claude']);
- f.state.status='active';await f.emit();assert.equal(f.timers.size,0);
- f.state.status='needs-tab';await f.emit();await f.fire();assert.deepEqual(f.state.calls,['claude','claude']);
- for(const status of [null,'active','offline','error','disabled','checking'] as const)assert.equal(needsSessionSignal(status),false);
+ f.state.status='active';await f.emit();assert.equal(f.timers.size,1);await f.fire();
+ f.state.status='needs-tab';await f.emit();await f.fire();assert.deepEqual(f.state.calls,['claude','claude','claude']);
+ for(const status of [null,'offline','error','disabled','checking'] as const)assert.equal(needsSessionSignal(status),false);
  f.stop();
 });
 
@@ -91,7 +91,7 @@ test('debounced signals recheck permission, current source status and cookie pre
  for(const change of ['permission','status','cookie'] as const){
   const f=fixture();await f.emit();
   if(change==='permission')f.state.allowed=false;
-  if(change==='status')f.state.status='active';
+  if(change==='status')f.state.status='disabled';
   if(change==='cookie')f.state.cookies=[];
   await f.fire();assert.deepEqual(f.state.calls,[],change);f.stop();
  }

@@ -17,8 +17,6 @@ export const CommandSchema = z.discriminatedUnion('type', [
   z.object({type:z.literal('hosted-attempt'),id:z.string().uuid(),cancel:z.boolean().optional()}),
   z.object({type:z.literal('hosted-list')}),
   z.object({type:z.literal('hosted-action'),id:z.string().uuid(),action:z.enum(['rename','refresh','disconnect','forget']),alias:z.string().trim().max(60).optional()}),
-  z.object({ type: z.literal('account-setup-start'), provider: ProviderSchema, mode: z.enum(['detect','another']), nickname: z.string().trim().max(60) }),
-  z.object({ type: z.literal('account-setup-save'), setupId: z.string().uuid(), accountId: z.string().min(1).max(240) }),
   z.object({ type: z.literal('account-setup-cancel'), setupId: z.string().uuid() }),
   z.object({type:z.literal('widget-settings'),settings:WidgetSettingsSchema.optional()}),
   z.object({type:z.literal('widget-state'),provider:ProviderSchema}),

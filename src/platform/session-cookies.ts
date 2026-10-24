@@ -24,7 +24,7 @@ interface SessionPort {
 // Candidate names from the plan. Absence is not authoritative until live evidence verifies them.
 const SESSION:Partial<Record<ProviderId,RegExp>>={claude:/^sessionKey$/,chatgpt:/^__Secure-next-auth\.session-token(?:\.\d+)?$/};
 export function supportsSessionSignals(provider:ProviderId){return !!SESSION[provider];}
-export function needsSessionSignal(status:ConnectionStatus|null){return status==='needs-auth'||status==='needs-tab';}
+export function needsSessionSignal(status:ConnectionStatus|null){return status==='active'||status==='needs-auth'||status==='needs-tab';}
 function matches(provider:ProviderId,cookie:CookieMetadata):boolean {
  return !!SESSION[provider]?.test(cookie.name)&&cookie.domain.replace(/^\./,'').toLowerCase()===new URL(providers[provider].home).hostname
   &&cookie.partitionKey===undefined;

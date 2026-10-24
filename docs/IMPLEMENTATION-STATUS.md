@@ -1237,3 +1237,10 @@ automated tests, live verification and blocked/unverified work.
   then use the existing authorization to merge the validated checkpoint through
   integration to main and prune only its merged task branch. No release or
   provider activation; no next group started.
+
+
+## U4 auto-remember website accounts
+
+Branch codex/u4-auto-remember from main, preserving existing changes (clean start). U1 is a separate unmerged PR. Implemented automatic verified account binding/naming/reuse, inactive remembered state, generation fences, active normal-cookie signals and display-only estimated reset projection. Removed manual website setup UI/commands; private sign-in remains gated. History/notification/badge pipelines use real readings only. No permissions or cookie storage added. New A/B/A and projection tests complement existing mid-read identity, privacy, generation and history tests. Actual test results are recorded in the PR handoff.
+
+U4 validation: npm run check passes (257 core, 20 native, 24 connection and 4 transport/runtime tests, TypeScript/Chrome build). npm run test:browser passes 56/56 on final sequential run. Earlier runs caught obsolete manual-flow assertions, a redundant Store write that normalized fixture defaults, and overlapping build/test artifacts; corrected before final validation. Existing session-signal assertions intentionally now permit active-source checks while retaining normal-store, permission, debounce and cooldown guards. New browser fixture covers automatic A/B/A and display-only projected reset; real provider behavior remains unverified. U4 adds no permissions or stored cookies. PR handoff includes exact changed files and limitations.
