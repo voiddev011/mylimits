@@ -53,7 +53,7 @@ The existing IndexedDB key store manages a non-extractable AES-256 key. Cipherte
 lives only in `mylimits:tokens:v1`, separate from Store and cookie-vault policy.
 Tokens are sent only to GitHub API requests and the extension background handler;
 they do not enter Store, snapshots, history exports, diagnostics, errors or logs.
-The password input is cleared after an attempt. No external backend or Desktop
+The password input is cleared after an attempt. No external backend or separate application
 is required. The current storage protection requires Chromium's trusted-context
 storage API; Firefox token setup is not live verified and fails closed if absent.
 

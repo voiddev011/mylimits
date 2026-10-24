@@ -41,6 +41,7 @@ export interface Account {
 export interface Settings {
   warningRemaining: number;
   criticalRemaining: number;
+  /** Legacy storage key for browser notifications; not a native application. */
   desktopAlerts: boolean;
   refreshMinutes: number;
   theme: 'system' | 'dark' | 'light';
