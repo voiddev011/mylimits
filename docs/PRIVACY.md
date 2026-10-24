@@ -18,6 +18,9 @@ Evidence-spike capture is explicit and temporary in a separate test profile. Cap
 
 Optional Copilot connections use fine-grained tokens with Plan: read. The token
 is encrypted separately in `mylimits:tokens:v1` using the existing non-extractable
-AES-GCM key. Only official `api.github.com` REST requests receive it. Tokens are
+AES-GCM key. Only requests to `api.github.com` receive it. Documented billing is the default;
+explicit experimental opt-in also sends the token to GitHub’s undocumented
+`copilot_internal/user` entitlement endpoint. No IDE impersonation or cookie
+collection is used for Copilot. Tokens are
 excluded from account state, history, exports and diagnostics. Disconnect removes
 the chosen token; Forget removes that account's tokens and history. See [COPILOT.md](COPILOT.md).

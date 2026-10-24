@@ -3,6 +3,7 @@ export function meterValue(
   m: Meter,
   mode: "used" | "remaining" = "remaining",
 ): string {
+  if (m.unlimited) return "Unlimited";
   if (m.unit === "currency" && !m.currency) return "Unknown currency";
   if (m.unit === "currency") {
     const money = (n: number) =>
@@ -23,6 +24,8 @@ export function meterValue(
   }
   if (m.id === "premium-requests" && m.used !== null)
     return `${m.used.toLocaleString()}${m.total === null ? "" : ` / ${m.total.toLocaleString()}`} used`;
+  if (m.id === "ai-credits" && m.used !== null)
+    return `${m.used.toLocaleString()} credits used`;
   if (m.evidence === "observed") return `${m.used ?? 0} observed`;
   const left = remainingPercent(m);
   if (left !== null)

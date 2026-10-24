@@ -1,4 +1,9 @@
-import { copilotIdentity, parseCopilot } from "../core/copilot";
+import {
+  copilotIdentity,
+  parseCopilot,
+  parseCopilotCredits,
+  parseCopilotQuotas,
+} from "../core/copilot";
 import type { Snapshot } from "../core/engine";
 import { AdapterError, retryTime } from "../providers/errors";
 export async function readCopilot(
@@ -7,6 +12,7 @@ export async function readCopilot(
   now: number,
   request: (url: string, options: RequestInit) => Promise<Response>,
   signal?: AbortSignal,
+  quotaAccess = false,
 ): Promise<Snapshot> {
   async function get(path: string) {
     let response: Response;
@@ -22,7 +28,7 @@ export async function readCopilot(
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
+          "X-GitHub-Api-Version": "2026-03-10",
         },
       });
     } catch {
@@ -51,7 +57,9 @@ export async function readCopilot(
     if (response.status === 403 || response.status === 404)
       throw new AdapterError(
         "unavailable",
-        "A fine-grained token with the Plan: read user permission is required.",
+        path === "/copilot_internal/user"
+          ? "GitHub denied experimental quota access for this token. Billing access does not grant IDE quota access."
+          : "Billing reports require Plan: read and an eligible personally purchased plan. Free quotas are not supplied by billing.",
         null,
         "copilot-permission",
       );
@@ -67,18 +75,50 @@ export async function readCopilot(
     }
   }
   try {
-    const who = copilotIdentity(await get("/user")),
-      d = new Date(now),
-      usage = await get(
-        `/users/${encodeURIComponent(who.login)}/settings/billing/premium_request/usage?year=${d.getUTCFullYear()}&month=${d.getUTCMonth() + 1}&product=Copilot`,
-      ),
-      checked = copilotIdentity(await get("/user"));
+    const who = copilotIdentity(await get("/user"));
+    if (quotaAccess) {
+      const snapshot = parseCopilotQuotas(
+        who,
+        await get("/copilot_internal/user"),
+      );
+      const checked = copilotIdentity(await get("/user"));
+      if (
+        checked.id !== who.id ||
+        checked.login.toLowerCase() !== who.login.toLowerCase()
+      )
+        throw Error("identity changed");
+      return snapshot;
+    }
+    const d = new Date(now);
+    const period = `year=${d.getUTCFullYear()}&month=${d.getUTCMonth() + 1}`;
+    const prefix = `/users/${encodeURIComponent(who.login)}/settings/billing`;
+    const credits = parseCopilotCredits(
+      who,
+      await get(`${prefix}/ai_credit/usage?${period}`),
+      now,
+    );
+    let snapshot = credits;
+    if (credits.meters[0]!.used === null) {
+      const rawLegacy = await get(
+        `${prefix}/premium_request/usage?${period}&product=Copilot`,
+      );
+      const legacy = parseCopilot(who, rawLegacy, now, allowance);
+      // Only a report containing actual legacy usage establishes a usable legacy source.
+      // An empty billing report must never masquerade as zero Free-plan usage.
+      if (
+        (rawLegacy as { usageItems: { product: string }[] }).usageItems.some(
+          (item) => item.product.toLowerCase() === "copilot",
+        )
+      )
+        snapshot = legacy;
+    }
+    const checked = copilotIdentity(await get("/user"));
     if (
       checked.id !== who.id ||
       checked.login.toLowerCase() !== who.login.toLowerCase()
     )
       throw Error("identity changed");
-    return parseCopilot(who, usage, now, allowance);
+    return snapshot;
   } catch (e) {
     if (e instanceof AdapterError) throw e;
     throw new AdapterError(

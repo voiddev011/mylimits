@@ -90,7 +90,11 @@ export function accountSource(account: Account, store: PublicState): string {
     ) ??
     sources.find((c) => account.meters.some((m) => m.connectionId === c.id)) ??
     sources[0];
-  return source ? connectionSource(source.kind) : "Saved reading";
+  return source?.kind === "copilot" && source.copilotQuotaAccess
+    ? "GitHub quotas (experimental)"
+    : source
+      ? connectionSource(source.kind)
+      : "Saved reading";
 }
 /** Strict allowlist: no identifiers, names, free-form errors, URLs or readings. */
 export function diagnostics(store: PublicState, version: string, now: number) {

@@ -2784,7 +2784,7 @@ test.describe("Copilot official API token connections (simulated)", () => {
           id = headers.get("Authorization")?.endsWith("SECOND") ? 2 : 1;
         if (
           options?.credentials !== "omit" ||
-          headers.get("X-GitHub-Api-Version") !== "2022-11-28"
+          headers.get("X-GitHub-Api-Version") !== "2026-03-10"
         )
           throw Error("Invalid REST transport");
         const login = id === 1 ? "alice" : "bob";
@@ -2801,14 +2801,16 @@ test.describe("Copilot official API token connections (simulated)", () => {
                     year: new Date().getUTCFullYear(),
                     month: new Date().getUTCMonth() + 1,
                   },
-                  usageItems: [
-                    {
-                      product: "Copilot",
-                      unitType: "requests",
-                      grossQuantity: id * 20 + offset,
-                      netQuantity: 0,
-                    },
-                  ],
+                  usageItems: url.pathname.includes("/ai_credit/")
+                    ? []
+                    : [
+                        {
+                          product: "Copilot",
+                          unitType: "requests",
+                          grossQuantity: id * 20 + offset,
+                          netQuantity: 0,
+                        },
+                      ],
                 },
           ),
         );
@@ -2903,7 +2905,7 @@ test.describe("Copilot official API token connections (simulated)", () => {
     await page
       .getByRole("button", { name: "Details for GitHub Copilot · alice" })
       .click();
-    await page.getByLabel("Monthly allowance").selectOption("Pro");
+    await page.getByLabel("Legacy request allowance").selectOption("Pro");
     await page
       .getByRole("button", { name: "Save allowance", exact: true })
       .click();
@@ -3350,13 +3352,15 @@ test.describe("Copilot add-another shortcut and account identity (simulated)", (
                     year: new Date().getUTCFullYear(),
                     month: new Date().getUTCMonth() + 1,
                   },
-                  usageItems: [
-                    {
-                      product: "Copilot",
-                      unitType: "requests",
-                      grossQuantity: id * 10,
-                    },
-                  ],
+                  usageItems: url.pathname.includes("/ai_credit/")
+                    ? []
+                    : [
+                        {
+                          product: "Copilot",
+                          unitType: "requests",
+                          grossQuantity: id * 10,
+                        },
+                      ],
                 },
           ),
         );
@@ -3674,4 +3678,248 @@ test("U5 chosen limit preference without a selection explains where to choose", 
   await expect
     .poll(() => worker.evaluate(async () => chrome.action.getBadgeText({})))
     .toBe("");
+});
+
+test.describe("current Copilot quota access (simulated, not live evidence)", () => {
+  test.use({ grantedProviderOrigin: "https://api.github.com/*" });
+  test("opt-in reads Free credits and suggestions, preserves separate accounts, refreshes usage and rejects denied access without billing fallback", async ({
+    context,
+    worker,
+    extensionId,
+  }) => {
+    await worker.evaluate(() => {
+      const g = globalThis as typeof globalThis & {
+        quotaUsed?: number;
+        quotaDenied?: boolean;
+        billingCalls?: number;
+      };
+      g.quotaUsed = 12;
+      g.billingCalls = 0;
+      globalThis.fetch = async (input, opts) => {
+        const url = new URL(String(input));
+        if (
+          url.origin !== "https://api.github.com" ||
+          opts?.credentials !== "omit"
+        )
+          throw Error("Unexpected request");
+        const second = new Headers(opts.headers)
+            .get("Authorization")
+            ?.endsWith("SECOND"),
+          id = second ? 2 : 1,
+          login = second ? "bob" : "alice";
+        if (url.pathname === "/user")
+          return new Response(JSON.stringify({ id, login }));
+        if (url.pathname !== "/copilot_internal/user") {
+          g.billingCalls!++;
+          throw Error("No billing fallback allowed");
+        }
+        if (g.quotaDenied) return new Response("{}", { status: 403 });
+        return new Response(
+          JSON.stringify({
+            id,
+            login,
+            copilot_plan: second ? "pro" : "free",
+            token_based_billing: true,
+            quota_reset_date_utc: new Date(
+              Date.UTC(
+                new Date().getUTCFullYear(),
+                new Date().getUTCMonth() + 1,
+                1,
+              ),
+            ).toISOString(),
+            quota_snapshots: {
+              chat: {
+                entitlement: second ? 1000 : 100,
+                credits_used: second ? 450 : g.quotaUsed,
+                percent_remaining: second ? 55 : 100 - g.quotaUsed!,
+                unlimited: false,
+              },
+              completions: second
+                ? { unlimited: true, entitlement: 0 }
+                : {
+                    entitlement: 2000,
+                    quota_remaining: 2000,
+                    percent_remaining: 100,
+                    unlimited: false,
+                  },
+            },
+          }),
+        );
+      };
+    });
+    const page = await context.newPage();
+    await page.goto(
+      `chrome-extension://${extensionId}/dashboard.html#add-copilot`,
+    );
+    await page
+      .getByLabel("Read account quotas (experimental)", { exact: true })
+      .check();
+    await page
+      .getByLabel("Fine-grained personal access token")
+      .fill("github_pat_FICTIONAL_QUOTA_ACCOUNT_A");
+    await page
+      .getByRole("button", { name: "Connect GitHub Copilot", exact: true })
+      .click();
+    const alice = page
+      .locator(".account-row")
+      .filter({ hasText: "GitHub Copilot · alice" });
+    await expect(alice.locator(".row-meters")).toContainText("Credits");
+    await expect(alice.locator(".row-meters")).toContainText(
+      "Inline suggestions",
+    );
+    await expect(alice.locator(".row-meters")).toContainText("88%");
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await page.getByLabel("Display", { exact: true }).selectOption("used");
+    await page
+      .getByRole("button", { name: "Save preferences", exact: true })
+      .click();
+    await page.getByRole("button", { name: "Overview", exact: true }).click();
+    await expect(alice.locator(".row-meters")).toContainText("12%");
+    await expect(alice.locator(".row-meters")).toContainText("0%");
+    await page
+      .getByRole("button", { name: "Add another GitHub account", exact: true })
+      .click();
+    await page
+      .getByLabel("Read account quotas (experimental)", { exact: true })
+      .check();
+    await page
+      .getByLabel("Fine-grained personal access token")
+      .fill("github_pat_FICTIONAL_QUOTA_ACCOUNT_SECOND");
+    await page
+      .getByRole("button", { name: "Connect GitHub Copilot", exact: true })
+      .click();
+    const bob = page
+      .locator(".account-row")
+      .filter({ hasText: "GitHub Copilot · bob" });
+    await expect(bob.locator(".row-meters")).toContainText("45%");
+    await expect(bob.locator(".row-meters")).toContainText("Unlimited");
+    await expect(alice.locator(".row-meters")).toContainText("12%");
+    await worker.evaluate(async () => {
+      const g = globalThis as typeof globalThis & { quotaUsed?: number };
+      g.quotaUsed = 25;
+      const s = (await chrome.storage.local.get("mylimits:state:v2"))[
+        "mylimits:state:v2"
+      ] as Store;
+      for (const c of s.connections.filter((c) => c.kind === "copilot"))
+        c.lastAttemptAt = Date.now() - 16 * 60000;
+      await chrome.storage.local.set({ "mylimits:state:v2": s });
+    });
+    await page
+      .getByRole("button", { name: "Refresh all limits", exact: true })
+      .click();
+    await expect(alice.locator(".row-meters")).toContainText("25%");
+    await expect(bob.locator(".row-meters")).toContainText("45%");
+    const before = await worker.evaluate(async () => {
+      const s = (await chrome.storage.local.get("mylimits:state:v2"))[
+        "mylimits:state:v2"
+      ] as Store;
+      return s.connections
+        .filter((c) => c.kind === "copilot")
+        .map((c) => c.lastSuccessAt);
+    });
+    await worker.evaluate(async () => {
+      (
+        globalThis as typeof globalThis & { quotaDenied?: boolean }
+      ).quotaDenied = true;
+      const s = (await chrome.storage.local.get("mylimits:state:v2"))[
+        "mylimits:state:v2"
+      ] as Store;
+      for (const c of s.connections.filter((c) => c.kind === "copilot"))
+        c.lastAttemptAt = Date.now() - 16 * 60000;
+      await chrome.storage.local.set({ "mylimits:state:v2": s });
+    });
+    await page
+      .getByRole("button", { name: "Refresh all limits", exact: true })
+      .click();
+    await expect
+      .poll(() =>
+        worker.evaluate(async () => {
+          const s = (await chrome.storage.local.get("mylimits:state:v2"))[
+            "mylimits:state:v2"
+          ] as Store;
+          return s.connections
+            .filter((c) => c.kind === "copilot")
+            .every((c) => c.status === "unavailable");
+        }),
+      )
+      .toBe(true);
+    const after = await worker.evaluate(async () => {
+      const s = (await chrome.storage.local.get("mylimits:state:v2"))[
+        "mylimits:state:v2"
+      ] as Store;
+      return {
+        times: s.connections
+          .filter((c) => c.kind === "copilot")
+          .map((c) => c.lastSuccessAt),
+        billing: (globalThis as typeof globalThis & { billingCalls?: number })
+          .billingCalls,
+      };
+    });
+    expect(after.times).toEqual(before);
+    expect(after.billing).toBe(0);
+    await expect(alice.locator(".row-meters")).toContainText("25%");
+    await expect(alice.locator(".row-meters")).toContainText("Last");
+  });
+  test("empty documented billing data displays unavailable instead of zero Free-plan usage", async ({
+    context,
+    worker,
+    extensionId,
+  }) => {
+    await worker.evaluate(() => {
+      globalThis.fetch = async (input) =>
+        new Response(
+          JSON.stringify(
+            new URL(String(input)).pathname === "/user"
+              ? { id: 1, login: "alice" }
+              : {
+                  user: "alice",
+                  timePeriod: {
+                    year: new Date().getUTCFullYear(),
+                    month: new Date().getUTCMonth() + 1,
+                  },
+                  usageItems: [],
+                },
+          ),
+        );
+    });
+    const page = await context.newPage();
+    await page.goto(
+      `chrome-extension://${extensionId}/dashboard.html#add-copilot`,
+    );
+    await page
+      .getByLabel("Fine-grained personal access token")
+      .fill("github_pat_FICTIONAL_EMPTY_BILLING");
+    await page
+      .getByRole("button", { name: "Connect GitHub Copilot", exact: true })
+      .click();
+    const row = page
+      .locator(".account-row")
+      .filter({ hasText: "GitHub Copilot · alice" });
+    await expect(row.locator(".row-meters")).toContainText(
+      "Quota unavailable through billing API",
+    );
+    await expect(row.locator(".row-meters")).not.toContainText("0 used");
+    await expect(row.locator(".row-meters")).not.toContainText("0%");
+    await page
+      .getByRole("button", {
+        name: "Details for GitHub Copilot · alice",
+        exact: true,
+      })
+      .click();
+    await page
+      .getByLabel("Read account quotas (experimental)", { exact: true })
+      .check();
+    await expect
+      .poll(() =>
+        worker.evaluate(async () => {
+          const s = (await chrome.storage.local.get("mylimits:state:v2"))[
+            "mylimits:state:v2"
+          ] as Store;
+          return s.connections.find((c) => c.kind === "copilot")!
+            .copilotQuotaAccess;
+        }),
+      )
+      .toBe(true);
+    await expect(row).toContainText("Waiting for the next eligible refresh");
+  });
 });

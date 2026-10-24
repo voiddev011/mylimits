@@ -33,6 +33,7 @@ export function toPublicState(store: Store): PublicState {
       workspaceId: c.workspaceId,
       workspaceIds: [...c.workspaceIds],
       copilotAllowance: c.copilotAllowance,
+      copilotQuotaAccess: c.copilotQuotaAccess,
       savedSignIn: c.savedSignIn
         ? { method: c.savedSignIn.method, notAfter: c.savedSignIn.notAfter }
         : undefined,
@@ -69,6 +70,7 @@ export function toPublicState(store: Store): PublicState {
         used: m.used,
         total: m.total,
         remaining: m.remaining,
+        unlimited: m.unlimited,
         usedPercent: m.usedPercent,
         unit: m.unit,
         resetsAt: m.resetsAt,

@@ -1,93 +1,127 @@
-# GitHub Copilot · official REST API
+# GitHub Copilot usage
 
-## Connect
+## Choose a reading source
 
-1. In MyLimits choose **+ → GitHub Copilot**.
-2. Open [GitHub's fine-grained token form](https://github.com/settings/personal-access-tokens/new).
-   Choose the correct GitHub account. No repository access is needed. In Account
-   permissions choose **Plan → Read-only**, then generate the token.
-3. Paste it into MyLimits and click Connect. Approve access to `api.github.com`.
-4. Expand the connected account's settings and choose Free, Pro, Pro+ or Custom
-   monthly allowance. Until chosen, usage is displayed but remaining quota is unknown.
-5. After the first connection, click **Add another GitHub account** in the popup,
-   overview or account details. Services also has a visible Copilot **Add account**
-   button. Each opens a new-token flow; it does not replace the existing connection.
-6. Create the token while signed into the **other** GitHub account. Use a private
-   window for token creation to keep your usual GitHub login unchanged. Paste that
-   account's token to add its separate card and independently scheduled connection.
+MyLimits has two distinct Copilot sources. Neither is a streaming feed: refreshes
+run at most once per account every 15 minutes while the browser is running, and
+respect GitHub throttling. Other-device usage appears after GitHub updates its
+counters and the next successful eligible refresh.
 
-A second token for the same GitHub identity is rejected as already connected;
-use **Replace token** to renew that account instead. Simultaneous duplicate adds
-keep one connection and remove the unused token. Existing aliases and readings
-stay intact. Token setup runs in the normal full dashboard; popup/sidebar actions
-open it automatically, without changing the browser's GitHub session.
+**Account quotas (experimental)** reads the first-party IDE entitlement endpoint
+used by VS Code. Where GitHub permits the supplied token, it displays separate
+Credits / Chat, Inline suggestions and allocated premium quota meters, with the
+returned percentages, allowances, unlimited status and reset times. It is an
+undocumented interface, not a supported public REST contract. A fine-grained
+Plan: read token is **not guaranteed** to have entitlement access. No client-ID
+impersonation, IDE headers, IDE token extraction, browser cookies or scraping are
+used. A denial stays an explicit error; there is no silent billing fallback.
 
-Rename, replace a token, disconnect or forget from account details. A replacement
-must verify the same immutable GitHub user ID. Another user's token belongs in a
-new connection. Disconnect deletes that connection's encrypted token and keeps
-its dated readings; Forget also deletes that account's history. Revoke a token
-on GitHub separately if desired.
+**Billing (default)** uses documented GitHub REST reports. GitHub documents user
+billing as applicable to personally purchased Copilot plans, not Free-plan
+entitlements or organization-billed seats. Current AI credit usage is read first.
+The report supplies usage, not the VS Code quota percentage or inline-suggestion
+allowance. If no matching credit items are returned, MyLimits checks legacy
+premium requests. Only actual matching legacy rows select that source. Empty
+reports show **Quota unavailable through billing API**, never a fabricated zero
+Free-plan reading. A real matching report row with quantity zero remains zero.
 
-## Contract and assumptions
+## Connect or update
 
-Official documentation inspected 24 October 2026:
-[Get premium request usage for a user](https://docs.github.com/en/rest/billing/usage?apiVersion=2022-11-28#get-premium-request-usage-for-a-user).
+1. Choose **+ → GitHub Copilot** and create a fine-grained token from the intended
+   account at [GitHub token settings](https://github.com/settings/personal-access-tokens/new).
+   Grant **Plan → Read-only**; repository access is not needed for billing.
+2. To try the VS Code-style quota meters, explicitly check **Read account quotas
+   (experimental)**. If GitHub rejects the token, MyLimits cannot claim Free/paid
+   quota support for that account. Billing permission alone does not grant IDE
+   entitlement access.
+3. Paste the token into MyLimits and Connect; approve `api.github.com` access.
+   The normal full dashboard handles token setup. Popup/sidebar actions open it.
+4. Existing users can expand their Copilot card and enable the same checkbox.
+   The change fences old in-flight reads and takes effect at the next eligible
+   refresh. It does not bypass cooldowns. Old readings remain dated until replaced.
+5. Use Preferences → Display → Used to compare a returned quota with VS Code's
+   used percentage. Remaining is supported too. Unlimited stays Unlimited.
+6. For a verified **legacy premium-request** source only, set a custom allowance
+   or the legacy annual Pro / Pro+ preset. There is no Free 50-request preset.
+   Legacy allowances never overwrite credit or entitlement meters.
 
-Only these REST endpoints collect data:
+For account B choose **Add another GitHub account**, create B's own token (a
+private window keeps the normal GitHub login unchanged), then connect it. Each
+connection has a separate encrypted token, identity and refresh schedule. A
+second token for A is a duplicate, not B. Replace token must verify the original
+GitHub user ID. Aliases and history remain available.
 
-- `GET https://api.github.com/user`, before and after usage: numeric `id` and `login`.
-- `GET https://api.github.com/users/{login}/settings/billing/premium_request/usage?year=YYYY&month=M&product=Copilot`.
+Disconnect removes only that connection's encrypted token and retains dated
+readings. Forget also deletes its history. Revoke tokens on GitHub separately.
+Switching sources does not rewrite older history or reinterpret requests as
+credits. Previously saved zero readings are not retroactively claimed accurate.
 
-Headers: `Accept: application/vnd.github+json`, `X-GitHub-Api-Version: 2022-11-28`,
-Bearer authorization. Requests omit cookies and reject redirects. There are no
-GitHub website data requests, cookie reads or scraping in this connection path.
+## Evidence and exact requests
 
-Usage requires `timePeriod.year`, verifies month if returned, and verifies `user`
-against the authenticated login. Sums `usageItems[].grossQuantity` for
-case-insensitive `product = Copilot`, requiring `unitType = requests`. Gross
-quantities include discounted/included usage; `netQuantity` would omit it.
-Fractional requests are preserved. An empty item array is a verified zero.
-Malformed data, wrong month or a changed identity never overwrite prior readings.
-The documented endpoint has no pagination parameters.
+Verified against official documentation and source on 24 October 2026:
 
-**No allowance field is documented in this API response.** No undocumented field
-is assumed. The user explicitly supplies the allowance; it is not provider-reported.
-The requested defaults (Free 50, Pro 300, Pro+ 1500) live in `src/core/copilot.ts`
-with a reminder to verify the current GitHub plan page before release. Do not infer
-an account's plan from a token or confuse premium requests with all Copilot usage.
-Resets are calculated as next month's first day at 00:00 UTC.
+- [GitHub billing API](https://docs.github.com/en/rest/billing/usage): current
+  credit endpoint, Plan: read, user-billing eligibility and response fields.
+- [GitHub billing transition](https://github.blog/news-insights/company-news/GitHub-copilot-is-moving-to-usage-based-billing/):
+  AI Credits replaced premium requests for current billing; exceptions retain
+  legacy request-based annual subscriptions.
+- [VS Code configuration](https://github.com/microsoft/vscode/blob/main/product.json)
+  and [quota parser](https://github.com/microsoft/vscode/blob/main/src/vs/workbench/services/chat/common/chatEntitlementService.ts):
+  entitlement URL, quota snapshots, legacy Free quantities and unlimited handling.
 
-## Storage and refresh
+Every path verifies `GET https://api.github.com/user` before and after collection.
+The immutable numeric ID is the account identity. Returned entitlement ID/login,
+when present, must match. Credentials are sent only to this exact HTTPS origin;
+requests omit browser cookies and reject redirects.
 
-PATs are encrypted with AES-GCM, random 96-bit nonces and per-slot associated data.
-The existing IndexedDB key store manages a non-extractable AES-256 key. Ciphertext
-lives only in `mylimits:tokens:v1`, separate from Store and cookie-vault policy.
-Tokens are sent only to GitHub API requests and the extension background handler;
-they do not enter Store, snapshots, history exports, diagnostics, errors or logs.
-The password input is cleared after an attempt. No external backend or separate application
-is required. The current storage protection requires Chromium's trusted-context
-storage API; Firefox token setup is not live verified and fails closed if absent.
+Documented billing paths:
 
-Each token gets `copilot:<UUID>` and its own refresh schedule. The same verified
-GitHub user reuses its account identity instead of inventing another user.
-A 15-minute minimum applies to scheduled and manual refreshes. Browser closure
-pauses collection. A 401 stops all retries until token replacement; 403/404
-explain Plan: read; rate-limit deadlines use the existing scheduler backoff.
-Provider failures retain the last successful timestamp and readings.
+- `/users/{login}/settings/billing/ai_credit/usage?year=YYYY&month=M`
+- `/users/{login}/settings/billing/premium_request/usage?year=YYYY&month=M&product=Copilot`
 
-## Manual acceptance · PENDING
+Headers use `Accept: application/vnd.github+json` and
+`X-GitHub-Api-Version: 2026-03-10`. Credit reports require matching
+`product = Copilot AI Credits`, `unitType = ai-credits`; legacy requests require
+`product = Copilot`, `unitType = requests`. Gross quantities include discounted
+usage. Response user/year/month are validated. Missing allowance stays unknown.
+Legacy billing's monthly reset is calculated; entitlement resets are only the
+actual returned timestamps. Credit billing does not invent a reset timestamp.
 
-Automated tests use fictional REST responses and tokens, never real GitHub accounts.
+Explicit experimental opt-in enables `/copilot_internal/user`. Parsed fields:
+`copilot_plan`, `token_based_billing`, `quota_snapshots.chat/completions/premium_interactions`,
+`percent_remaining`, `entitlement`, `credits_used`, `quota_remaining`, `unlimited`,
+`quota_reset_at`, and account reset dates. Legacy Free fallback uses
+`monthly_quotas` / `limited_user_quotas`. Zero allocated snapshots are omitted;
+missing fields stay unknown. No quota at all is an error, not a successful zero.
 
-- Connect a real fine-grained Plan: read token; compare this month's premium
-  requests with GitHub billing. Verify included/discounted usage is counted correctly.
-- Connect a second user's token; compare both identities and readings. Verify
-  the normal browser's GitHub login remains unchanged.
-- Select a plan or custom allowance; confirm percentages and UTC reset.
-- Reopen the browser after 15 minutes; refresh without GitHub website tabs.
-- Revoke the token; after the next eligible fetch confirm the exact expired/revoked
-  message and no subsequent requests until replacement. Replace using the same user.
-- Try a token lacking Plan: read, and an expired token; confirm clear errors.
-- Disconnect A, then Forget B; verify encrypted entries disappear independently.
-- Verify a GitHub-generated 403/429 and rate-limit headers when safely available;
-  do not intentionally flood the API.
+## Storage, errors and compatibility
+
+PATs remain encrypted in `mylimits:tokens:v1` with AES-GCM and a non-extractable
+IndexedDB key, outside Store, history, exports, diagnostics and logs. Password
+inputs clear after attempts. No helper, backend, additional permission or cookie
+access is added. Store.version stays 2. Optional `copilotQuotaAccess` defaults to
+false for old connections; old IDs, aliases, tokens, allowances and history remain.
+The optional meter `unlimited` field is additive. Unlimited quotas do not produce
+projected resets, percentages or low-limit alerts.
+
+401 stops refresh until token replacement. 403/404 on experimental quota access
+explain that billing authorization does not grant IDE entitlement access. Billing
+403/404 explain permission and plan eligibility. 429/Retry-After retain existing
+backoff. Failures preserve prior readings and successful timestamps; they do not
+turn cached values into fresh quotas.
+
+## Live acceptance · PENDING
+
+Automated checks use fictional data, never real account credentials. Source-code
+compatibility is not evidence that a user's fine-grained PAT can access quotas.
+
+- Real Copilot Free: authorize quota access; compare Credits and Inline Suggestions
+  with VS Code, using the same account, display mode and reading time.
+- Real paid Copilot: check credits, unlimited suggestions and actual reset times.
+- Denied fine-grained PAT: explicit error, no false zero, no fallback success.
+- Two real accounts: independent identity and counters, no browser login change;
+  usage on another device appears on the next eligible refresh.
+- Credit-billed and legacy annual plans: confirm appropriate public billing rows
+  and units, and that legacy custom allowances do not alter quota/credit readings.
+- Throttling, revocation and token replacement; disconnect B leaves A working.
+- Windows Chrome/Brave end-to-end setup and Firefox storage compatibility.

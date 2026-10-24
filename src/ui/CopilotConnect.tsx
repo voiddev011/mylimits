@@ -10,6 +10,7 @@ export function CopilotConnect({
   connectionId,
   another = false,
   accountId,
+  quotaAccess: initialQuotaAccess = false,
 }: {
   run: ActionRunner;
   busy: boolean;
@@ -17,7 +18,9 @@ export function CopilotConnect({
   connectionId?: string;
   another?: boolean;
   accountId?: string;
+  quotaAccess?: boolean;
 }) {
+  const [quotaAccess, setQuotaAccess] = useState(initialQuotaAccess);
   const [token, setToken] = useState(""),
     [working, setWorking] = useState(false),
     [error, setError] = useState("");
@@ -65,7 +68,14 @@ export function CopilotConnect({
             setError("Allow GitHub API access to connect.");
             return;
           }
-          if (await run({ type: "copilot-connect", token, connectionId }))
+          if (
+            await run({
+              type: "copilot-connect",
+              token,
+              connectionId,
+              quotaAccess,
+            })
+          )
             onSaved();
         } catch {
           setError("Could not connect. Try again.");
@@ -108,9 +118,27 @@ export function CopilotConnect({
           pattern="github_pat_[A-Za-z0-9_]{10,490}"
         />
       </label>
+      {!connectionId && (
+        <label className="check-label">
+          <input
+            type="checkbox"
+            checked={quotaAccess}
+            onChange={(e) => setQuotaAccess(e.target.checked)}
+          />
+          Read account quotas (experimental)
+        </label>
+      )}
+      {!connectionId && (
+        <small>
+          Account quotas use GitHub’s undocumented IDE endpoint for Credits and
+          Inline Suggestions. Your token may not have access. Billing mode does
+          not supply Free-plan quotas.
+        </small>
+      )}
       <small>
-        Encrypted on this device. Premium requests only; choose your allowance
-        in account settings. Checks run at most every 15 minutes.
+        Encrypted on this device. Current credit billing where available; Free
+        quotas are not supplied by the documented billing API. Checks run at
+        most every 15 minutes.
       </small>
       {error && <p role="alert">{error}</p>}
       <button className="button button--primary" disabled={busy || working}>
@@ -129,62 +157,93 @@ export function CopilotSettings({
   run,
   busy,
   accountId,
+  quotaAccess: initialQuotaAccess = false,
 }: {
   connectionId: string;
   allowance: number | null;
   run: ActionRunner;
   busy: boolean;
   accountId?: string;
+  quotaAccess?: boolean;
 }) {
+  const [quotaDraft, setQuotaDraft] = useState(initialQuotaAccess);
+  useEffect(() => setQuotaDraft(initialQuotaAccess), [initialQuotaAccess]);
   const [plan, setPlan] = useState("Custom"),
     [custom, setCustom] = useState(String(allowance ?? "")),
     [replace, setReplace] = useState(false);
   return (
     <div>
-      <form
-        className="inline-form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void run({
-            type: "copilot-allowance",
-            connectionId,
-            allowance:
-              plan === "Custom"
-                ? custom
-                  ? Number(custom)
-                  : null
-                : COPILOT_PLANS[plan as keyof typeof COPILOT_PLANS],
-          });
-        }}
-      >
-        <label>
-          Monthly allowance
-          <select value={plan} onChange={(e) => setPlan(e.target.value)}>
-            {Object.entries(COPILOT_PLANS).map(([name, n]) => (
-              <option key={name} value={name}>
-                {name} · {n}
-              </option>
-            ))}
-            <option>Custom</option>
-          </select>
-        </label>
-        {plan === "Custom" && (
+      <label className="check-label">
+        <input
+          type="checkbox"
+          checked={quotaDraft}
+          disabled={busy}
+          onChange={async (e) => {
+            const enabled = e.target.checked;
+            setQuotaDraft(enabled);
+            if (
+              !(await run({
+                type: "copilot-quota-access",
+                connectionId,
+                enabled,
+              }))
+            )
+              setQuotaDraft(initialQuotaAccess);
+          }}
+        />
+        Read account quotas (experimental)
+      </label>
+      <p className="small-note">
+        Reads Credits and Inline Suggestions from GitHub’s undocumented IDE
+        endpoint if your token is allowed. Changes take effect on the next
+        eligible refresh; checks run at most every 15 minutes.
+      </p>
+      {!initialQuotaAccess && (
+        <form
+          className="inline-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void run({
+              type: "copilot-allowance",
+              connectionId,
+              allowance:
+                plan === "Custom"
+                  ? custom
+                    ? Number(custom)
+                    : null
+                  : COPILOT_PLANS[plan as keyof typeof COPILOT_PLANS],
+            });
+          }}
+        >
           <label>
-            Requests (blank = unknown)
-            <input
-              type="number"
-              min="1"
-              max="1000000000"
-              step="any"
-              value={custom}
-              onChange={(e) => setCustom(e.target.value)}
-            />
+            Legacy request allowance
+            <select value={plan} onChange={(e) => setPlan(e.target.value)}>
+              {Object.entries(COPILOT_PLANS).map(([name, n]) => (
+                <option key={name} value={name}>
+                  {name} (legacy annual) · {n}
+                </option>
+              ))}
+              <option>Custom</option>
+            </select>
           </label>
-        )}
-        <button className="button" disabled={busy}>
-          Save allowance
-        </button>
-      </form>
+          {plan === "Custom" && (
+            <label>
+              Requests (blank = unknown)
+              <input
+                type="number"
+                min="1"
+                max="1000000000"
+                step="any"
+                value={custom}
+                onChange={(e) => setCustom(e.target.value)}
+              />
+            </label>
+          )}
+          <button className="button" disabled={busy}>
+            Save allowance
+          </button>
+        </form>
+      )}
       <button
         className="text-button"
         disabled={busy}
@@ -198,6 +257,7 @@ export function CopilotSettings({
           busy={busy}
           connectionId={connectionId}
           accountId={accountId}
+          quotaAccess={initialQuotaAccess}
           onSaved={() => setReplace(false)}
         />
       )}
