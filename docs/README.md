@@ -3,11 +3,11 @@
 One place to check available AI usage limits, reset times and local history.
 No separate application or MyLimits account is required.
 
-| Connection | What updates |
-| --- | --- |
-| Claude / Claude Code | Website-reported subscription/workspace windows |
-| ChatGPT / Codex | Available Work/Codex buckets, not every ChatGPT limit |
-| Cursor | Reported coding-plan allowance and spend |
+| Connection            | What updates                                                        |
+| --------------------- | ------------------------------------------------------------------- |
+| Claude / Claude Code  | Website-reported subscription/workspace windows                     |
+| ChatGPT / Codex       | Available Work/Codex buckets, not every ChatGPT limit               |
+| Cursor                | Reported coding-plan allowance and spend                            |
 | GitHub Copilot (beta) | Premium requests through official REST, with a token per connection |
 
 Website login switches automatically remember earlier accounts. Only the current

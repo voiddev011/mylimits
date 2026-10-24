@@ -1,13 +1,239 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="description" content="A dated, code-based explanation of local storage, permissions, provider requests, optional features and deletion."><title>Privacy notice · MyLimits</title><link rel="stylesheet" href="assets/styles.css"><script src="assets/config.js" defer></script></head>
-<body><a class="skip" href="#main">Skip to content</a><div class="wrap"><header class="header"><a class="brand" href="index.html" aria-label="MyLimits home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>MyLimits</a><nav aria-label="Main navigation"><a href="how-it-works.html">How it works</a><a href="privacy.html" aria-current="page">Privacy</a><a href="faq.html">FAQ</a><a href="https://github.com/voiddev011/mylimits">GitHub ↗</a></nav></header><main id="main"><article class="article">
-<p class="eyebrow">Local by default</p><h1>Your data.<br>Your browser.</h1><p class="lead">Privacy notice for the MyLimits extension.</p><p class="quiet">Updated <time datetime="2026-10-24">24 October 2026</time> · Reviewed against version 3.4.0</p>
-<div class="note"><p><strong>No MyLimits account or server is required.</strong> The extension sends no analytics or advertising data and uploads no readings, history, nicknames, settings or credentials to MyLimits. It communicates directly with the providers you choose.</p></div>
-<h2>What is read</h2><p>Claude, ChatGPT and Cursor website readers request selected identity, plan, workspace and usage data through your existing login. Copilot requests identity and premium-request usage only through <code>api.github.com</code>, without cookies, website endpoints or scraping. MyLimits does not collect prompts or conversations, or send model requests to measure limits.</p>
-<h2>What stays locally</h2><ul><li><strong>Account state:</strong> normalized readings, plans, salted account IDs, display names, aliases, source metadata, private workspace routing IDs, refresh timestamps and settings.</li><li><strong>History:</strong> real usage readings in IndexedDB, retained for 30 or 90 days. Projected resets never enter history.</li><li><strong>Supporting records:</strong> migration recovery, notification deduplication, recovery budgets and sanitized diagnostics.</li></ul><p>Ordinary records are not encrypted by MyLimits. Privacy mode hides names and history and disables export. Remembered website cards retain dated readings; a projected reset is clearly marked as an assumption.</p>
-<h2>Tokens and saved sign-ins</h2><p>A Copilot connection stores your fine-grained Plan: read token separately in <code>mylimits:tokens:v1</code>, encrypted with AES-GCM and a non-extractable key in IndexedDB. Tokens never enter account state, history, exports, diagnostics or logs. Each token has its own connection and refresh schedule. This storage protection requires a supported browser API; unsupported token setup fails closed.</p><p>Website login cookies remain managed by the browser and provider. A ChatGPT bearer token, when needed, is used transiently for its usage request and never persisted. The separate website saved-sign-in implementation remains disabled for every provider. Copilot tokens do not change that policy. Encryption cannot protect against malware or someone controlling your browser profile.</p>
-<h2>Network requests</h2><p>Provider requests use only approved HTTPS origins: <code>claude.ai</code>, <code>chatgpt.com</code>, <code>cursor.com</code> and <code>api.github.com</code>. No remote synchronization service or native helper is part of this version. Closing the browser pauses tracking.</p><p>This static website has no analytics, cookies, remote fonts or third-party scripts. GitHub Pages handles ordinary hosting requests under <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub’s privacy statement</a>. Following external links opens that service.</p>
-<h2>Every extension permission, explained</h2><p>This describes normal builds, not the separate evidence spike. Provider hosts and optional permissions are requested only for the corresponding action.</p><table><thead><tr><th scope="col">Permission</th><th scope="col">Purpose</th></tr></thead><tbody><tr><td><code>storage</code></td><td>Local settings, readings and connection state.</td></tr><tr><td><code>alarms</code></td><td>Eligible refresh and maintenance scheduling.</td></tr><tr><td><code>scripting</code></td><td>Selected usage interfaces in a permitted existing or recovery tab.</td></tr><tr><td><code>idle</code></td><td>Eligible refreshes when the device becomes active.</td></tr><tr><td><code>sidePanel</code> (Chromium)</td><td>The browser side panel; omitted on Firefox.</td></tr><tr><td>Optional <code>notifications</code></td><td>Approved usage and reset alerts.</td></tr><tr><td>Optional <code>cookies</code></td><td>Narrow website sign-in presence/change signals. Copilot does not request cookies.</td></tr><tr><td>Optional exact HTTPS hosts</td><td>The three website origins above and the official GitHub API origin.</td></tr></tbody></table><p>Normal builds have no mandatory host grants, general browsing-history, native-messaging or web-request permission. Dormant saved-sign-in header rules remain gated off. Firefox declares no data collection; real Copilot token setup on Firefox is unverified.</p>
-<h2>Optional background-tab recovery</h2><p>An eligible failed website check may open one inactive normal provider tab using your existing login. Recovery is rate limited, avoids private tabs and can be disabled in Settings. It cannot sign in for you or guarantee logout survival. If you activate its tab, MyLimits leaves it open.</p>
-<h2 id="delete">Delete your data</h2><ul><li><strong>Forget account:</strong> removes that account’s local readings, nickname, history and matching recovery records. Forgetting a remembered account leaves the current browser account working.</li><li><strong>Copilot Disconnect or Forget:</strong> deletes the relevant encrypted token. Disconnect keeps dated readings; Forget also removes history. Revoke the token separately on GitHub to end its provider-side authorization.</li><li><strong>Clear history:</strong> deletes the selected account’s or all accounts’ history after confirmation, while keeping tracking preferences.</li><li><strong>Uninstall:</strong> removes browser-owned extension storage and IndexedDB. It does not sign out of provider websites or uninstall applications you installed in older versions.</li></ul>
-<h2>Contact and source</h2><p>Questions or privacy requests: <a href="https://github.com/voiddev011/mylimits/issues">GitHub issues</a>. Keep credentials and private account data out of public issues. This notice is based on the <a href="https://github.com/voiddev011/mylimits">current source code</a>, including the manifest configuration, storage, recovery and vault policy.</p></article></main><footer class="footer"><p>MyLimits is not affiliated with Anthropic, OpenAI, GitHub or Cursor.</p><div class="footer-links"><a href="privacy.html">Privacy</a><a href="https://github.com/voiddev011/mylimits/issues">Contact / issues ↗</a></div></footer></div></body></html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="description"
+      content="A dated, code-based explanation of local storage, permissions, provider requests, optional features and deletion."
+    />
+    <title>Privacy notice · MyLimits</title>
+    <link rel="stylesheet" href="assets/styles.css" />
+    <script src="assets/config.js" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <div class="wrap">
+      <header class="header">
+        <a class="brand" href="index.html" aria-label="MyLimits home"
+          ><span class="brand-mark" aria-hidden="true"
+            ><i></i><i></i><i></i></span
+          >MyLimits</a
+        >
+        <nav aria-label="Main navigation">
+          <a href="how-it-works.html">How it works</a
+          ><a href="privacy.html" aria-current="page">Privacy</a
+          ><a href="faq.html">FAQ</a
+          ><a href="https://github.com/voiddev011/mylimits">GitHub ↗</a>
+        </nav>
+      </header>
+      <main id="main">
+        <article class="article">
+          <p class="eyebrow">Local by default</p>
+          <h1>Your data.<br />Your browser.</h1>
+          <p class="lead">Privacy notice for the MyLimits extension.</p>
+          <p class="quiet">
+            Updated <time datetime="2026-10-24">24 October 2026</time> ·
+            Reviewed against version 3.4.0
+          </p>
+          <div class="note">
+            <p>
+              <strong>No MyLimits account or server is required.</strong> The
+              extension sends no analytics or advertising data and uploads no
+              readings, history, nicknames, settings or credentials to MyLimits.
+              It communicates directly with the providers you choose.
+            </p>
+          </div>
+          <h2>What is read</h2>
+          <p>
+            Claude, ChatGPT and Cursor website readers request selected
+            identity, plan, workspace and usage data through your existing
+            login. Copilot requests identity and premium-request usage only
+            through <code>api.github.com</code>, without cookies, website
+            endpoints or scraping. MyLimits does not collect prompts or
+            conversations, or send model requests to measure limits.
+          </p>
+          <h2>What stays locally</h2>
+          <ul>
+            <li>
+              <strong>Account state:</strong> normalized readings, plans, salted
+              account IDs, display names, aliases, source metadata, private
+              workspace routing IDs, refresh timestamps and settings.
+            </li>
+            <li>
+              <strong>History:</strong> real usage readings in IndexedDB,
+              retained for 30 or 90 days. Projected resets never enter history.
+            </li>
+            <li>
+              <strong>Supporting records:</strong> migration recovery,
+              notification deduplication, recovery budgets and sanitized
+              diagnostics.
+            </li>
+          </ul>
+          <p>
+            Ordinary records are not encrypted by MyLimits. Privacy mode hides
+            names and history and disables export. Remembered website cards
+            retain dated readings; a projected reset is clearly marked as an
+            assumption.
+          </p>
+          <h2>Tokens and saved sign-ins</h2>
+          <p>
+            A Copilot connection stores your fine-grained Plan: read token
+            separately in <code>mylimits:tokens:v1</code>, encrypted with
+            AES-GCM and a non-extractable key in IndexedDB. Tokens never enter
+            account state, history, exports, diagnostics or logs. Each token has
+            its own connection and refresh schedule. This storage protection
+            requires a supported browser API; unsupported token setup fails
+            closed.
+          </p>
+          <p>
+            Website login cookies remain managed by the browser and provider. A
+            ChatGPT bearer token, when needed, is used transiently for its usage
+            request and never persisted. The separate website saved-sign-in
+            implementation remains disabled for every provider. Copilot tokens
+            do not change that policy. Encryption cannot protect against malware
+            or someone controlling your browser profile.
+          </p>
+          <h2>Network requests</h2>
+          <p>
+            Provider requests use only approved HTTPS origins:
+            <code>claude.ai</code>, <code>chatgpt.com</code>,
+            <code>cursor.com</code> and <code>api.github.com</code>. No remote
+            synchronization service or native helper is part of this version.
+            Closing the browser pauses tracking.
+          </p>
+          <p>
+            This static website has no analytics, cookies, remote fonts or
+            third-party scripts. GitHub Pages handles ordinary hosting requests
+            under
+            <a
+              href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement"
+              >GitHub’s privacy statement</a
+            >. Following external links opens that service.
+          </p>
+          <h2>Every extension permission, explained</h2>
+          <p>
+            This describes normal builds, not the separate evidence spike.
+            Provider hosts and optional permissions are requested only for the
+            corresponding action.
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Permission</th>
+                <th scope="col">Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>storage</code></td>
+                <td>Local settings, readings and connection state.</td>
+              </tr>
+              <tr>
+                <td><code>alarms</code></td>
+                <td>Eligible refresh and maintenance scheduling.</td>
+              </tr>
+              <tr>
+                <td><code>scripting</code></td>
+                <td>
+                  Selected usage interfaces in a permitted existing or recovery
+                  tab.
+                </td>
+              </tr>
+              <tr>
+                <td><code>idle</code></td>
+                <td>Eligible refreshes when the device becomes active.</td>
+              </tr>
+              <tr>
+                <td><code>sidePanel</code> (Chromium)</td>
+                <td>The browser side panel; omitted on Firefox.</td>
+              </tr>
+              <tr>
+                <td>Optional <code>notifications</code></td>
+                <td>Approved usage and reset alerts.</td>
+              </tr>
+              <tr>
+                <td>Optional <code>cookies</code></td>
+                <td>
+                  Narrow website sign-in presence/change signals. Copilot does
+                  not request cookies.
+                </td>
+              </tr>
+              <tr>
+                <td>Optional exact HTTPS hosts</td>
+                <td>
+                  The three website origins above and the official GitHub API
+                  origin.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p>
+            Normal builds have no mandatory host grants, general
+            browsing-history, native-messaging or web-request permission.
+            Dormant saved-sign-in header rules remain gated off. Firefox
+            declares no data collection; real Copilot token setup on Firefox is
+            unverified.
+          </p>
+          <h2>Optional background-tab recovery</h2>
+          <p>
+            An eligible failed website check may open one inactive normal
+            provider tab using your existing login. Recovery is rate limited,
+            avoids private tabs and can be disabled in Settings. It cannot sign
+            in for you or guarantee logout survival. If you activate its tab,
+            MyLimits leaves it open.
+          </p>
+          <h2 id="delete">Delete your data</h2>
+          <ul>
+            <li>
+              <strong>Forget account:</strong> removes that account’s local
+              readings, nickname, history and matching recovery records.
+              Forgetting a remembered account leaves the current browser account
+              working.
+            </li>
+            <li>
+              <strong>Copilot Disconnect or Forget:</strong> deletes the
+              relevant encrypted token. Disconnect keeps dated readings; Forget
+              also removes history. Revoke the token separately on GitHub to end
+              its provider-side authorization.
+            </li>
+            <li>
+              <strong>Clear history:</strong> deletes the selected account’s or
+              all accounts’ history after confirmation, while keeping tracking
+              preferences.
+            </li>
+            <li>
+              <strong>Uninstall:</strong> removes browser-owned extension
+              storage and IndexedDB. It does not sign out of provider websites
+              or uninstall applications you installed in older versions.
+            </li>
+          </ul>
+          <h2>Contact and source</h2>
+          <p>
+            Questions or privacy requests:
+            <a href="https://github.com/voiddev011/mylimits/issues"
+              >GitHub issues</a
+            >. Keep credentials and private account data out of public issues.
+            This notice is based on the
+            <a href="https://github.com/voiddev011/mylimits"
+              >current source code</a
+            >, including the manifest configuration, storage, recovery and vault
+            policy.
+          </p>
+        </article>
+      </main>
+      <footer class="footer">
+        <p>
+          MyLimits is not affiliated with Anthropic, OpenAI, GitHub or Cursor.
+        </p>
+        <div class="footer-links">
+          <a href="privacy.html">Privacy</a
+          ><a href="https://github.com/voiddev011/mylimits/issues"
+            >Contact / issues ↗</a
+          >
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>

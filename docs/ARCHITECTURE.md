@@ -14,7 +14,6 @@ U1 compatibility filtering runs before strict Store parsing. It drops retired pr
 
 The separate evidence build has no automatic tracking and keeps explicitly captured test credentials in memory only. See [installation](INSTALL.md).
 
-
 ## U2 · GitHub Copilot
 
 `copilot-accounts.ts` verifies identity and usage before committing a `copilot:<slot>`

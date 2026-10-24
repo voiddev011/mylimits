@@ -14,7 +14,6 @@ U1 removes retired provider/source accounts, snapshots and history on first load
 
 Evidence-spike capture is explicit and temporary in a separate test profile. Captures disappear on disconnect/restart; copied reports exclude secrets. [Maintainer test instructions](ARCHITECTURE.md#maintainer-test-builds).
 
-
 ## GitHub Copilot REST tokens
 
 Optional Copilot connections use fine-grained tokens with Plan: read. The token
