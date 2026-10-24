@@ -320,39 +320,76 @@ export function collectAlerts(
   };
 }
 
+/** Uses only stored readings; display-only reset projections never enter the badge. */
 export function badge(
   store: Store,
   now: number,
-): { text: string; color: string } {
-  const readings = store.accounts
-    .flatMap((account) =>
-      account.meters
-        .filter(
-          (meter) =>
-            meter.evidence === "reported" &&
-            isFresh(account, meter, now, store.settings.refreshMinutes),
-        )
-        .map((meter) => ({ account, remaining: remainingPercent(meter) })),
-    )
-    .filter(
-      (r): r is { account: Account; remaining: number } => r.remaining !== null,
+): { text: string; color: string; title: string } {
+  const empty = {
+    text: "",
+    color: "#64748b",
+    title: "MyLimits · your usage, in one place",
+  };
+  const choice = store.settings.badge;
+  if (choice?.mode === "off") return empty;
+  const format = (
+    account: Account,
+    meter: Meter,
+    remaining: number,
+    fresh: boolean,
+  ) => {
+    const value = Math.round(
+      store.settings.displayMode === "used" ? 100 - remaining : remaining,
     );
-  if (!readings.length) return { text: "", color: "#64748b" };
+    const suffix = store.settings.displayMode === "used" ? "used" : "remaining";
+    const threshold = alertThresholds(account, store.settings);
+    const description = store.settings.privacyMode
+      ? "Limit"
+      : `${accountName(account)} · ${meter.label}`;
+    return {
+      text: `${value}%`,
+      color: !fresh
+        ? "#64748b"
+        : remaining <= threshold.critical
+          ? "#dc5a52"
+          : remaining <= threshold.warning
+            ? "#b97819"
+            : "#237c64",
+      title: `MyLimits · ${description}: ${value}% ${suffix}${fresh ? "" : " · Last reading"}`,
+    };
+  };
+  if (choice?.mode === "meter") {
+    const account = store.accounts.find((a) => a.id === choice.accountId);
+    const meter = account?.meters.find((m) => m.id === choice.meterId);
+    if (account && meter) {
+      const fresh = isFresh(account, meter, now, store.settings.refreshMinutes);
+      if (
+        meter.evidence !== "reported" ||
+        (!fresh && meter.resetsAt !== null && meter.resetsAt <= now)
+      )
+        return empty;
+      const remaining = remainingPercent(meter);
+      return remaining === null
+        ? empty
+        : format(account, meter, remaining, fresh);
+    }
+    // A deleted account or limit falls back to automatic selection.
+  }
+  const readings = store.accounts.flatMap((account) =>
+    account.meters
+      .filter(
+        (meter) =>
+          meter.evidence === "reported" &&
+          isFresh(account, meter, now, store.settings.refreshMinutes),
+      )
+      .flatMap((meter) => {
+        const remaining = remainingPercent(meter);
+        return remaining === null ? [] : [{ account, meter, remaining }];
+      }),
+  );
+  if (!readings.length) return empty;
   const lowest = readings.reduce((a, b) =>
     a.remaining <= b.remaining ? a : b,
   );
-  const threshold = alertThresholds(lowest.account, store.settings);
-  const value =
-    store.settings.displayMode === "used"
-      ? 100 - lowest.remaining
-      : lowest.remaining;
-  return {
-    text: `${Math.round(value)}%`,
-    color:
-      lowest.remaining <= threshold.critical
-        ? "#dc5a52"
-        : lowest.remaining <= threshold.warning
-          ? "#b97819"
-          : "#237c64",
-  };
+  return format(lowest.account, lowest.meter, lowest.remaining, true);
 }

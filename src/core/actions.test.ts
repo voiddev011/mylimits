@@ -2,12 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { emptyStore } from "./model";
 import { applySnapshot } from "./engine";
-import {
-  enableWebsite,
-  forgetAccount,
-  setWorkspace,
-  orderAccounts,
-} from "./actions";
+import { enableWebsite, forgetAccount, setWorkspace } from "./actions";
 function fixture() {
   return applySnapshot(
     emptyStore("salt"),
@@ -52,10 +47,4 @@ test("forget removes snapshots and disables the current collector without deleti
     next.connections.find((c) => c.provider === "chatgpt")!.generation,
     0,
   );
-});
-test("invalid reorder cannot merge or drop accounts", () => {
-  const s = fixture();
-  assert.throws(() => orderAccounts(s, []));
-  assert.throws(() => orderAccounts(s, ["not-owned"]));
-  assert.equal(orderAccounts(s, ["a"]).accounts[0]!.order, 0);
 });

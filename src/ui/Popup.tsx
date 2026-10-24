@@ -26,11 +26,7 @@ import "./styles.css";
 import "./popup.css";
 
 function visibleMeters(account: Account): Meter[] {
-  const pinned =
-    account.pinnedMeterIds?.flatMap(
-      (id) => account.meters.find((m) => m.id === id) ?? [],
-    ) ?? [];
-  return (pinned.length ? pinned : account.meters).slice(0, 2);
+  return account.meters.slice(0, 2);
 }
 
 export function Popup() {

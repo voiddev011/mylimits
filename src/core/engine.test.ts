@@ -246,3 +246,89 @@ test("reset expiry is distinct from a fresh zero-usage reading", () => {
     false,
   );
 });
+
+test("toolbar badge defaults to auto, supports off, and chosen meter respects display mode and thresholds", () => {
+  const s = withAccount([
+    meter(30),
+    meter(95, { id: "week", label: "Weekly" }),
+  ]);
+  delete s.settings.badge; // Legacy settings have automatic behavior.
+  assert.equal(badge(s, NOW).text, "5%");
+  assert.equal(badge(s, NOW).color, "#dc5a52");
+  s.settings.badge = { mode: "off" };
+  assert.equal(badge(s, NOW).text, "");
+  s.settings.badge = {
+    mode: "meter",
+    accountId: s.accounts[0]!.id,
+    meterId: "session",
+  };
+  assert.equal(badge(s, NOW).text, "70%");
+  assert.equal(badge(s, NOW).color, "#237c64");
+  s.settings.displayMode = "used";
+  assert.equal(badge(s, NOW).text, "30%");
+  assert.match(badge(s, NOW).title, /Session: 30% used/);
+  s.settings.badge.meterId = "week";
+  assert.equal(badge(s, NOW).text, "95%");
+  assert.equal(badge(s, NOW).color, "#dc5a52");
+  s.accounts[0]!.meters[1]!.usedPercent = 85;
+  assert.equal(badge(s, NOW).color, "#b97819");
+});
+
+test("chosen stale meter retains last value in grey but never projects expired reset values", () => {
+  const s = withAccount([meter(62)]);
+  s.settings.badge = {
+    mode: "meter",
+    accountId: s.accounts[0]!.id,
+    meterId: "session",
+  };
+  s.accounts[0]!.connection = "inactive";
+  assert.equal(badge(s, NOW).text, "38%");
+  assert.equal(badge(s, NOW).color, "#64748b");
+  assert.match(badge(s, NOW).title, /Last reading/);
+  s.settings.displayMode = "used";
+  assert.equal(badge(s, NOW).text, "62%");
+  assert.equal(badge(s, NOW + 3600_000).text, "");
+  assert.equal(badge(s, NOW + 3600_000).color, "#64748b");
+  // Even an active account needs a new reading after the reset timestamp.
+  s.accounts[0]!.connection = "active";
+  assert.equal(badge(s, NOW + 3600_000).text, "");
+  s.accounts[0]!.meters[0]!.resetsAt = null;
+  assert.equal(badge(s, NOW + 3600_000).text, "62%");
+  assert.equal(badge(s, NOW + 3600_000).color, "#64748b");
+});
+
+test("missing chosen account or meter falls back to auto, unavailable or projected readings stay empty", () => {
+  const s = withAccount([meter(30)]);
+  s.settings.badge = {
+    mode: "meter",
+    accountId: "deleted",
+    meterId: "session",
+  };
+  assert.equal(badge(s, NOW).text, "70%");
+  s.settings.badge.accountId = s.accounts[0]!.id;
+  s.settings.badge.meterId = "deleted";
+  assert.equal(badge(s, NOW).text, "70%");
+  s.settings.badge.meterId = "session";
+  s.accounts[0]!.meters[0]!.usedPercent = null;
+  assert.equal(badge(s, NOW).text, "");
+  s.accounts[0]!.meters[0]!.usedPercent = 0;
+  s.accounts[0]!.meters[0]!.evidence = "estimated";
+  assert.equal(badge(s, NOW).text, "");
+});
+
+test("toolbar tooltip hides both account and limit names in privacy mode", () => {
+  const s = withAccount([meter(30, { label: "Secret weekly project" })]);
+  s.accounts[0]!.alias = "Secret personal account";
+  for (const mode of ["auto", "meter"] as const) {
+    s.settings.badge = {
+      mode,
+      accountId: s.accounts[0]!.id,
+      meterId: "session",
+    };
+    assert.match(badge(s, NOW).title, /Secret personal account/);
+    s.settings.privacyMode = true;
+    assert.equal(badge(s, NOW).title, "MyLimits · Limit: 70% remaining");
+    assert.ok(!badge(s, NOW).title.includes("Secret"));
+    s.settings.privacyMode = false;
+  }
+});

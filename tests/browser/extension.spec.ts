@@ -3498,3 +3498,180 @@ test.describe("Copilot add-another shortcut and account identity (simulated)", (
     ).toBeVisible();
   });
 });
+
+test("U5 one toolbar choice replaces the previous limit, persists, and privacy hides tooltip names", async ({
+  context,
+  worker,
+  extensionId,
+}) => {
+  const fixture = {
+    ...emptyStore("u5-badge-fixture"),
+    accounts: demoState().accounts,
+  };
+  const first = fixture.accounts[0]!;
+  first.order = 99;
+  first.pinnedMeterIds = ["extra"];
+  first.meters.push({
+    ...first.meters[0]!,
+    id: "extra",
+    label: "Legacy pinned extra",
+    usedPercent: 20,
+  });
+  await worker.evaluate(
+    async (s) => chrome.storage.local.set({ "mylimits:state:v2": s }),
+    fixture,
+  );
+  const page = await context.newPage();
+  await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
+  const row = page.locator(".account-row").filter({
+    has: page.getByRole("button", {
+      name: "Details for Claude Work",
+      exact: true,
+    }),
+  });
+  await expect(row.locator(".row-meters")).toContainText("Weekly");
+  await expect(row.locator(".row-meters")).not.toContainText(
+    "Legacy pinned extra",
+  );
+  await page
+    .getByRole("button", { name: "Details for Claude Work", exact: true })
+    .click();
+  await expect(page.getByRole("checkbox", { name: "Pin meter" })).toHaveCount(
+    0,
+  );
+  await expect(
+    page.getByRole("button", { name: /Move .* (up|down)$/ }),
+  ).toHaveCount(0);
+  await expect(page.getByRole("option", { name: "Your order" })).toHaveCount(0);
+  const weekly = row.getByRole("button", {
+    name: "Show Weekly · all models on toolbar",
+    exact: true,
+  });
+  await weekly.click();
+  await expect(weekly).toHaveText("On toolbar");
+  await expect
+    .poll(() => worker.evaluate(async () => chrome.action.getBadgeText({})))
+    .toBe("39%");
+  await expect
+    .poll(() => worker.evaluate(async () => chrome.action.getTitle({})))
+    .toBe("MyLimits · Claude Work · Weekly · all models: 39% remaining");
+  await page
+    .getByRole("button", { name: "Details for GPT Work", exact: true })
+    .click();
+  const codex = page.getByRole("button", {
+    name: "Show Work / Codex · 5 hours on toolbar",
+    exact: true,
+  });
+  await codex.click();
+  await expect(codex).toHaveText("On toolbar");
+  await expect
+    .poll(() => worker.evaluate(async () => chrome.action.getBadgeText({})))
+    .toBe("14%");
+  await page
+    .getByRole("button", { name: "Details for Claude Work", exact: true })
+    .click();
+  await expect(weekly).toHaveText("Show on toolbar");
+  await expect
+    .poll(() =>
+      worker.evaluate(async () => {
+        const s = (await chrome.storage.local.get("mylimits:state:v2"))[
+          "mylimits:state:v2"
+        ] as Store;
+        return s.settings.badge;
+      }),
+    )
+    .toEqual({ mode: "meter", accountId: "demo-gpt-work", meterId: "session" });
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(page.getByLabel("Toolbar badge", { exact: true })).toHaveValue(
+    "meter",
+  );
+  await expect(
+    page.getByText("GPT Work · Work / Codex · 5 hours", { exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("Display", { exact: true }).selectOption("used");
+  await page
+    .getByRole("button", { name: "Save preferences", exact: true })
+    .click();
+  await expect
+    .poll(() => worker.evaluate(async () => chrome.action.getBadgeText({})))
+    .toBe("86%");
+  await page.getByLabel("Toolbar badge", { exact: true }).selectOption("off");
+  await page
+    .getByRole("button", { name: "Save preferences", exact: true })
+    .click();
+  await expect
+    .poll(() => worker.evaluate(async () => chrome.action.getBadgeText({})))
+    .toBe("");
+  await page.reload();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(page.getByLabel("Toolbar badge", { exact: true })).toHaveValue(
+    "off",
+  );
+  await page.getByLabel("Toolbar badge", { exact: true }).selectOption("meter");
+  await page.getByLabel("Privacy mode").selectOption("on");
+  await page
+    .getByRole("button", { name: "Save preferences", exact: true })
+    .click();
+  await expect
+    .poll(() => worker.evaluate(async () => chrome.action.getTitle({})))
+    .toBe("MyLimits · Limit: 86% used");
+  await page.getByLabel("Privacy mode").selectOption("off");
+  await page
+    .getByRole("button", { name: "Save preferences", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Overview", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Details for GPT Work", exact: true })
+    .click();
+  await codex.click(); // Toggle the chosen meter off: automatic selection resumes.
+  await expect(codex).toHaveText("Show on toolbar");
+  await expect
+    .poll(() =>
+      worker.evaluate(async () => {
+        const s = (await chrome.storage.local.get("mylimits:state:v2"))[
+          "mylimits:state:v2"
+        ] as Store;
+        return s.settings.badge;
+      }),
+    )
+    .toEqual({ mode: "auto" });
+  const popup = await context.newPage();
+  await popup.goto(`chrome-extension://${extensionId}/popup.html`);
+  const quick = popup
+    .locator(".quick-account")
+    .filter({ hasText: "Claude Work" });
+  await expect(quick).toContainText("Weekly");
+  await expect(quick).not.toContainText("Legacy pinned extra");
+  const saved = await worker.evaluate(async () => {
+    const s = (await chrome.storage.local.get("mylimits:state:v2"))[
+      "mylimits:state:v2"
+    ] as Store;
+    return { order: s.accounts[0]!.order, pins: s.accounts[0]!.pinnedMeterIds };
+  });
+  expect(saved).toEqual({ order: 99, pins: ["extra"] });
+});
+
+test("U5 chosen limit preference without a selection explains where to choose", async ({
+  context,
+  worker,
+  extensionId,
+}) => {
+  const fixture = emptyStore("u5-no-choice");
+  await worker.evaluate(
+    async (s) => chrome.storage.local.set({ "mylimits:state:v2": s }),
+    fixture,
+  );
+  const page = await context.newPage();
+  await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByLabel("Toolbar badge", { exact: true }).selectOption("meter");
+  await expect(
+    page.getByText("Choose a limit in Accounts", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Save preferences", exact: true })
+    .click();
+  await expect
+    .poll(() => worker.evaluate(async () => chrome.action.getBadgeText({})))
+    .toBe("");
+});

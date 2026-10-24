@@ -50,7 +50,7 @@ key for compatibility; it is a browser notification preference, not an app route
 ## Checks and package maintenance
 
 Run `npm ci`, `npm run check`, `npx playwright install chromium`, then
-`npm run test:browser`. Latest completed baseline: 224 unit/platform tests and 70
+`npm run test:browser`. Latest completed baseline: 229 unit/platform tests and 72
 extension/site browser tests. Fixtures do not establish real provider behavior.
 
 Build variants with `npm run build:edge` / `npm run build:firefox`. Package using
@@ -92,3 +92,14 @@ only normal Chrome/Firefox ZIPs and attaches them to a GitHub Release. It does n
 submit to browser stores. Private-repository releases are not public downloads.
 Do not create a release or change repository visibility without authorization.
 See [LAUNCH.md](LAUNCH.md) for the operator's publishing steps.
+
+## Toolbar badge
+
+`Settings.badge` optionally selects Automatic, one account/meter, or Off. Missing
+settings retain automatic selection of the lowest fresh reported remaining limit.
+A stale chosen reading is grey; an expired reset window is empty, never a projected
+reset value. Tooltip names are hidden in privacy mode. Settings changes, startup
+and completed refreshes render the badge and tooltip together. Store version stays
+2. Legacy `order` and `pinnedMeterIds` are parsed and preserved, but no longer affect
+sorting or previews. Account pinning remains available; previews show the first two
+meters. No permission or credential handling changes are required.

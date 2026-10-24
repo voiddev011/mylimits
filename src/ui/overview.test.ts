@@ -107,3 +107,42 @@ test("low filter respects each account warning threshold", () => {
     2,
   );
 });
+
+test("recommended sorting ignores legacy order but keeps account pinning", () => {
+  const store = demoState(now);
+  const before = selectAccounts(
+    store.accounts,
+    store.settings,
+    now,
+    "",
+    false,
+    "default",
+  ).map((a) => a.id);
+  store.accounts.forEach((a, i) => {
+    a.order = store.accounts.length - i;
+    a.pinnedMeterIds = ["week"];
+  });
+  assert.deepEqual(
+    selectAccounts(
+      store.accounts,
+      store.settings,
+      now,
+      "",
+      false,
+      "default",
+    ).map((a) => a.id),
+    before,
+  );
+  store.accounts[store.accounts.length - 1]!.pinned = true;
+  assert.equal(
+    selectAccounts(
+      store.accounts,
+      store.settings,
+      now,
+      "",
+      false,
+      "default",
+    )[0]!.id,
+    store.accounts[store.accounts.length - 1]!.id,
+  );
+});

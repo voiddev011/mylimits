@@ -279,3 +279,28 @@ test("C11 saved-sign-in metadata is additive and exposes only method/expiry whil
     false,
   );
 });
+
+test("U5 accepts old order and pinned meter fields without deleting their values", () => {
+  const s = emptyStore("legacy-u5");
+  const a = legacy().accounts[0]!;
+  s.accounts = [
+    {
+      ...a,
+      provider: "claude",
+      kind: "account",
+      connection: "inactive",
+      order: 4,
+      pinnedMeterIds: ["week"],
+    },
+  ];
+  delete s.settings.badge;
+  const parsed = StoreSchema.parse(s);
+  assert.equal(parsed.version, 2);
+  assert.equal(parsed.accounts[0]!.order, 4);
+  assert.deepEqual(parsed.accounts[0]!.pinnedMeterIds, ["week"]);
+  assert.equal(parsed.settings.badge, undefined);
+  for (const mode of ["auto", "meter", "off"] as const) {
+    s.settings.badge = { mode, accountId: "account", meterId: "week" };
+    assert.deepEqual(StoreSchema.parse(s).settings.badge, s.settings.badge);
+  }
+});

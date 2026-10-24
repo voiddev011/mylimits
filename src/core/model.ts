@@ -11,7 +11,12 @@ export interface Meter {
   total: number | null;
   remaining?: number | null;
   unit:
-    "percent" | "messages" | "requests" | "searches" | "credits" | "currency";
+    | "percent"
+    | "messages"
+    | "requests"
+    | "searches"
+    | "credits"
+    | "currency";
   resetsAt: number | null;
   source: string;
   currency?: string | null;
@@ -57,6 +62,11 @@ export interface Settings {
   privacyMode?: boolean;
   historyRetentionDays?: 30 | 90;
   displayMode?: "remaining" | "used";
+  badge?: {
+    mode: "auto" | "meter" | "off";
+    accountId?: string;
+    meterId?: string;
+  };
   autoRecoverTab?: boolean;
   resetAlerts?: boolean;
   quietHours?: { enabled: boolean; start: string; end: string };
@@ -147,6 +157,7 @@ export function emptyStore(salt: string): Store {
       privacyMode: false,
       historyRetentionDays: 30,
       displayMode: "remaining",
+      badge: { mode: "auto" },
       autoRecoverTab: true,
       resetAlerts: false,
       quietHours: { enabled: false, start: "22:00", end: "08:00" },

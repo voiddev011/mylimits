@@ -55,8 +55,6 @@ export function selectAccounts(
       if (sort === "default") {
         const pinned = Number(!!b.pinned) - Number(!!a.pinned);
         if (pinned) return pinned;
-        if (a.order !== undefined || b.order !== undefined)
-          return (a.order ?? 9999) - (b.order ?? 9999);
       }
       const difference =
         sort === "remaining"

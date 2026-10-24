@@ -88,6 +88,13 @@ export const SettingsSchema: z.ZodType<Settings> = z
     privacyMode: z.boolean().optional(),
     historyRetentionDays: z.union([z.literal(30), z.literal(90)]).optional(),
     displayMode: z.enum(["remaining", "used"]).optional(),
+    badge: z
+      .object({
+        mode: z.enum(["auto", "meter", "off"]),
+        accountId: id.optional(),
+        meterId: id.optional(),
+      })
+      .optional(),
     resetAlerts: z.boolean().optional(),
     autoRecoverTab: z.boolean().default(true),
     quietHours: z

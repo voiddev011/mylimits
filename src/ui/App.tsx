@@ -6,8 +6,6 @@ import {
 import { useEffect, useState, type FormEvent } from "react";
 import { browser } from "wxt/browser";
 import {
-  ArrowDown,
-  ArrowUp,
   Check,
   ChevronDown,
   ExternalLink,
@@ -77,17 +75,6 @@ function AccountDetails({
     if (await run({ type: "rename", accountId: account.id, alias }))
       setEditing(false);
   }
-  const sorted = [...store.accounts].sort(
-    (a, b) => (a.order ?? 0) - (b.order ?? 0),
-  );
-  const position = sorted.findIndex((a) => a.id === account.id);
-  function move(delta: number) {
-    const ids = sorted.map((a) => a.id);
-    const to = position + delta;
-    if (to < 0 || to >= ids.length) return;
-    [ids[position], ids[to]] = [ids[to]!, ids[position]!];
-    void run({ type: "order", ids });
-  }
   return (
     <div className="account-detail">
       <div className="detail-heading">
@@ -97,24 +84,6 @@ function AccountDetails({
             {account.plan ?? "Plan not reported"} · Last reading{" "}
             {account.updatedAt ? age(account.updatedAt, now) : "not available"}
           </p>
-        </div>
-        <div className="inline-actions">
-          <button
-            className="icon-button"
-            aria-label={`Move ${accountName(account)} up`}
-            disabled={busy || position === 0}
-            onClick={() => move(-1)}
-          >
-            <ArrowUp size={15} />
-          </button>
-          <button
-            className="icon-button"
-            aria-label={`Move ${accountName(account)} down`}
-            disabled={busy || position === sorted.length - 1}
-            onClick={() => move(1)}
-          >
-            <ArrowDown size={15} />
-          </button>
         </div>
       </div>
       {editing && !store.settings.privacyMode ? (
@@ -187,29 +156,40 @@ function AccountDetails({
               now={now}
               showResetClock
             />
-            <label className="check-label">
-              <input
-                type="checkbox"
-                checked={account.pinnedMeterIds?.includes(m.id) ?? false}
-                disabled={
-                  busy ||
-                  (!account.pinnedMeterIds?.includes(m.id) &&
-                    (account.pinnedMeterIds?.length ?? 0) >= 2)
-                }
-                onChange={(e) =>
-                  void run({
-                    type: "account-preferences",
-                    accountId: account.id,
-                    pinnedMeterIds: e.target.checked
-                      ? [...(account.pinnedMeterIds ?? []), m.id]
-                      : (account.pinnedMeterIds ?? []).filter(
-                          (id) => id !== m.id,
-                        ),
-                  })
-                }
-              />
-              Pin meter
-            </label>
+            <button
+              className="button"
+              aria-label={`Show ${m.label} on toolbar`}
+              aria-pressed={
+                store.settings.badge?.mode === "meter" &&
+                store.settings.badge.accountId === account.id &&
+                store.settings.badge.meterId === m.id
+              }
+              disabled={busy}
+              onClick={() =>
+                void run({
+                  type: "settings",
+                  settings: {
+                    ...store.settings,
+                    badge:
+                      store.settings.badge?.mode === "meter" &&
+                      store.settings.badge.accountId === account.id &&
+                      store.settings.badge.meterId === m.id
+                        ? { mode: "auto" }
+                        : {
+                            mode: "meter",
+                            accountId: account.id,
+                            meterId: m.id,
+                          },
+                  },
+                })
+              }
+            >
+              {store.settings.badge?.mode === "meter" &&
+              store.settings.badge.accountId === account.id &&
+              store.settings.badge.meterId === m.id
+                ? "On toolbar"
+                : "Show on toolbar"}
+            </button>
           </div>
         ))}
       </div>
@@ -460,12 +440,7 @@ function AccountRow({
   connect: (p: ProviderId, on: boolean) => Promise<void>;
   addAccount: (p: ProviderId) => void;
 }) {
-  const pinned =
-    account.pinnedMeterIds?.flatMap(
-      (id) => account.meters.find((m) => m.id === id) ?? [],
-    ) ?? [];
-  const selected = pinned.length ? pinned : account.meters;
-  const meters = selected.slice(0, 2);
+  const meters = account.meters.slice(0, 2);
   return (
     <article
       className={`account-row ${expanded ? "account-row--expanded" : ""}`}
@@ -665,8 +640,44 @@ function Preferences({
             />
           </label>
           <label>
+            Toolbar badge
+            <select
+              aria-label="Toolbar badge"
+              value={draft.badge?.mode ?? "auto"}
+              onChange={(e) =>
+                setDraft({
+                  ...draft,
+                  badge: {
+                    ...draft.badge,
+                    mode: e.target.value as "auto" | "meter" | "off",
+                  },
+                })
+              }
+            >
+              <option value="auto">Automatic (most-used limit)</option>
+              <option value="meter">Chosen limit</option>
+              <option value="off">Off</option>
+            </select>
+            {draft.badge?.mode === "meter" && (
+              <small>
+                {(() => {
+                  const a = store.accounts.find(
+                    (a) => a.id === draft.badge?.accountId,
+                  );
+                  const m = a?.meters.find(
+                    (m) => m.id === draft.badge?.meterId,
+                  );
+                  return a && m
+                    ? `${accountName(a)} · ${m.label}`
+                    : "Choose a limit in Accounts";
+                })()}
+              </small>
+            )}
+          </label>
+          <label>
             Display
             <select
+              aria-label="Display"
               value={draft.displayMode ?? "remaining"}
               onChange={(e) =>
                 setDraft({
@@ -1158,7 +1169,7 @@ export function App({
                                 setSort(e.target.value as LimitSort)
                               }
                             >
-                              <option value="default">Your order</option>
+                              <option value="default">Recommended</option>
                               <option value="remaining">Least remaining</option>
                               <option value="reset">Next reset</option>
                               <option value="name">Name</option>
