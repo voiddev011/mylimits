@@ -600,3 +600,10 @@ details p {
     gap: 12px;
   }
 }
+
+/* Keep download controls visible on short desktop viewports across system fonts. */
+@media (min-width: 761px) and (max-height: 700px) {
+  .hero { padding-top: 16px; }
+  .hero h1 { font-size: clamp(2.15rem, 4.5vw, 3.8rem); }
+  .hero .eyebrow { margin-bottom: 14px; }
+}

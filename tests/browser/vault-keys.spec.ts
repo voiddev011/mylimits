@@ -370,7 +370,24 @@ test("simulated private-provider runtime verifies two accounts, saves only on co
   expect(result.rejection).toBe("saved-http-401");
   expect(result.challenge).toBe(true);
 });
-test("production private commands remain disabled and validate consent and exact dashboard sender", async ({
+test("production ChatGPT connection UI offers the explicitly enabled saved sign-in", async ({
+  context,
+  extensionId,
+}) => {
+  const page = await context.newPage();
+  await page.goto(`chrome-extension://${extensionId}/dashboard.html#add`);
+  await page.getByRole("button", { name: /^ChatGPT \/ Codex/ }).click();
+  await expect(
+    page.getByRole("button", { name: "Private sign-in", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", {
+      name: "Use current browser login",
+      exact: true,
+    }),
+  ).toBeVisible();
+});
+test("disabled-provider private commands stay blocked and validate consent and exact dashboard sender", async ({
   context,
   extensionId,
 }) => {
@@ -378,7 +395,7 @@ test("production private commands remain disabled and validate consent and exact
   const result = await page.evaluate(async () => {
     const start = {
       type: "vault-signin-start",
-      provider: "chatgpt",
+      provider: "claude",
       method: "private",
       nickname: "Personal",
     };
@@ -414,7 +431,7 @@ test("production private commands remain disabled and validate consent and exact
     async () =>
       await chrome.runtime.sendMessage({
         type: "vault-signin-start",
-        provider: "chatgpt",
+        provider: "claude",
         method: "private",
         nickname: "",
       }),

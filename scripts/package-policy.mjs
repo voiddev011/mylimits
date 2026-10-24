@@ -1,13 +1,12 @@
 import assert from "node:assert/strict";
-export function assertReleaseHasNoSpike(manifest, files, bundled = "") {
+export function assertReleasePackage(manifest, files, bundled = "") {
   assert.ok(
-    !files.some((file) => /(^|[\/_.-])spike([\/_.-]|$)/i.test(file)),
-    "Release contains a spike file",
-  );
-  assert.ok(
-    !bundled.includes("MYLIMITS_PRIVATE_SESSION_SPIKE") &&
-      !bundled.includes("mylimits-spike-v1"),
-    "Release contains spike runtime code",
+    files
+      .filter((f) => f.endsWith(".html"))
+      .every((f) =>
+        ["popup.html", "dashboard.html", "sidepanel.html"].includes(f),
+      ),
+    "Release contains an unexpected extension page",
   );
   assert.ok(
     !files.some((file) =>
@@ -28,17 +27,16 @@ export function assertReleaseHasNoSpike(manifest, files, bundled = "") {
   ])
     assert.ok(
       !manifest.permissions?.includes(permission),
-      `Release requires spike permission ${permission}`,
+      `Release requires forbidden permission ${permission}`,
     );
-  // C3's existing optional cookies grant is intentional; do not remove sign-in detection.
+  // Optional cookies and header rules support sign-in detection and experimental saved sign-in.
   for (const permission of [
     "nativeMessaging",
-    "declarativeNetRequestWithHostAccess",
     "webRequest",
     "declarativeNetRequestFeedback",
   ])
     assert.ok(
       !manifest.optional_permissions?.includes(permission),
-      `Release exposes spike permission ${permission}`,
+      `Release exposes forbidden permission ${permission}`,
     );
 }

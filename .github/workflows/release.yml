@@ -23,29 +23,33 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser -- --reporter=list,github
       - run: npm run zip
+      - run: npm run zip:edge
       - run: npm run zip:firefox
+      - run: node scripts/check-packages.mjs
+      - run: python3 scripts/check-archives.py
+      - run: node scripts/package-checksums.mjs
       - name: Validate release asset allowlist
         shell: bash
         run: |
           set -euo pipefail
           version=$(node -p "require('./package.json').version")
           test "$GITHUB_REF_NAME" = "v$version"
-          for browser in chrome firefox; do
+          for browser in chrome edge firefox; do
             archive=".output/mylimits-$version-$browser.zip"
             test -s "$archive"
-            if unzip -Z1 "$archive" | grep -E '(^|/)spike([/.]|$)'; then
-              echo 'Evidence spike must never be released.' >&2
-              exit 1
-            fi
           done
           mkdir release-assets
           cp ".output/mylimits-$version-chrome.zip" release-assets/
+          cp ".output/mylimits-$version-edge.zip" release-assets/
           cp ".output/mylimits-$version-firefox.zip" release-assets/
+          cp .output/SHA256SUMS release-assets/
       - uses: actions/upload-artifact@v4
         with:
           name: release-zips
-          path: release-assets/*.zip
+          path: release-assets/
           if-no-files-found: error
           retention-days: 7
 
@@ -68,7 +72,7 @@ jobs:
         run: |
           set -euo pipefail
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release upload "$RELEASE_TAG" release-assets/*.zip --clobber
+            gh release upload "$RELEASE_TAG" release-assets/*.zip release-assets/SHA256SUMS --clobber
           else
-            gh release create "$RELEASE_TAG" release-assets/*.zip --verify-tag --generate-notes
+            gh release create "$RELEASE_TAG" release-assets/*.zip release-assets/SHA256SUMS --verify-tag --generate-notes --prerelease
           fi

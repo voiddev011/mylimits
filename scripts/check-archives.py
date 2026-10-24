@@ -2,7 +2,7 @@
 import json, zipfile
 from pathlib import Path
 version=json.loads(Path('package.json').read_text())['version']
-for target in ['chrome','firefox']:
+for target in ['chrome','edge','firefox']:
     file=Path(f'.output/mylimits-{version}-{target}.zip')
     with zipfile.ZipFile(file) as archive:
         names=archive.namelist()
@@ -14,12 +14,12 @@ for target in ['chrome','firefox']:
         bundled=''.join(archive.read(n).decode('utf-8') for n in names if n.endswith('.js'))
         assert not any(n.startswith(('companion/','desktop/')) or n.lower().endswith(('.exe','.msi')) for n in names), 'Native application files in extension'
         assert 'connectNative' not in bundled and 'sendNativeMessage' not in bundled
-        assert not any('spike' in n.lower() for n in names), 'Release ZIP contains spike files'
-        assert 'MYLIMITS_PRIVATE_SESSION_SPIKE' not in bundled and 'mylimits-spike-v1' not in bundled
+        assert all(n in ['popup.html','dashboard.html','sidepanel.html'] for n in names if n.endswith('.html'))
         assert not any(p in manifest.get('permissions',[]) for p in ['nativeMessaging','cookies','declarativeNetRequestWithHostAccess','webRequest'])
-        assert not any(p in manifest.get('optional_permissions',[]) for p in ['nativeMessaging','declarativeNetRequestWithHostAccess','webRequest','declarativeNetRequestFeedback'])
+        assert not any(p in manifest.get('optional_permissions',[]) for p in ['nativeMessaging','webRequest','declarativeNetRequestFeedback'])
         assert 'Prompt template and local review' not in bundled
         assert 'Prepare a handoff' not in bundled
+        assert manifest.get('optional_permissions') == (['notifications','cookies'] if target == 'firefox' else ['notifications','cookies','declarativeNetRequestWithHostAccess'])
         assert not manifest.get('host_permissions')
         assert len(manifest['optional_host_permissions'])==4
         assert not manifest.get('content_scripts')

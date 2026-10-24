@@ -10,6 +10,9 @@ git switch main
 git pull --ff-only origin main
 npm ci --include=optional
 npm run zip
+npm run zip:edge
+npm run zip:firefox
+node scripts/package-checksums.mjs
 ```
 
 Output: **`.output/mylimits-3.4.0-chrome.zip`**. Share this ZIP directly with testers.
@@ -18,8 +21,22 @@ choose **Load unpacked** → the extracted folder containing `manifest.json`.
 [Exact installation steps](INSTALL.md). These installations do not auto-update.
 
 This is immediate manual beta distribution, not a browser-store installation.
-The repository is private, so its Releases link is not a public download URL.
-No native app setup is needed. Never distribute `.output-spike` or a spike ZIP.
+Public repositories allow anyone to download releases; private repositories
+restrict downloads to people with repository access. Check visibility before sharing.
+No native app setup is needed. Distribute only the browser ZIPs validated by the package guards.
+
+## Upload a GitHub beta manually
+
+Open Releases → Draft a new release, create tag `v3.4.0` targeting main, and attach
+all three `.output/mylimits-3.4.0-*.zip` files plus `.output/SHA256SUMS`. Mark it as
+a prerelease and include the installation instructions from INSTALL.md. The
+Chrome ZIP also supports Brave. State that Firefox is unsigned/temporary and
+provider live acceptance remains pending. No release is created merely by
+building files; uploading/publishing is a separate explicit operator action.
+
+The tag workflow can also validate and attach these same assets. Do not upload
+source archives as the installable extension. Website download URLs must be set
+to actual published release assets only after they exist.
 
 ## Publish to Chrome Web Store
 
@@ -36,7 +53,7 @@ No native app setup is needed. Never distribute `.output-spike` or a spike ZIP.
    provider authentication access must be described accurately. Do not claim no
    data handling simply because storage is local. Never publish live credentials.
 5. Supply a **publicly accessible privacy-policy URL and public support/help URL**.
-   This private repo's Markdown/issues links are not public help pages. Host
+   Check that repository Markdown/issues links are publicly accessible. Host
    `site/privacy.html` and the setup/help content publicly before submitting;
    update the extension/site support links to those real public URLs.
 6. Choose public visibility and **Submit for review**. Enable automatic publication
@@ -51,13 +68,14 @@ Google's official instructions:
 ## Actual launch readiness
 
 - Packaging, automated checks and the current website code are implemented.
-- The repo is private and GitHub Pages is disabled. Public privacy/help hosting,
+- Repository visibility and GitHub Pages deployment must be checked. Public privacy/help hosting,
   live support URLs and store account/listing assets are operator setup, not done
   by producing a ZIP. Do not change repo visibility just to publish an extension.
 - Run real-account smoke checks for every provider advertised in the listing.
   Copilot real-token acceptance remains pending; see [COPILOT.md](COPILOT.md).
-- Independent saved GPT/Claude sign-ins remain **disabled**. Do not market them as
-  enabled. Website account switching remembers last readings; it does not refresh
+- Saved ChatGPT sign-in is **experimental on Chromium**; Claude and other saved
+  sign-ins, and Firefox saved sign-in, remain disabled. Fixture tests do not prove
+  live session acceptance or survival after logout. Website account switching remembers last readings; it does not refresh
   every logged-out account. Codex buckets do not represent all ChatGPT limits.
 - If the current version number already exists in your store listing, increase
   package.json, package-lock.json and the manifest version consistently before
@@ -74,5 +92,5 @@ accounts the user connects, with local history and optional alerts.”
 - Firefox: `npm run zip:firefox`, then Mozilla Add-on Developer Hub submission for
   signing/listing. Temporary local installation does not replace signing.
 - Optional GitHub release: use an unused version tag matching package.json only
-  when authorized. The existing workflow builds the two normal ZIPs; private
+  when authorized. The existing workflow builds the three browser ZIPs; private
   releases still require repository access. No release is created by this cleanup.

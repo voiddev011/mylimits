@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile, access, readdir } from "node:fs/promises";
-import { assertReleaseHasNoSpike } from "./package-policy.mjs";
+import { assertReleasePackage } from "./package-policy.mjs";
 async function filesUnder(dir, prefix = "") {
   const files = [];
   for (const entry of await readdir(dir, { withFileTypes: true })) {
@@ -39,7 +39,7 @@ for (const target of ["chrome", "edge", "firefox"]) {
           .map((f) => readFile(`${dir}/${f}`, "utf8")),
       )
     ).join("\n");
-  assertReleaseHasNoSpike(m, files, code);
+  assertReleasePackage(m, files, code);
   for (const file of [
     "providers/copilot.svg",
     "providers/claude.svg",
