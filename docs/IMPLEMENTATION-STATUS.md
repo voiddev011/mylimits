@@ -58,3 +58,12 @@ not itself prove hosting is live. No publication or live provider success is cla
 Next: update the installed extension from main using [INSTALL.md](INSTALL.md),
 then run the explicit [Copilot acceptance checks](COPILOT.md). Keep credentials out
 of issues, diagnostics and chat.
+
+## Remote delivery checks
+
+All five PRs (#21–#25) are merged on GitHub. Six merged remote branches were
+removed only after ancestry checks; only main and archive/pre-simplify remain.
+Node 22/24/26 CI checks passed on the integration head. The Pages workflow's first
+run failed at checkout because its job-level permission map omitted contents: read;
+this is corrected. Pages is also not enabled on the repository, so operator setup
+in WEBSITE.md remains required. This is separate from extension validation.
