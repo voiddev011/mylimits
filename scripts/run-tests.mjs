@@ -43,3 +43,5 @@ import '../src/platform/expiry-watchdog.test.ts';
 import '../src/core/simplify-cleanup.test.ts';
 
 import '../src/core/auto-remember.test.ts';
+
+import '../src/platform/copilot.test.ts';

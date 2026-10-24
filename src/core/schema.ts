@@ -38,14 +38,15 @@ export const ProviderStateSchema: z.ZodType<ProviderState> = z.object({
   failures: z.number().int().min(0), nextRetryAt: time.nullable(),
 });
 export const ConnectionRecordSchema: z.ZodType<ConnectionRecord> = z.object({
-  id, provider: ProviderSchema, kind: z.enum(['website','vault']),
+  id, provider: ProviderSchema, kind: z.enum(['copilot','website','vault']),
   accountId: id.nullable(), workspaceId: id.nullable(), workspaceIds: z.array(id).max(100), enabled: z.boolean(),
   status: z.enum(['disabled','checking','active','needs-auth','needs-tab','unavailable','offline','error']),
   generation: z.number().int().min(0), lastAttemptAt: time.nullable(), lastSuccessAt: time.nullable(),
   nextRetryAt: time.nullable(), failures: z.number().int().min(0), message: z.string().max(300).nullable(), profileId: z.string().uuid().optional(),
+  copilotAllowance:z.number().finite().positive().max(1000000000).nullable().optional(),
   authFailures:z.number().int().min(0).default(0),
   savedSignIn:z.object({method:z.enum(['private','current']),notAfter:time.nullable()}).strict().optional(),
-});
+}).refine(c=>c.kind!=='copilot'||c.provider==='copilot'&&!!c.profileId&&c.id===`copilot:${c.profileId}`,{message:'Invalid Copilot connection.'});
 export const WorkspaceSchema: z.ZodType<Workspace> = z.object({ id, provider: ProviderSchema, remoteId: id, name: z.string().max(120) });
 export const UsageSnapshotSchema: z.ZodType<UsageSnapshot> = z.object({
   schemaVersion: z.literal(2), snapshotId: id, providerId: ProviderSchema, accountId: id, connectionId: id,
@@ -72,6 +73,7 @@ export const StoreSchema:z.ZodType<Store>=z.preprocess(raw=>{
  if(!raw||typeof raw!=='object'||Array.isArray(raw))return raw;
  const state=raw as Record<string,unknown>;if(state.version!==2||!state.providers||typeof state.providers!=='object'||Array.isArray(state.providers))return raw;
  const providers={...state.providers as Record<string,unknown>};
+ if(!('copilot' in providers))providers.copilot=emptyStore('defaults-only').providers.copilot;
  if(!('cursor' in providers))providers.cursor=emptyStore('defaults-only').providers.cursor;
  const connections=Array.isArray(state.connections)&&!state.connections.some(c=>c?.id==='website:cursor')?[...state.connections,websiteConnection('cursor')]:state.connections;
  return simplifyStoredState({...state,providers,connections});

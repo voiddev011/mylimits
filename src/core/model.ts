@@ -1,5 +1,5 @@
 // Pure domain types and calculations. No browser APIs or package dependencies.
-export const PROVIDER_IDS = ['claude', 'chatgpt', 'cursor'] as const;
+export const PROVIDER_IDS = ['claude', 'chatgpt', 'cursor', 'copilot'] as const;
 export type ProviderId = typeof PROVIDER_IDS[number];
 export interface Meter {
   id: string;
@@ -85,7 +85,7 @@ export interface Store {
 export function emptyStore(salt: string): Store {
   return {
     version: 2, installSalt: salt, accounts: [],
-    connections: PROVIDER_IDS.map(provider => websiteConnection(provider)), workspaces: [], snapshots: [], historyIssue: null, resetLedger: {},
+    connections: PROVIDER_IDS.filter(p=>p!=='copilot').map(provider => websiteConnection(provider)), workspaces: [], snapshots: [], historyIssue: null, resetLedger: {},
     providers: Object.fromEntries(PROVIDER_IDS.map(id => [id, {
       enabled: false, status: 'disabled', activeAccountId: null, checkedAt: null, message: null, failures: 0, nextRetryAt: null,
     }])) as Store['providers'],
@@ -111,7 +111,7 @@ export function alertThresholds(account: Account, settings: Settings): { warning
   return { warning, critical: Math.min(warning, settings.criticalRemaining) };
 }
 
-export type ConnectionKind = 'website' | 'vault';
+export type ConnectionKind = 'copilot' | 'website' | 'vault';
 export type ConnectionStatus = 'disabled' | 'checking' | 'active' | 'needs-auth' | 'needs-tab' | 'unavailable' | 'offline' | 'error';
 export interface ConnectionRecord {
   id: string; provider: ProviderId; kind: ConnectionKind; accountId: string | null;
@@ -120,6 +120,7 @@ export interface ConnectionRecord {
   lastSuccessAt: number | null; nextRetryAt: number | null; failures: number;
   message: string | null; profileId?: string;
   authFailures?:number;
+  copilotAllowance?:number|null;
   savedSignIn?:{method:'private'|'current';notAfter:number|null};
 }
 export interface Workspace { id: string; provider: ProviderId; remoteId: string; name: string; }

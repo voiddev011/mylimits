@@ -13,3 +13,14 @@ The dormant saved-sign-in path uses a private-window verification flow, explicit
 U1 compatibility filtering runs before strict Store parsing. It drops retired providers and connection kinds and their accounts/snapshots. A durable cleanup journal records deleted IDs before state rewriting. IndexedDB cleanup and obsolete-key removal finish before completion is marked; interrupted cleanup retries. Remaining identities, aliases, settings, snapshots and history are retained. Legacy V1 parsing is compatibility-only. Runtime initialization removes obsolete alarms and registered scripts.
 
 The separate evidence build has no automatic tracking and keeps explicitly captured test credentials in memory only. See [installation](INSTALL.md).
+
+
+## U2 · GitHub Copilot
+
+`copilot-accounts.ts` verifies identity and usage before committing a `copilot:<slot>`
+connection. `copilot.ts` exclusively uses GitHub REST with cookie omission and
+redirect rejection. `token-vault.ts` protects PATs in a separate storage key;
+`connection-refresh.ts` integrates source-bound reads, generation fences, history
+and backoff. The scheduler enforces 15 minutes even for manual clicks and parks
+401 failures until replacement. Allowance is an explicit account-setting override
+because the documented usage response exposes no allowance. See [COPILOT.md](COPILOT.md).

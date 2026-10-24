@@ -13,3 +13,12 @@ Saved-sign-in code is disabled. Its prepared encryption protects accidental expo
 U1 removes retired provider/source accounts, snapshots and history on first load and erases obsolete feature storage keys. A metadata-only journal makes interrupted deletion retryable. Remaining account data and history are preserved. History exports contain dated readings only. Forget removes the selected account and history.
 
 Evidence-spike capture is explicit and temporary in a separate test profile. Captures disappear on disconnect/restart; copied reports exclude secrets. [Test instructions](INSTALL.md).
+
+
+## GitHub Copilot REST tokens
+
+Optional Copilot connections use fine-grained tokens with Plan: read. The token
+is encrypted separately in `mylimits:tokens:v1` using the existing non-extractable
+AES-GCM key. Only official `api.github.com` REST requests receive it. Tokens are
+excluded from account state, history, exports and diagnostics. Disconnect removes
+the chosen token; Forget removes that account's tokens and history. See [COPILOT.md](COPILOT.md).

@@ -13,7 +13,7 @@ export function migrateV1(raw: unknown): Store {
  const old=V1StoreSchema.parse(raw); const base=emptyStore(old.installSalt);
  const next:Store={...base,...old,version:2,providers:{...base.providers,claude:old.providers.claude,chatgpt:old.providers.chatgpt},settings:{...base.settings,...old.settings},connections:base.connections,
   accounts:old.accounts.filter(a=>(a.provider==='claude'||a.provider==='chatgpt')&&!a.companionProfile).map((a,i)=>({...a,provider:a.provider as Store['accounts'][number]['provider'],order:i,pinned:false,pinnedMeterIds:[],snoozedUntil:null,workspaceId:null})), snapshots:[],workspaces:[],historyIssue:null};
- next.connections=next.connections.map(c=>{const p=c.provider==='cursor'?undefined:old.providers[c.provider];if(!p)return c;return {...c,enabled:p.enabled,status:lifecycle[p.status]??'unavailable',accountId:p.activeAccountId,
+ next.connections=next.connections.map(c=>{const p=c.provider==='cursor'||c.provider==='copilot'?undefined:old.providers[c.provider];if(!p)return c;return {...c,enabled:p.enabled,status:lifecycle[p.status]??'unavailable',accountId:p.activeAccountId,
   lastAttemptAt:p.checkedAt,lastSuccessAt:old.accounts.find(a=>a.id===p.activeAccountId)?.updatedAt??null,nextRetryAt:p.nextRetryAt,failures:p.failures,message:p.message};});
  for(const a of next.accounts){
   const id=`website:${a.provider}`;

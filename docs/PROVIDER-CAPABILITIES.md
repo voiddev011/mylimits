@@ -11,3 +11,12 @@ Saved-sign-in code remains present with every provider policy **off** and empty 
 | Cursor | Returned coding-plan pools and spend | Disabled |
 
 Display labels do not add new authorization routes. Readers use website interfaces, not a new coding-tool integration. Ordinary website logout or expiry can stop reads. Background recovery cannot authenticate users or solve interactive challenges. Real two-account isolation, lifetime, renewal and logout survival are unverified.
+
+
+## GitHub Copilot
+
+Official REST API premium-request monthly gross quantities; fine-grained PAT with
+Plan: read. Multiple per-token connections, verified numeric user IDs. No cookies,
+website endpoints or scraping. Explicit user-selected allowance until GitHub exposes
+a documented allowance field. Minimum refresh 15 minutes. Real-token acceptance
+is pending; see [COPILOT.md](COPILOT.md).

@@ -3,6 +3,7 @@ export type RefreshReason='scheduled'|'manual'|'open'|'startup'|'tab'|'cookie'|'
 const AUTH_SIGNALS:readonly RefreshReason[]=['manual','tab','cookie'];
 export function shouldRefresh(c:ConnectionRecord,reason:RefreshReason,now:number,minutes:number):boolean {
  if(!c.enabled)return false;
+ if(c.kind==='copilot'&&(c.status==='needs-auth'||c.lastAttemptAt!==null&&now-c.lastAttemptAt<900000))return false;
  if(c.lastAttemptAt!==null&&now-c.lastAttemptAt<15000)return false;
  // An explicit sign-in signal may retry authentication, but never bypasses the click cooldown.
  if(c.status==='needs-auth'){

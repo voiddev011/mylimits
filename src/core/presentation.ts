@@ -27,7 +27,7 @@ export function accountStatusText(account:Account,store:PublicState,now:number):
   return `${current?'Live':'Remembered'}${current?' · '+(recovering?'Retrying in the background':accountStatus(account,now,store.settings.refreshMinutes)):''}`;
 }
 export function connectionSource(kind:ConnectionKind):string{
- return kind==='website'?'Browser login':'Saved sign-in';
+ return kind==='copilot'?'GitHub REST API':kind==='website'?'Browser login':'Saved sign-in';
 }
 export function accountSource(account:Account,store:PublicState):string{
  const sources=store.connections.filter(c=>c.accountId===account.id);

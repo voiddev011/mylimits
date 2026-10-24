@@ -11,7 +11,7 @@ export function toPublicState(store: Store): PublicState {
     version: 2, settings: structuredClone(store.settings), providers: structuredClone(store.providers), historyIssue: store.historyIssue,
     workspaces: store.workspaces.map(({ id, provider, name }) => ({ id, provider, name })),
     connections: store.connections.map(c => ({ id:c.id, provider:c.provider,kind:c.kind,accountId:c.accountId,workspaceId:c.workspaceId,workspaceIds:[...c.workspaceIds],
-      savedSignIn:c.savedSignIn?{method:c.savedSignIn.method,notAfter:c.savedSignIn.notAfter}:undefined, enabled:c.enabled,status:c.status,lastAttemptAt:c.lastAttemptAt,lastSuccessAt:c.lastSuccessAt,nextRetryAt:c.nextRetryAt,failures:c.failures,message:c.message })),
+      copilotAllowance:c.copilotAllowance,savedSignIn:c.savedSignIn?{method:c.savedSignIn.method,notAfter:c.savedSignIn.notAfter}:undefined, enabled:c.enabled,status:c.status,lastAttemptAt:c.lastAttemptAt,lastSuccessAt:c.lastSuccessAt,nextRetryAt:c.nextRetryAt,failures:c.failures,message:c.message })),
     accounts: store.accounts.map(a => ({ id:a.id,provider:a.provider,kind:a.kind,alias:a.alias,defaultName:a.defaultName,plan:a.plan,
       connection:a.connection,createdAt:a.createdAt,updatedAt:a.updatedAt,alertRemaining:a.alertRemaining,alertsMuted:a.alertsMuted,
       pinned:a.pinned,order:a.order,pinnedMeterIds:a.pinnedMeterIds,snoozedUntil:a.snoozedUntil,workspaceId:a.workspaceId,

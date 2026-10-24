@@ -329,7 +329,7 @@ test('real IndexedDB pagination, safe export and history deletion preserve accou
 });
 
 test('V1 state and IndexedDB history migrate on extension restart without losing nicknames',async({context,worker,extensionId,profilePath})=>{
- const {cursor:_newProvider,...legacyProviders}=emptyStore('legacy-keep-salt').providers;
+ const {cursor:_newProvider,copilot:_copilot,...legacyProviders}=emptyStore('legacy-keep-salt').providers;
  const legacy={...emptyStore('legacy-keep-salt'),providers:{...legacyProviders,gemini:legacyProviders.claude,grok:legacyProviders.claude,perplexity:legacyProviders.claude},version:1,observationLedger:[],accounts:demoState().accounts};legacy.accounts[0]!.alias='Old work nickname';
  await worker.evaluate(async legacy=>{
   await new Promise<void>((resolve,reject)=>{const r=indexedDB.deleteDatabase('mylimits-history');r.onsuccess=()=>resolve();r.onerror=()=>reject(r.error);r.onblocked=()=>reject(new Error('History database still open'));});
@@ -465,7 +465,7 @@ test('minimal dashboard keeps limits first and advanced controls discoverable wi
  await page.getByRole('button',{name:'Accounts',exact:true}).click();
  await expect(page.getByText('Reconnect to refresh this browser account.',{exact:true})).toBeVisible();
  await expect(page.getByRole('link',{name:'Open website',exact:true})).toHaveCount(0);
- await expect(page.locator('.website-top button')).toHaveCount(3);
+ await expect(page.locator('.website-top button')).toHaveCount(4);
  const saved=await worker.evaluate(async()=>(await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);
  expect(saved.accounts).toEqual(fixture.accounts);expect(saved.connections).toEqual(fixture.connections);
 });
@@ -749,4 +749,47 @@ test('website A B A is remembered automatically with separate cards and real his
  await expect(page.getByText('Projected · Reset · full limit available',{exact:true})).toBeVisible();
  const history=await page.evaluate(async id=>chrome.runtime.sendMessage({type:'history-page',accountId:id}),s.accounts[0]!.id);
  expect(history.data.points.every((p:{meters:{evidence:string}[]})=>p.meters.every(m=>m.evidence==='reported'))).toBe(true);
+});
+
+test.describe('Copilot official API token connections (simulated)',()=>{
+ test.use({grantedProviderOrigin:'https://api.github.com/*'});
+ test('connect two accounts, select allowance, preserve encrypted tokens and delete one independently',async({context,worker,extensionId})=>{
+  await worker.evaluate(()=>{
+   globalThis.fetch=async(input,options)=>{
+    const url=new URL(String(input));if(url.origin!=='https://api.github.com')throw Error('Fixture blocks other network');
+    const headers=new Headers(options?.headers),id=headers.get('Authorization')?.endsWith('SECOND')?2:1;
+    if(options?.credentials!=='omit'||headers.get('X-GitHub-Api-Version')!=='2022-11-28')throw Error('Invalid REST transport');
+    const login=id===1?'alice':'bob';return new Response(JSON.stringify(url.pathname==='/user'?{id,login}:{user:login,timePeriod:{year:new Date().getUTCFullYear(),month:new Date().getUTCMonth()+1},usageItems:[{product:'Copilot',unitType:'requests',grossQuantity:id*20,netQuantity:0}]}));
+   };
+  });
+  const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html#add`);
+  async function add(token:string){
+   await page.getByRole('button',{name:'GitHub Copilot',exact:false}).click();
+   await page.getByLabel('Fine-grained personal access token').fill(token);
+   await page.getByRole('button',{name:'Connect GitHub Copilot',exact:true}).click();
+   await expect(page.getByRole('heading',{name:'GitHub Copilot',exact:true})).toHaveCount(0);
+  }
+  const token='github_pat_FICTIONAL_BROWSER_SECRET_FIRST';await add(token);
+  await page.getByRole('button',{name:'Add account',exact:true}).click();await add(token+'SECOND');
+  await expect(page.locator('.account-row')).toHaveCount(2);
+  await page.evaluate(()=>document.documentElement.dataset.theme='dark');
+  await expect(page.locator('.account-row img[src$="/copilot.svg"]').first()).toHaveCSS('filter','invert(1)');
+  await page.evaluate(()=>document.documentElement.dataset.theme='light');
+  await expect(page.locator('.account-row img[src$="/copilot.svg"]').first()).toHaveCSS('filter','none');
+  await page.getByRole('button',{name:'Details for GitHub Copilot · alice'}).click();
+  await page.getByLabel('Monthly allowance').selectOption('Pro');await page.getByRole('button',{name:'Save allowance',exact:true}).click();
+  await expect(page.locator('.account-detail')).toContainText('20 / 300 used');
+  const stored=await worker.evaluate(async()=>await chrome.storage.local.get(['mylimits:state:v2','mylimits:tokens:v1']));
+  expect(JSON.stringify(stored)).not.toContain(token);
+  expect(Object.keys(stored['mylimits:tokens:v1'] as object)).toHaveLength(2);
+  const publicState=await page.evaluate(async()=>await chrome.runtime.sendMessage({type:'state'}));expect(JSON.stringify(publicState)).not.toContain(token);
+  const diag=await page.evaluate(async()=>await chrome.runtime.sendMessage({type:'request-diagnostics'}));expect(JSON.stringify(diag)).not.toContain(token);
+  await page.locator('.account-detail').getByRole('button',{name:'Disconnect',exact:true}).click();
+  await expect.poll(async()=>worker.evaluate(async()=>Object.keys((await chrome.storage.local.get('mylimits:tokens:v1'))['mylimits:tokens:v1'] as object).length)).toBe(1);
+  await expect(page.locator('.account-row')).toHaveCount(2);
+  await page.getByRole('button',{name:'Details for GitHub Copilot · bob'}).click();
+  await page.getByRole('button',{name:'Forget saved account',exact:true}).click();await page.getByRole('button',{name:'Confirm forget',exact:true}).click();
+  await expect(page.locator('.account-row')).toHaveCount(1);
+  await expect.poll(async()=>worker.evaluate(async()=>Object.keys((await chrome.storage.local.get('mylimits:tokens:v1'))['mylimits:tokens:v1'] as object).length)).toBe(0);
+ });
 });

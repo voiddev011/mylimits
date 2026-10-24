@@ -7,3 +7,5 @@ Saved-sign-in code remains present with every provider policy **off** and empty 
 Popup: account readings, refresh, + and Full dashboard. Dashboard: accounts, history, preferences, website access and Help & updates.
 
 [Install](INSTALL.md) · [Start here](START-HERE.md) · [Architecture](ARCHITECTURE.md) · [Privacy](PRIVACY.md) · [Platforms](PLATFORMS.md) · [Provider capabilities](PROVIDER-CAPABILITIES.md) · [Current status](IMPLEMENTATION-STATUS.md)
+
+GitHub Copilot setup and official API details: [COPILOT.md](COPILOT.md).
