@@ -29,7 +29,7 @@ test.afterAll(async () => { await new Promise<void>(done => server.close(() => d
 for (const width of [360, 1280]) for (const colorScheme of ['light', 'dark'] as const) {
   for (const file of ['index.html', 'how-it-works.html', 'privacy.html', 'faq.html']) {
     test(`site ${file} at ${width}px in ${colorScheme}`, async ({ page }) => {
-      await page.setViewportSize({ width, height: 900 });
+      await page.setViewportSize({ width, height: 640 });
       await page.emulateMedia({ colorScheme });
       const errors: string[] = [];
       page.on('pageerror', error => errors.push(error.message));
@@ -46,8 +46,12 @@ for (const width of [360, 1280]) for (const colorScheme of ['light', 'dark'] as 
       if (file === 'index.html') {
         await expect(page.locator('[data-store][href]')).toHaveCount(0);
         await expect(page.locator('[data-store] small')).toHaveText(['Coming soon', 'Coming soon', 'Coming soon']);
-        await page.getByRole('link', { name: 'Get MyLimits' }).click();
-        await expect(page.locator('#install')).toBeInViewport();
+        expect(await page.evaluate(() => scrollY)).toBe(0);
+        for (const control of await page.locator('[data-store], #install .button').all()) {
+          const bounds = await control.boundingBox();
+          expect(bounds!.y).toBeGreaterThanOrEqual(0);
+          expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(640);
+        }
         if (width === 360 || colorScheme === 'dark') await page.screenshot({ path: `artifacts/site-${width}-${colorScheme}.png`, fullPage: true });
       }
       expect(errors).toEqual([]);
