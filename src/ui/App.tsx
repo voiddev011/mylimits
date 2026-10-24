@@ -1,3 +1,4 @@
+import { BrandMark } from "./BrandMark";
 import {
   accountStatusText,
   connectionSource,
@@ -9,7 +10,6 @@ import {
   Check,
   ChevronDown,
   ExternalLink,
-  Gauge,
   History,
   LayoutDashboard,
   Pin,
@@ -976,7 +976,7 @@ export function App({
       <header className="app-header">
         <div className="brand">
           <span className="brand-mark">
-            <Gauge size={22} />
+            <BrandMark size={22} />
           </span>
           <div>
             <h1>MyLimits</h1>
@@ -1063,7 +1063,7 @@ export function App({
           />
         ) : !store ? (
           <div className="empty">
-            <Gauge size={28} />
+            <BrandMark size={28} />
             <h2>
               {error ? "Unable to load saved data" : "Opening your overview…"}
             </h2>
@@ -1227,7 +1227,7 @@ export function App({
                 ) : (
                   <div className="empty">
                     <div className="empty-illustration">
-                      <Gauge size={38} />
+                      <BrandMark size={38} />
                       <span>Ready when you are</span>
                     </div>
                     <h2>A clear view starts here.</h2>

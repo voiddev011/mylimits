@@ -39,3 +39,15 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## MyLimits brand
+
+The three rounded bars in `src/ui/BrandMark.tsx` and `public/icon/logo.svg`
+match [the website mark](https://github.com/voiddev011/mylimits-website/blob/979dadef5e8cec1bdbdda161cc06751f9b4d6c95/assets/styles.css):
+5px bars, 3px gaps, heights 12/23/17px, 2px corner radius. The UI inherits its
+existing theme colour. Toolbar icons use the website’s ink (#183b2d) and wash
+(#edf2e6) with a padded rounded tile for contrast. No provider logos are changed.
+
+Regenerate 16/32/48/128px PNGs from the SVG with
+`node scripts/render-brand-icons.mjs` using the existing Playwright browser
+installation (`CHROMIUM_PATH` is supported). Icons are bundled locally.

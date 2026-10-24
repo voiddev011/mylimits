@@ -1843,6 +1843,11 @@ test("popup plus opens dashboard setup and local genuine logos load without exte
   );
   const page = await context.newPage();
   await page.goto(`chrome-extension://${extensionId}/popup.html`);
+  await expect(page.locator(".quick-brand .mylimits-mark rect")).toHaveCount(3);
+  await expect(page.locator(".quick-brand .mylimits-mark")).toHaveAttribute(
+    "viewBox",
+    "0 0 21 23",
+  );
   await expect(page.locator(".provider-mark img")).toHaveCount(5);
   expect(
     await page
@@ -1864,6 +1869,7 @@ test("popup plus opens dashboard setup and local genuine logos load without exte
   const opened = context.waitForEvent("page");
   await page.getByRole("button", { name: "Add account", exact: true }).click();
   const dashboard = await opened;
+  await expect(dashboard.locator(".brand .mylimits-mark rect")).toHaveCount(3);
   await expect(
     dashboard.getByRole("region", { name: "Add an account" }),
   ).toBeVisible();
