@@ -1,1 +1,105 @@
-:root{color-scheme:light dark;font:17px/1.6 system-ui,sans-serif}body{margin:0;background:#121c17;color:#e5eee8}main{max-width:1100px;margin:auto;padding:24px}header,section{padding:24px;border:1px solid #46594d;border-radius:12px;margin-bottom:20px}h1,h2{line-height:1.3}h1{font-size:2rem}h2{font-size:1.3rem}p{max-width:85ch;color:#b9c9bf}.warning{color:#ffce83;font-weight:650}label{display:block;margin:12px 0}select,button{font:inherit;color:inherit;border:1px solid #7e9e89;border-radius:7px;background:#263e30;padding:8px 12px}button{cursor:pointer;margin:6px 8px 6px 0}button:hover{background:#395d46}input{margin-right:10px}table{border-collapse:collapse;width:100%;font-size:.85rem}td,th{text-align:left;border:1px solid #46594d;padding:8px;overflow-wrap:anywhere}section,article{overflow:auto}article{border-top:1px solid #46594d;padding:12px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere}#status{font-weight:600;color:#c1e8cd}#cookies-table{max-height:300px;overflow:auto}@media(max-width:600px){main{padding:12px}section,header{padding:16px}}
+:root {
+  color-scheme: light dark;
+  font:
+    17px/1.6 system-ui,
+    sans-serif;
+}
+body {
+  margin: 0;
+  background: #121c17;
+  color: #e5eee8;
+}
+main {
+  max-width: 1100px;
+  margin: auto;
+  padding: 24px;
+}
+header,
+section {
+  padding: 24px;
+  border: 1px solid #46594d;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+h1,
+h2 {
+  line-height: 1.3;
+}
+h1 {
+  font-size: 2rem;
+}
+h2 {
+  font-size: 1.3rem;
+}
+p {
+  max-width: 85ch;
+  color: #b9c9bf;
+}
+.warning {
+  color: #ffce83;
+  font-weight: 650;
+}
+label {
+  display: block;
+  margin: 12px 0;
+}
+select,
+button {
+  font: inherit;
+  color: inherit;
+  border: 1px solid #7e9e89;
+  border-radius: 7px;
+  background: #263e30;
+  padding: 8px 12px;
+}
+button {
+  cursor: pointer;
+  margin: 6px 8px 6px 0;
+}
+button:hover {
+  background: #395d46;
+}
+input {
+  margin-right: 10px;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.85rem;
+}
+td,
+th {
+  text-align: left;
+  border: 1px solid #46594d;
+  padding: 8px;
+  overflow-wrap: anywhere;
+}
+section,
+article {
+  overflow: auto;
+}
+article {
+  border-top: 1px solid #46594d;
+  padding: 12px 0;
+}
+pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+#status {
+  font-weight: 600;
+  color: #c1e8cd;
+}
+#cookies-table {
+  max-height: 300px;
+  overflow: auto;
+}
+@media (max-width: 600px) {
+  main {
+    padding: 12px;
+  }
+  section,
+  header {
+    padding: 16px;
+  }
+}

@@ -1,3 +1,10 @@
 /* Set an intrinsic width before React mounts to avoid a narrow browser popup. */
-html, body { width: 440px; min-width: 440px; margin: 0; }
-#root { width: 100%; }
+html,
+body {
+  width: 440px;
+  min-width: 440px;
+  margin: 0;
+}
+#root {
+  width: 100%;
+}

@@ -4,14 +4,7 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "jsx": "react-jsx",
-    "types": [
-      "node",
-      "vite/client"
-    ]
+    "types": ["node", "vite/client"]
   },
-  "exclude": [
-    "node_modules",
-    ".output",
-    "server"
-  ]
+  "exclude": ["node_modules", ".output", "server"]
 }

@@ -1,14 +1,146 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="description" content="Answers about supported AI tools, browser tracking, sign-ins and privacy in MyLimits."><title>Frequently asked questions · MyLimits</title><link rel="stylesheet" href="assets/styles.css"><script src="assets/config.js" defer></script></head>
-<body><a class="skip" href="#main">Skip to content</a><div class="wrap"><header class="header"><a class="brand" href="index.html" aria-label="MyLimits home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>MyLimits</a><nav aria-label="Main navigation"><a href="how-it-works.html">How it works</a><a href="privacy.html">Privacy</a><a href="faq.html" aria-current="page">FAQ</a><a href="https://github.com/voiddev011/mylimits">GitHub ↗</a></nav></header><main id="main"><article class="article">
-<p class="eyebrow">Good to know</p><h1>A few clear answers.</h1><p class="lead">What to expect from the beta.</p>
-<details open><summary>Do I need a MyLimits account or server?</summary><p>No. MyLimits runs locally in your browser. Website readers use your existing provider login; GitHub Copilot uses a token you explicitly provide.</p></details>
-<details><summary>Which tools can I track?</summary><p>Claude / Claude Code, ChatGPT / Codex and Cursor have beta website readers. GitHub Copilot premium requests use the official GitHub REST API with a fine-grained Plan: read token. Coverage depends on your plan and the data each provider exposes. Real Copilot-token acceptance remains pending.</p></details>
-<details><summary>Does it show every ChatGPT chat limit?</summary><p>No. The ChatGPT website reader focuses on the Work / Codex allowance. Ordinary chat quotas are separate, and missing limits are not estimated.</p></details>
-<details><summary>Will it keep tracking after I sign out?</summary><p>Website tracking requires the current browser login. Previously seen accounts remain as dated cards; they do not independently refresh while signed out. Copilot uses its own token for each account and does not use the website session. Tokens can expire or be revoked. Closing the browser pauses collection.</p></details>
-<details><summary>Are saved sign-ins available?</summary><p>Not in the current production policy. Website saved-sign-in vaults remain disabled. Copilot tokens are a separate opt-in REST connection and do not enable saved website sign-ins.</p></details>
-<details><summary>Does MyLimits read my conversations?</summary><p>It does not collect prompts or conversations. Selected account and usage interfaces provide identity and normalized usage. Copilot data comes only from official GitHub REST endpoints, without cookies or scraping.</p></details>
-<details><summary>Why is a reading stale or a reset unknown?</summary><p>A provider may not expose the value, a login may expire, or a check may fail. Last successful readings keep their age. For remembered website accounts, a passed reset may display a clearly marked projection; it is not a provider-confirmed quota or a new history reading.</p></details>
-<details><summary>Is my data encrypted?</summary><p>Ordinary readings, nicknames, history and settings are local but not encrypted by MyLimits. Copilot tokens are encrypted separately with a non-extractable AES-GCM key. Privacy mode hides screen content and disables history export; it does not encrypt ordinary records.</p></details>
-<details><summary>How do I delete an account’s data?</summary><p>Use <strong>Forget account</strong> to remove its local readings, nickname and history. Copilot Disconnect and Forget delete the relevant encrypted token. Uninstalling removes browser-owned extension storage. Revoke the token on GitHub separately if desired. See the <a href="privacy.html#delete">deletion instructions</a>.</p></details>
-<details><summary>How do I report a problem?</summary><p>Open a <a href="https://github.com/voiddev011/mylimits/issues">GitHub issue</a>. Include your browser, extension version and a description of the problem. Do not post tokens, cookies, sign-in links or private account exports.</p></details></article></main><footer class="footer"><p>MyLimits is not affiliated with Anthropic, OpenAI, GitHub or Cursor.</p><div class="footer-links"><a href="privacy.html">Privacy</a><a href="https://github.com/voiddev011/mylimits/issues">Contact / issues ↗</a></div></footer></div></body></html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="description"
+      content="Answers about supported AI tools, browser tracking, sign-ins and privacy in MyLimits."
+    />
+    <title>Frequently asked questions · MyLimits</title>
+    <link rel="stylesheet" href="assets/styles.css" />
+    <script src="assets/config.js" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <div class="wrap">
+      <header class="header">
+        <a class="brand" href="index.html" aria-label="MyLimits home"
+          ><span class="brand-mark" aria-hidden="true"
+            ><i></i><i></i><i></i></span
+          >MyLimits</a
+        >
+        <nav aria-label="Main navigation">
+          <a href="how-it-works.html">How it works</a
+          ><a href="privacy.html">Privacy</a
+          ><a href="faq.html" aria-current="page">FAQ</a
+          ><a href="https://github.com/voiddev011/mylimits">GitHub ↗</a>
+        </nav>
+      </header>
+      <main id="main">
+        <article class="article">
+          <p class="eyebrow">Good to know</p>
+          <h1>A few clear answers.</h1>
+          <p class="lead">What to expect from the beta.</p>
+          <details open>
+            <summary>Do I need a MyLimits account or server?</summary>
+            <p>
+              No. MyLimits runs locally in your browser. Website readers use
+              your existing provider login; GitHub Copilot uses a token you
+              explicitly provide.
+            </p>
+          </details>
+          <details>
+            <summary>Which tools can I track?</summary>
+            <p>
+              Claude / Claude Code, ChatGPT / Codex and Cursor have beta website
+              readers. GitHub Copilot premium requests use the official GitHub
+              REST API with a fine-grained Plan: read token. Coverage depends on
+              your plan and the data each provider exposes. Real Copilot-token
+              acceptance remains pending.
+            </p>
+          </details>
+          <details>
+            <summary>Does it show every ChatGPT chat limit?</summary>
+            <p>
+              No. The ChatGPT website reader focuses on the Work / Codex
+              allowance. Ordinary chat quotas are separate, and missing limits
+              are not estimated.
+            </p>
+          </details>
+          <details>
+            <summary>Will it keep tracking after I sign out?</summary>
+            <p>
+              Website tracking requires the current browser login. Previously
+              seen accounts remain as dated cards; they do not independently
+              refresh while signed out. Copilot uses its own token for each
+              account and does not use the website session. Tokens can expire or
+              be revoked. Closing the browser pauses collection.
+            </p>
+          </details>
+          <details>
+            <summary>Are saved sign-ins available?</summary>
+            <p>
+              Not in the current production policy. Website saved-sign-in vaults
+              remain disabled. Copilot tokens are a separate opt-in REST
+              connection and do not enable saved website sign-ins.
+            </p>
+          </details>
+          <details>
+            <summary>Does MyLimits read my conversations?</summary>
+            <p>
+              It does not collect prompts or conversations. Selected account and
+              usage interfaces provide identity and normalized usage. Copilot
+              data comes only from official GitHub REST endpoints, without
+              cookies or scraping.
+            </p>
+          </details>
+          <details>
+            <summary>Why is a reading stale or a reset unknown?</summary>
+            <p>
+              A provider may not expose the value, a login may expire, or a
+              check may fail. Last successful readings keep their age. For
+              remembered website accounts, a passed reset may display a clearly
+              marked projection; it is not a provider-confirmed quota or a new
+              history reading.
+            </p>
+          </details>
+          <details>
+            <summary>Is my data encrypted?</summary>
+            <p>
+              Ordinary readings, nicknames, history and settings are local but
+              not encrypted by MyLimits. Copilot tokens are encrypted separately
+              with a non-extractable AES-GCM key. Privacy mode hides screen
+              content and disables history export; it does not encrypt ordinary
+              records.
+            </p>
+          </details>
+          <details>
+            <summary>How do I delete an account’s data?</summary>
+            <p>
+              Use <strong>Forget account</strong> to remove its local readings,
+              nickname and history. Copilot Disconnect and Forget delete the
+              relevant encrypted token. Uninstalling removes browser-owned
+              extension storage. Revoke the token on GitHub separately if
+              desired. See the
+              <a href="privacy.html#delete">deletion instructions</a>.
+            </p>
+          </details>
+          <details>
+            <summary>How do I report a problem?</summary>
+            <p>
+              Open a
+              <a href="https://github.com/voiddev011/mylimits/issues"
+                >GitHub issue</a
+              >. Include your browser, extension version and a description of
+              the problem. Do not post tokens, cookies, sign-in links or private
+              account exports.
+            </p>
+          </details>
+        </article>
+      </main>
+      <footer class="footer">
+        <p>
+          MyLimits is not affiliated with Anthropic, OpenAI, GitHub or Cursor.
+        </p>
+        <div class="footer-links">
+          <a href="privacy.html">Privacy</a
+          ><a href="https://github.com/voiddev011/mylimits/issues"
+            >Contact / issues ↗</a
+          >
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
