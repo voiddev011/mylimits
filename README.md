@@ -57,11 +57,7 @@ instructions are in [docs/INSTALL.md](docs/INSTALL.md).
 
 ## License
 
-**Proprietary — all rights reserved.** This project is not licensed under MIT
-or another open-source license. No permission is granted to copy, modify,
-redistribute, sell, or commercially use this project. See [LICENSE](LICENSE).
-
-GitHub's Terms of Service allow users to view and fork public repositories on
-GitHub. Repository visibility and platform permissions are separate from
-permission to reuse or commercialize the project.
+MyLimits is licensed under the [MIT License](LICENSE). You may use, copy,
+modify, distribute, sublicense, and sell copies of the software, subject to
+the license terms.
 
