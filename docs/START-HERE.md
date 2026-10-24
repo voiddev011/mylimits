@@ -1,11 +1,16 @@
 # Start here
 
-Read root AGENTS.md, [status](IMPLEMENTATION-STATUS.md), [architecture](ARCHITECTURE.md) and [installation](INSTALL.md).
+`main` integrates simplification (U1), Copilot (U2), readable History (U3),
+auto-remembered website accounts (U4), and the static website (P1).
 
-MyLimits tracks provider-reported usage for **Claude / Claude Code**, **ChatGPT / Codex** and **Cursor** through the account currently signed into each website. Ordinary ChatGPT message/image quotas are not inferred from Codex buckets. Unknown quotas and reset times stay unknown.
+Read root AGENTS.md, [status](IMPLEMENTATION-STATUS.md), [architecture](ARCHITECTURE.md)
+and [installation](INSTALL.md). [Copilot setup](COPILOT.md) explains the separate
+REST token flow. [Remembered accounts](AUTO-REMEMBER.md) explains website switching.
 
-Saved-sign-in code remains present with every provider policy **off** and empty cookie allowlists. Private sign-in is hidden until evidence and approval enable a provider. No independent multi-account or logout-survival behavior is claimed.
+Only Claude, ChatGPT/Codex and Cursor website readers remain, plus Copilot REST.
+Previously seen website accounts keep dated cards; only the current browser login
+refreshes. Saved website sign-in remains off. No general independent OpenAI/Claude
+connection or logout-survival behavior is claimed. Real-token checks remain pending.
 
-U1 removes unused features without adding tracking capabilities. The previous source is recoverable from `archive/pre-simplify`. The working branch is `codex/u1-simplify`, with a PR into main; do not modify the archive.
-
-GitHub Copilot setup and official API details: [COPILOT.md](COPILOT.md).
+The removed source is recoverable from `archive/pre-simplify`; do not modify it.
+All project Markdown belongs directly in docs/.

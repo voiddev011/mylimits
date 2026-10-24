@@ -4,15 +4,15 @@ In your existing repository (Node 24+):
 
 ```powershell
 git fetch origin
-git switch codex/u1-simplify
-git pull --ff-only
+git switch main
+git pull --ff-only origin main
 npm ci
 npm run build
 ```
 
 Open brave://extensions or chrome://extensions and reload the existing unpacked extension. Its folder is `<repository>/.output/chrome-mv3`. First installation: enable Developer mode, Load unpacked and select that folder. Keep the same folder/extension entry when updating.
 
-Click + → choose a provider → Use current browser login; sign in to that website if needed, then Check account and Save detected account. Preferences, Website access, Help & updates and History remain in the full dashboard. Private sign-in is shown only for an approved enabled vault provider; all current policies are off.
+Click + → choose a provider → Use current browser login; sign in to that website if needed, the verified account is tracked automatically. Switching website logins remembers previously seen accounts without a Save step. Preferences, Website access, Help & updates and History remain in the full dashboard. Private sign-in is shown only for an approved enabled vault provider; all current policies are off.
 
 U1's first load deletes retired accounts/readings and preserves the remaining website accounts, aliases, preferences and history. Do not install this cleanup build over data you intend to keep for retired features; use your existing browser-profile backup. Code remains archived on archive/pre-simplify.
 
@@ -88,3 +88,10 @@ generated types, and never contacts providers. `npm run zip:spike` writes a
 clearly separate `*-spike.zip` under `.output-spike`; Actions publishes it as
 `mylimits-evidence-spike-not-for-release`. Ordinary release ZIPs are checked for
 spike files/runtime/required permissions. Live evidence and approval remain pending.
+
+## Current features
+
+For GitHub Copilot choose + → GitHub Copilot and follow [token setup](COPILOT.md).
+No other application is needed. History has account/range filters and a Download
+menu. Existing releases may lag main; build the source above or use the latest
+successful Checks artifact. The integration does not publish a release.

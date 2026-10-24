@@ -81,3 +81,9 @@ test('documentation, beta download and FAQ work without JavaScript', async ({ br
   await expect(page.getByText('Not in the current production policy.', { exact: false })).toBeVisible();
   await context.close();
 });
+
+test('website descriptions match the simplified extension and Copilot API path',async({page})=>{
+ await page.goto(`${origin}/mylimits/index.html`);const copilot=page.locator('.tool').filter({has:page.getByRole('heading',{name:'GitHub Copilot',exact:true})});await expect(copilot).toContainText('official GitHub API');await expect(copilot).not.toContainText('Coming soon');
+ for(const file of ['index.html','faq.html','how-it-works.html','privacy.html']){await page.goto(`${origin}/mylimits/${file}`);const body=await page.locator('body').textContent();for(const retired of ['Desktop helper','nativeMessaging','Gemini','Grok','Perplexity','snapshot sync'])expect(body).not.toContain(retired);}
+ await page.goto(`${origin}/mylimits/privacy.html`);await expect(page.locator('body')).toContainText('mylimits:tokens:v1');await expect(page.locator('body')).toContainText('api.github.com');
+});

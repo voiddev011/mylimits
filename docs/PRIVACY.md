@@ -2,9 +2,9 @@
 
 MyLimits tracks provider-reported usage for **Claude / Claude Code**, **ChatGPT / Codex** and **Cursor** through the account currently signed into each website. Ordinary ChatGPT message/image quotas are not inferred from Codex buckets. Unknown quotas and reset times stay unknown.
 
-Saved-sign-in code remains present with every provider policy **off** and empty cookie allowlists. Private sign-in is hidden until evidence and approval enable a provider. No independent multi-account or logout-survival behavior is claimed.
+Saved-sign-in code remains present with every provider policy **off** and empty cookie allowlists. Private sign-in is hidden until evidence and approval enable a provider. Website cards remember previous identities but do not independently refresh logged-out accounts. Copilot token connections are separate.
 
-Website access is optional and restricted to three exact HTTPS origins. The readers obtain account/workspace identity and available usage data; they do not read prompts, chat history or model response text. Identity is salted/hashed before account storage; nickname and quota readings are local plaintext. Where required, the website session bearer is transient and not logged or exported.
+Website access is optional and restricted to three exact website HTTPS origins; Copilot separately requests api.github.com. The readers obtain account/workspace identity and available usage data; they do not read prompts, chat history or model response text. Identity is salted/hashed before account storage; nickname and quota readings are local plaintext. Where required, the website session bearer is transient and not logged or exported.
 
 Diagnostics contain bounded sanitized request metadata: provider/path template, status, transport and timing, never bodies, cookie values or tokens. Copy safe diagnostics copies this report only when clicked.
 

@@ -50,10 +50,10 @@ unexpected network traffic, store configuration and no-JS behavior. It is
 automatically discovered by the existing Playwright configuration. Preview
 screenshots are written to ignored `artifacts/`.
 
-Update the dated privacy notice when permissions or storage / network behavior
-change. It was checked against `wxt.config.ts`, `src/core/vault-policy.ts`,
-`src/platform/{repository,history,session-cookies,bootstrap-tab,vault,vault-key-store,saved-sessions,sync,companion}.ts`,
-the provider catalog and `docs/PRIVACY.md` on 24 October 2026. All production
-vault providers are currently disabled. Optional sync and Desktop are disclosed
-separately from default browser tracking. GitHub Copilot is labeled coming soon
-because the current provider catalog has no Copilot reader.
+Update the dated privacy notice whenever permissions, storage or network behavior
+change. The merged site describes the three website readers plus Copilot REST,
+remembered cards, encrypted PAT storage and the four optional provider origins.
+Saved website sign-in remains disabled. Removed routes are no longer advertised.
+Real Copilot-token acceptance remains pending. No release tag is created by the
+main integration; existing release downloads may predate main. Build main locally
+or use the latest successful Checks workflow artifact to test the latest source.

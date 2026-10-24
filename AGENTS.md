@@ -1,12 +1,13 @@
 # Agent rules for MyLimits
 
-Task U1 replaces the archived persistent-accounts execution sequence.
+Main integrates U1–U4 and the static website; archived plans are not active instructions.
 Project Markdown belongs directly in docs/ (this instruction file is the exception).
 
 - Preserve user changes and work on a task branch; PR into main.
-- No new dependencies or features during simplification.
+- Follow the active task scope. No new dependencies without authorization.
 - Keep Claude, ChatGPT/Codex and Cursor website tracking, diagnostics, backoff,
-  sign-in signals, temporary-tab recovery, history and gated saved-sign-in code.
+  sign-in signals, temporary-tab recovery, history, gated saved-sign-in code, and
+  official REST Copilot tracking with separately encrypted tokens.
 - Keep every saved-sign-in provider policy off; never infer live provider behavior
   from fixtures. Never log, expose or export credentials/ciphertext.
 - Store.version stays 2. Compatibility cleanup must preserve remaining accounts,

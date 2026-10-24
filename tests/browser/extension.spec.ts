@@ -759,7 +759,7 @@ test.describe('Copilot official API token connections (simulated)',()=>{
     const url=new URL(String(input));if(url.origin!=='https://api.github.com')throw Error('Fixture blocks other network');
     const headers=new Headers(options?.headers),id=headers.get('Authorization')?.endsWith('SECOND')?2:1;
     if(options?.credentials!=='omit'||headers.get('X-GitHub-Api-Version')!=='2022-11-28')throw Error('Invalid REST transport');
-    const login=id===1?'alice':'bob';return new Response(JSON.stringify(url.pathname==='/user'?{id,login}:{user:login,timePeriod:{year:new Date().getUTCFullYear(),month:new Date().getUTCMonth()+1},usageItems:[{product:'Copilot',unitType:'requests',grossQuantity:id*20,netQuantity:0}]}));
+    const login=id===1?'alice':'bob';const offset=(globalThis as typeof globalThis&{copilotUsageOffset?:number}).copilotUsageOffset??0;return new Response(JSON.stringify(url.pathname==='/user'?{id,login}:{user:login,timePeriod:{year:new Date().getUTCFullYear(),month:new Date().getUTCMonth()+1},usageItems:[{product:'Copilot',unitType:'requests',grossQuantity:id*20+offset,netQuantity:0}]}));
    };
   });
   const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html#add`);
@@ -776,9 +776,13 @@ test.describe('Copilot official API token connections (simulated)',()=>{
   await expect(page.locator('.account-row img[src$="/copilot.svg"]').first()).toHaveCSS('filter','invert(1)');
   await page.evaluate(()=>document.documentElement.dataset.theme='light');
   await expect(page.locator('.account-row img[src$="/copilot.svg"]').first()).toHaveCSS('filter','none');
+  const sourceId=await worker.evaluate(async()=>{const s=(await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store;const c=s.connections.find(c=>c.kind==='copilot')!;c.lastAttemptAt=Date.now()-900001;(globalThis as typeof globalThis&{copilotUsageOffset:number}).copilotUsageOffset=5;await chrome.storage.local.set({'mylimits:state:v2':s});return c.id});
+  expect((await page.evaluate(async id=>chrome.runtime.sendMessage({type:'refresh',connectionId:id}),sourceId)).ok).toBe(true);
+  const refreshed=await worker.evaluate(async()=>(await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);
+  expect(refreshed.accounts.find(a=>a.defaultName.includes('alice'))!.meters[0]!.used).toBe(25);expect(refreshed.accounts.find(a=>a.defaultName.includes('bob'))!.meters[0]!.used).toBe(40);
   await page.getByRole('button',{name:'Details for GitHub Copilot · alice'}).click();
   await page.getByLabel('Monthly allowance').selectOption('Pro');await page.getByRole('button',{name:'Save allowance',exact:true}).click();
-  await expect(page.locator('.account-detail')).toContainText('20 / 300 used');
+  await expect(page.locator('.account-detail')).toContainText('25 / 300 used');
   const stored=await worker.evaluate(async()=>await chrome.storage.local.get(['mylimits:state:v2','mylimits:tokens:v1']));
   expect(JSON.stringify(stored)).not.toContain(token);
   expect(Object.keys(stored['mylimits:tokens:v1'] as object)).toHaveLength(2);

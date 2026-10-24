@@ -1,11 +1,20 @@
 # MyLimits
 
-MyLimits tracks provider-reported usage for **Claude / Claude Code**, **ChatGPT / Codex** and **Cursor** through the account currently signed into each website. Ordinary ChatGPT message/image quotas are not inferred from Codex buckets. Unknown quotas and reset times stay unknown.
+Track provider-reported usage for **Claude / Claude Code**, **ChatGPT / Codex**,
+**Cursor**, and **GitHub Copilot** in one extension.
 
-Saved-sign-in code remains present with every provider policy **off** and empty cookie allowlists. Private sign-in is hidden until evidence and approval enable a provider. No independent multi-account or logout-survival behavior is claimed.
+- Website tracking uses the current browser login. Switching logins automatically
+  remembers earlier accounts with their last readings; it does not independently
+  refresh logged-out website accounts.
+- Copilot premium requests use official REST and a separately encrypted Plan: read
+  token per connection. Choose a plan allowance; checks run at most every 15 minutes.
+- History groups readings by account and limit, with range chips, charts and exports.
+- No local application or server is required. Website saved-sign-in policies stay off.
 
-Popup: account readings, refresh, + and Full dashboard. Dashboard: accounts, history, preferences, website access and Help & updates.
+Unknown quotas remain unknown. Codex buckets do not cover every ChatGPT limit.
+Real provider/token acceptance remains pending; fixture tests do not prove it.
 
-[Install](INSTALL.md) · [Start here](START-HERE.md) · [Architecture](ARCHITECTURE.md) · [Privacy](PRIVACY.md) · [Platforms](PLATFORMS.md) · [Provider capabilities](PROVIDER-CAPABILITIES.md) · [Current status](IMPLEMENTATION-STATUS.md)
-
-GitHub Copilot setup and official API details: [COPILOT.md](COPILOT.md).
+[Install](INSTALL.md) · [Start here](START-HERE.md) · [Architecture](ARCHITECTURE.md) ·
+[Privacy](PRIVACY.md) · [Platforms](PLATFORMS.md) · [Capabilities](PROVIDER-CAPABILITIES.md) ·
+[Copilot setup](COPILOT.md) · [Remembered accounts](AUTO-REMEMBER.md) ·
+[Website operations](WEBSITE.md) · [Status](IMPLEMENTATION-STATUS.md)

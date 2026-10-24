@@ -1,21 +1,60 @@
-# U1 simplification status
+# Current main — combined updates
 
-Archive: archive/pre-simplify, pushed before changes. Working branch: codex/u1-simplify; PR target main.
+Updated 24 October 2026. Main integrates all five feature PRs with merge ancestry
+preserved; merged branch heads can be deleted without losing their commits.
+`archive/pre-simplify` stays unchanged as the explicit recovery branch.
 
-Only Claude / Claude Code, ChatGPT / Codex and Cursor website tracking remain. Retired provider/source routes, remote services and the floating preview are removed. Saved sign-in remains off by policy. No new features or live provider behavior claimed.
+## Included
 
-Validation and the exact deleted-file/permission comparison are recorded in the U1 PR handoff. Compatibility tests cover old 2.2-era and current stores, cleanup interruption and preservation of retained account data.
+- [U1 #21](https://github.com/voiddev011/mylimits/pull/21): remove unused providers,
+  local helper, hosted/snapshot routes and floating preview; retry-safe cleanup of
+  retired browser data while preserving supported accounts/settings/history.
+- [U4 #22](https://github.com/voiddev011/mylimits/pull/22): verified website login
+  switches are remembered automatically; Live/Remembered cards and display-only
+  projected resets. Projections never enter history, alerts or badge calculations.
+- [U2 #24](https://github.com/voiddev011/mylimits/pull/24): official REST Copilot
+  premium requests, separately encrypted tokens, per-account refresh, explicit
+  allowance settings, 15-minute minimum and independent token deletion.
+- [U3 #25](https://github.com/voiddev011/mylimits/pull/25): simple History account
+  cards/charts, range chips, reset markers, tooltips, readings table and menus.
+- [P1 #23](https://github.com/voiddev011/mylimits/pull/23): static website, Pages
+  workflow and tag-triggered browser packaging workflow. Content reconciled with
+  removed features and the new Copilot route.
 
-Validated: npm run check passes (210 unit tests and Chrome build); npm run test:browser passes 45/45; npm run test:spike passes 4/4. Chrome, Edge and Firefox builds and archive guards pass. No live provider traffic or new capability was tested or claimed.
+## Combined validation
 
-The initial browser iteration used an outdated build and still contained deleted-feature fixtures; it is not acceptance evidence. Final rebuilt-source tests pass, including first-load IndexedDB deletion and encrypted saved-sign-in fixtures.
+- `npm run check`: PASS — typecheck, **221 unit/platform tests**, Chrome build.
+- `npm run test:browser`: PASS — **69 extension/site tests**.
+- `npm run test:spike`: PASS — **4 simulated evidence tests**.
+- Chrome/Edge/Firefox builds and `node scripts/check-packages.mjs`: PASS.
+- Chrome/Firefox ZIPs, checksum generation and `python scripts/check-archives.py`: PASS.
+- New integration coverage confirms cleanup preserves Copilot connections and
+  encrypted storage, and eligible controller refresh updates A without changing B.
+- No dependencies added. No removed route or provider restored by merge resolution.
 
-Required permissions remain storage, alarms, scripting and idle, plus Chromium sidePanel. Optional permissions reduce to notifications/cookies; optional origins reduce from six to the three retained providers. The separate evidence build keeps its explicit diagnostic permissions.
+Latest local build artifacts (3.4.0):
 
-The compatibility-only parser recognizes retired provider/kind names to delete their old records safely. Those names do not reintroduce providers or routes. Unknown/malformed current data still fails validation. Both account IDs and source IDs are journaled before rewriting state; cleanup retries on history failure.
+| Artifact | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `.output/mylimits-3.4.0-chrome.zip` | 212796 | `32cb185a49f6dcd04dcd71139a699ec3b499d9c5b5b6d0c43e8ad7af5701e12a` |
+| `.output/mylimits-3.4.0-firefox.zip` | 212735 | `449687c83a6fef495714f824c2a1dd8b550a789397611a450ceff45b3108f0b0` |
 
-## U4 integration
+Build timestamps may change ZIP bytes and hashes in CI. Packages contain only
+four optional provider origins; no native-messaging permission. Existing release
+assets may predate main; no release tag is created by this integration.
 
-Auto-remembered website accounts and display-only reset projection are included.
-Website logins switched A → B → A retain both cards; only the current login is Live.
-Saved sign-ins remain off. See AUTO-REMEMBER.md; live provider behavior is unverified.
+## Remaining checks and operator setup
+
+Real provider account/token, quota comparison, renewal and logout checks remain
+PENDING. Website readers track only the current browser login; remembered cards
+are dated readings, not independent logged-out refresh. All saved website sign-in
+policies remain off. Copilot is an independent token route with real-token acceptance
+pending; Firefox token setup is unverified and fails closed without required APIs.
+
+GitHub reported `has_pages: false` before integration. The repository operator must
+enable Pages with GitHub Actions source for website deployment; merging code does
+not itself prove hosting is live. No publication or live provider success is claimed.
+
+Next: update the installed extension from main using [INSTALL.md](INSTALL.md),
+then run the explicit [Copilot acceptance checks](COPILOT.md). Keep credentials out
+of issues, diagnostics and chat.
