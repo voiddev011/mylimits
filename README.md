@@ -6,6 +6,8 @@ your data stays in your browser and no MyLimits account or server is required.
 
 **Website:** [voiddev011.github.io/mylimits-website](https://voiddev011.github.io/mylimits-website/index.html)
 
+**Quick links:** [Installation guide](https://voiddev011.github.io/mylimits-website/how-it-works.html) · [Releases and downloads](https://github.com/voiddev011/mylimits/releases)
+
 ## Features
 
 - View provider-reported usage and reset times from one dashboard.
