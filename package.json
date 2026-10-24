@@ -18,7 +18,8 @@
     "postinstall": "wxt prepare",
     "build:firefox": "wxt build -b firefox",
     "zip:firefox": "wxt zip -b firefox",
-    "build:edge": "wxt build -b edge"
+    "build:edge": "wxt build -b edge",
+    "zip:edge": "wxt zip -b edge"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

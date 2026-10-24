@@ -391,9 +391,46 @@ test("a changed login cannot be saved under the previously verified identity", a
   await f.service().check(id);
   const candidate = setupCandidate(f.state())!;
   f.setCookie("SECRET_C");
+  f.setIdentity("C");
   await assert.rejects(f.service().save(id, candidate.id, true), {
     code: "wrong-account",
   });
+  assert.equal(f.entries.size, 0);
+  assert.equal(f.state().accounts.length, 1);
+});
+test("renewed cookies for the same verified account are rechecked before saving", async () => {
+  const f = await fixture(), id = await f.service().start("chatgpt", "private", "Personal");
+  await f.service().check(id);
+  const candidate = setupCandidate(f.state())!;
+  const before = f.reads();
+  f.setCookie("RENEWED_FIXTURE_B");
+  await f.service().save(id, candidate.id, true);
+  assert.equal(f.reads(), before + 1);
+  assert.equal(f.entries.size, 1);
+  assert.equal([...f.entries.values()][0]!.cookies[0]!.value, "RENEWED_FIXTURE_B");
+  assert.equal(f.state().accounts.find(a => a.id === candidate.id)!.alias, "Personal");
+});
+test("signing out before confirmation cannot save the earlier credentials", async () => {
+  const f = await fixture(), id = await f.service().start("chatgpt", "private", "");
+  await f.service().check(id);
+  const candidate = setupCandidate(f.state())!;
+  f.noCookies();
+  await assert.rejects(f.service().save(id, candidate.id, true), { code: "wrong-account" });
+  assert.equal(f.entries.size, 0);
+  assert.equal(f.state().accounts.length, 1);
+});
+test("another cookie change during renewal verification cannot be committed", async () => {
+  const f = await fixture(), id = await f.service().start("chatgpt", "private", "");
+  await f.service().check(id);
+  const candidate = setupCandidate(f.state())!;
+  f.setCookie("RENEWED_FIXTURE_B");
+  const verify = f.port.verify;
+  f.port.verify = async (...args) => {
+    const result = await verify(...args);
+    f.setCookie("CHANGED_AGAIN");
+    return result;
+  };
+  await assert.rejects(f.service().save(id, candidate.id, true), { code: "wrong-account" });
   assert.equal(f.entries.size, 0);
   assert.equal(f.state().accounts.length, 1);
 });

@@ -108,7 +108,8 @@ test("quiet hours, alert preference, account mute and snooze never consume a not
 });
 test("disabled policies, rejected sources, wrong slot/provider/account and website connections cannot alert", () => {
   const s = fixture();
-  assert.equal(collectExpiryAlerts(s, now, vaultEnabled).alerts.length, 0);
+  assert.equal(collectExpiryAlerts(s, now, vaultEnabled).alerts.length, 1);
+  assert.equal(collectExpiryAlerts(s, now, () => false).alerts.length, 0);
   for (const patch of [
     { enabled: false },
     { status: "disabled" as const },

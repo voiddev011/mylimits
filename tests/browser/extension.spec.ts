@@ -812,11 +812,11 @@ test("production-off expiry metadata shows honest labels but cannot arm warnings
   const fixture = emptyStore("production-expiry-off"),
     now = Date.now(),
     slot = "10000000-0000-4000-8000-000000000001",
-    id = `vault:chatgpt:${slot}`;
-  const account = { ...demoState(now).accounts[1]!, meters: [] };
+    id = `vault:claude:${slot}`;
+  const account = { ...demoState(now).accounts[0]!, meters: [] };
   fixture.accounts = [account];
   fixture.connections.push({
-    ...fixture.connections.find((c) => c.provider === "chatgpt")!,
+    ...fixture.connections.find((c) => c.provider === "claude")!,
     id,
     kind: "vault",
     profileId: slot,
@@ -848,7 +848,7 @@ test("production-off expiry metadata shows honest labels but cannot arm warnings
   const page = await context.newPage();
   await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
   await page
-    .getByRole("button", { name: "Details for GPT Work", exact: true })
+    .getByRole("button", { name: "Details for Claude Work", exact: true })
     .click();
   await expect(
     page.getByText("Sign-in expires in 1 day", { exact: true }),

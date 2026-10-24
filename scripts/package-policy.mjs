@@ -30,10 +30,9 @@ export function assertReleaseHasNoSpike(manifest, files, bundled = "") {
       !manifest.permissions?.includes(permission),
       `Release requires spike permission ${permission}`,
     );
-  // C3's existing optional cookies grant is intentional; do not remove sign-in detection.
+  // Optional cookies and header rules support sign-in detection and experimental saved sign-in.
   for (const permission of [
     "nativeMessaging",
-    "declarativeNetRequestWithHostAccess",
     "webRequest",
     "declarativeNetRequestFeedback",
   ])

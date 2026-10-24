@@ -819,7 +819,7 @@ function Preferences({
         <ShieldCheck size={18} />
         <p>
           Provider access is optional. Website login expiry can stop tracking.
-          Saved sign-in remains disabled pending provider verification.
+          ChatGPT saved sign-in is experimental on Chromium browsers. Other providers remain disabled.
         </p>
       </div>
     </section>

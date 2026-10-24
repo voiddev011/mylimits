@@ -533,11 +533,36 @@ export function createPrivateSignIn(port: PrivateSignInPort) {
       throw new VaultError("confirmation-required");
     check(a);
     const task = (async () => {
-            const fresh = await capture(a);
+      const fresh = await capture(a);
       check(a);
-      // ChatGPT renews its session cookie in the open private window.
-      // Accept the newest cookie; the next refresh re-verifies the identity.
-      if (fresh) a.payload = fresh; 
+      if (!fresh) throw new VaultError("wrong-account");
+      if (JSON.stringify(fresh) !== JSON.stringify(a.payload)) {
+        // Session renewal is allowed only after verifying the new credentials
+        // still belong to the account the user explicitly confirmed.
+        a.payload = fresh;
+        const renewed = await port.verify(a.provider, a.slot, a.abort.signal);
+        check(a);
+        const store = await port.readStore();
+        check(a);
+        if (
+          renewed.kind !== "account" ||
+          !renewed.identity ||
+          (await accountId(a.provider, renewed.identity, store.installSalt)) !==
+            selectedId
+        )
+          throw new VaultError("wrong-account");
+        check(a);
+        // Do not bind another cookie rotation to an earlier identity response.
+        const confirmed = await capture(a);
+        check(a);
+        if (JSON.stringify(confirmed) !== JSON.stringify(fresh))
+          throw new VaultError("wrong-account");
+        renewed.meters = renewed.meters.map((m) =>
+          MeterSchema.parse(m, { jitless: true }),
+        );
+        a.snapshot = renewed;
+        a.verifiedAt = port.now();
+      }
       await port.put(a.slot, a.provider, a.payload!);
       check(a);
       const snapshot = a.snapshot!,

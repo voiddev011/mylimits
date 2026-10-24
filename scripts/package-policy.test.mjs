@@ -4,7 +4,7 @@ import { assertReleaseHasNoSpike } from "./package-policy.mjs";
 test("release guard rejects diagnostic files, bundled code and required diagnostic permissions while preserving C3 optional cookies", () => {
   const manifest = {
     permissions: ["storage"],
-    optional_permissions: ["cookies"],
+    optional_permissions: ["cookies", "declarativeNetRequestWithHostAccess"],
   };
   assertReleaseHasNoSpike(
     manifest,
@@ -40,7 +40,7 @@ test("release guard rejects diagnostic files, bundled code and required diagnost
 test("normal extension rejects native app installers, helper directories and native-messaging runtime", () => {
   const manifest = {
     permissions: ["storage"],
-    optional_permissions: ["cookies"],
+    optional_permissions: ["cookies", "declarativeNetRequestWithHostAccess"],
   };
   for (const file of [
     "companion/host.mjs",

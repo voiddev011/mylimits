@@ -56,8 +56,9 @@ Google's official instructions:
   by producing a ZIP. Do not change repo visibility just to publish an extension.
 - Run real-account smoke checks for every provider advertised in the listing.
   Copilot real-token acceptance remains pending; see [COPILOT.md](COPILOT.md).
-- Independent saved GPT/Claude sign-ins remain **disabled**. Do not market them as
-  enabled. Website account switching remembers last readings; it does not refresh
+- Saved ChatGPT sign-in is **experimental on Chromium**; Claude and other saved
+  sign-ins, and Firefox saved sign-in, remain disabled. Fixture tests do not prove
+  live session acceptance or survival after logout. Website account switching remembers last readings; it does not refresh
   every logged-out account. Codex buckets do not represent all ChatGPT limits.
 - If the current version number already exists in your store listing, increase
   package.json, package-lock.json and the manifest version consistently before

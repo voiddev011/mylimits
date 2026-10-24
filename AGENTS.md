@@ -8,8 +8,11 @@ Project Markdown belongs directly in docs/ (this instruction file is the excepti
 - Keep Claude, ChatGPT/Codex and Cursor website tracking, diagnostics, backoff,
   sign-in signals, temporary-tab recovery, history, gated saved-sign-in code, and
   official REST Copilot tracking with separately encrypted tokens.
-- Keep every saved-sign-in provider policy off; never infer live provider behavior
-  from fixtures. Never log, expose or export credentials/ciphertext.
+- ChatGPT saved sign-in is experimental on Chromium browsers with the explicit
+  cookie allowlist in vault-policy.ts; keep Claude, Cursor and Copilot saved-sign-in
+  policies off. Firefox saved-sign-in UI remains disabled. Re-verify identity before
+  saving renewed credentials; never infer live-provider acceptance from fixtures.
+  Never log, expose or export credentials/ciphertext.
 - Store.version stays 2. Compatibility cleanup must preserve remaining accounts,
   aliases/preferences/history and retry safely after interruption.
 - Inject browser APIs into new platform modules. No live provider traffic in tests.

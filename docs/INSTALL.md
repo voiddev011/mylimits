@@ -39,7 +39,10 @@ Firefox and fails closed if the required storage protection is unavailable.
 Click **+ → provider → Use current browser login**, then grant the requested site
 access and sign in normally. Verified login changes are remembered automatically;
 there is no extra Save step. Only the current website login refreshes independently
-of previously remembered cards. Saved website sign-in remains disabled.
+of previously remembered cards. ChatGPT also offers experimental saved sign-in on Chromium browsers. Approve
+the optional cookie/header permissions and private-window access when requested.
+Other providers and Firefox do not offer saved sign-in. Session renewal must pass
+identity verification before saving; provider throttling may require checking again.
 
 For Copilot choose **+ → GitHub Copilot** and follow [token setup](COPILOT.md).
 The dashboard contains account settings, notifications, privacy, Help & updates,
