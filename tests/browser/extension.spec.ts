@@ -321,9 +321,9 @@ test('real IndexedDB pagination, safe export and history deletion preserve accou
  expect(result.pages.map(p=>p.points.length)).toEqual([20,20,13]);
  const ids=result.pages.flatMap(p=>p.points.map((r:{id:number})=>r.id));expect(new Set(ids).size).toBe(53);
  expect(result.csv).toContain("'=SUM(A1:A2)");expect(result.json).not.toContain('history-fixture');expect(JSON.parse(result.json).readings).toHaveLength(53);
- await page.getByRole('button',{name:'History',exact:true}).click();await expect(page.getByText('Reading history')).toBeVisible();
- await expect(page.getByRole('button',{name:'Load older readings'})).toBeVisible();await page.getByRole('button',{name:'Clear history',exact:true}).click();await page.getByRole('button',{name:'Confirm clear history',exact:true}).click();
- await expect(page.getByText('No saved readings in this date range.')).toBeVisible();
+ await page.getByRole('button',{name:'History',exact:true}).click();await expect(page.getByRole('heading',{name:'History',exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Load older readings'})).toBeVisible();await page.getByRole('button',{name:'Manage',exact:true}).click();await page.getByRole('menuitem',{name:'Clear history',exact:true}).click();await page.getByRole('button',{name:'Confirm clear history',exact:true}).click();
+ await expect(page.getByText('No readings yet. They appear after the first refresh.')).toBeVisible();
  const saved=await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);
  expect(saved.accounts).toHaveLength(5);expect(saved.accounts[0]!.alias).toBe('=SUM(A1:A2)');
 });
@@ -406,12 +406,12 @@ test('shared views preserve dark theme, long names and keyboard focus at narrow 
  }
 });
 
-test('history insights separate windows, show cautious pacing and persist 90-day retention',async({context,worker,extensionId})=>{
+test('history shows simple limit charts and persists 90-day retention',async({context,worker,extensionId})=>{
  const now=Date.now(),fixture=emptyStore('history-insights-fixture');fixture.accounts=[{...demoState(now).accounts[0]!,connection:'active'}];const id=fixture.accounts[0]!.id;
  fixture.connections[0]={...fixture.connections[0]!,enabled:true,status:'active',accountId:id,lastAttemptAt:now,lastSuccessAt:now};fixture.providers.claude={...fixture.providers.claude,enabled:true,status:'active',activeAccountId:id,checkedAt:now};await worker.evaluate(async s=>chrome.storage.local.set({'mylimits:state:v2':s}),fixture);
  await worker.evaluate(async({id,now})=>{await new Promise<void>((resolve,reject)=>{const req=indexedDB.open('mylimits-history',2);req.onsuccess=()=>{const db=req.result,tx=db.transaction('readings','readwrite');for(let i=0;i<5;i++)tx.objectStore('readings').add({accountId:id,time:now-(4-i)*600000,connectionId:'website:claude',meters:[{id:'session',label:'Session',scope:'subscription',evidence:'reported',unit:'percent',usedPercent:10+i*5,resetsAt:now+7200000}]});tx.oncomplete=()=>{db.close();resolve()};tx.onerror=()=>reject(tx.error)}})}, {id,now});
- const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html`);await page.getByRole('button',{name:'History',exact:true}).click();await expect(page.getByText(/At a similar pace:/)).toBeVisible();await expect(page.getByRole('img',{name:/separate observed segments/})).toBeVisible();await page.getByText('Reported reset timeline',{exact:true}).click();await expect(page.getByText(/a new reading must confirm/)).toBeVisible();
- await page.getByRole('button',{name:'Settings',exact:true}).click();await page.getByLabel('History retention').selectOption('90');await page.getByRole('button',{name:'Save preferences'}).click();await page.getByRole('button',{name:'History',exact:true}).click();await expect(page.getByText(/90-day local retention/)).toBeVisible();
+ const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html`);await page.getByRole('button',{name:'History',exact:true}).click();await expect(page.getByRole('group',{name:'Session usage over time'})).toBeVisible();await expect(page.locator('.history-current strong')).toHaveText('30 % used');await expect(page.getByText(/At a similar pace:|observed segments|Reported reset timeline/)).toHaveCount(0);await expect(page.getByRole('button',{name:'90 days',exact:true})).toHaveCount(0);
+ await page.getByRole('button',{name:'Settings',exact:true}).click();await page.getByLabel('History retention').selectOption('90');await page.getByRole('button',{name:'Save preferences'}).click();await page.getByRole('button',{name:'History',exact:true}).click();await expect(page.getByText(/90-day local retention/)).toBeVisible();await expect(page.getByRole('button',{name:'90 days',exact:true})).toBeVisible();await page.getByRole('button',{name:'90 days',exact:true}).click();await expect(page.getByRole('button',{name:'90 days',exact:true})).toHaveAttribute('aria-pressed','true');
 });
 
 test('Guide is removed and its legacy link lands on Overview without prompt tools',async({context,worker,extensionId})=>{
@@ -517,7 +517,7 @@ test('large text persists, privacy masks every surface, and 200 percent enlargem
  await page.getByRole('button',{name:'Overview',exact:true}).click();await expect(page.getByLabel('Search accounts')).toHaveValue('');await page.getByRole('button',{name:'Settings',exact:true}).click();
  await page.reload();await expect(page.locator('html')).toHaveAttribute('data-text-size','large');await expect(page.getByLabel('Privacy mode',{exact:true})).toHaveValue('on');
  for(const tab of ['Overview','Accounts','History']){await page.getByRole('button',{name:tab,exact:true}).click();for(const a of fixture.accounts)await expect(page.getByText(a.alias,{exact:false})).toHaveCount(0);}
- await expect(page.getByRole('button',{name:'Export JSON',exact:true})).toBeDisabled();
+ await expect(page.getByRole('button',{name:'Download',exact:true})).toBeDisabled();
  await page.getByRole('button',{name:'Overview',exact:true}).click();await expect(page.getByLabel('Search accounts')).toHaveValue('');await page.getByRole('button',{name:'Details for Account 1',exact:true}).click();await expect(page.getByRole('button',{name:'Rename Account 1',exact:true})).toBeDisabled();
  await page.setViewportSize({width:560,height:920});await page.evaluate(()=>{document.documentElement.style.fontSize='32px'});
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
@@ -792,4 +792,56 @@ test.describe('Copilot official API token connections (simulated)',()=>{
   await expect(page.locator('.account-row')).toHaveCount(1);
   await expect.poll(async()=>worker.evaluate(async()=>Object.keys((await chrome.storage.local.get('mylimits:tokens:v1'))['mylimits:tokens:v1'] as object).length)).toBe(0);
  });
+});
+
+async function seedHistoryDesign(worker:Worker){
+ const now=Date.now(),fixture=emptyStore('history-design');fixture.accounts=demoState(now).accounts.slice(0,2);fixture.accounts[0]!.alias='Personal';fixture.accounts[1]!.alias='Work';
+ await worker.evaluate(async({fixture,now})=>{
+  await chrome.storage.local.set({'mylimits:state:v2':fixture});
+  await new Promise<void>((resolve,reject)=>{const r=indexedDB.open('mylimits-history',2);r.onsuccess=()=>{const db=r.result,tx=db.transaction('readings','readwrite'),s=tx.objectStore('readings');
+   for(let i=0;i<72;i++){if(i>=40&&i<=46)continue;const time=now-(71-i)*300000;s.add({accountId:fixture.accounts[0]!.id,time,connectionId:'PRIVATE_CONNECTION_ID',workspaceId:'PRIVATE_WORKSPACE',meters:[{id:'session',label:'5-hour limit',scope:'subscription',evidence:'reported',unit:'percent',usedPercent:i<36?15+i*2:5+(i-36)*57/35,resetsAt:i<36?now-10800000:now+10800000,source:'PRIVATE_SOURCE'},{id:'weekly',label:'Weekly limit',scope:'subscription',evidence:'reported',unit:'percent',usedPercent:25+i*.4,resetsAt:now+172800000,source:'PRIVATE_SOURCE'}]})}
+   for(let i=0;i<13;i++)s.add({accountId:fixture.accounts[1]!.id,time:now-(12-i)*600000,connectionId:'WORK_CONNECTION',meters:[{id:'session',label:'5-hour limit',scope:'work-codex',evidence:'reported',unit:'percent',usedPercent:33+i*2.5,resetsAt:now+7200000,source:'PRIVATE_SOURCE'}]});
+   for(const [days,value] of [[2,88],[20,95]])s.add({accountId:fixture.accounts[0]!.id,time:now-days!*86400000,connectionId:'PRIVATE_CONNECTION_ID',meters:[{id:'session',label:'5-hour limit',scope:'subscription',evidence:'reported',unit:'percent',usedPercent:value,resetsAt:now-days!*86400000+3600000}]});
+   tx.oncomplete=()=>{db.close();resolve()};tx.onerror=()=>reject(tx.error)};r.onerror=()=>reject(r.error)});
+ },{fixture,now});return {fixture,now};
+}
+test('History groups accounts, filters ranges, exposes tooltips and reset lines, and hides technical fields',async({context,worker,extensionId})=>{
+ const {fixture}=await seedHistoryDesign(worker),page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html#history`);
+ await expect(page.getByRole('heading',{name:'History',exact:true})).toBeVisible();await expect(page.getByText('How much of each limit you used over time.')).toBeVisible();await expect(page.getByLabel('History account')).toHaveValue('');
+ await expect(page.locator('.history-account')).toHaveCount(2);await page.getByRole('button',{name:'24 h',exact:true}).click();
+ const personal=page.locator('.history-account').filter({has:page.getByRole('heading',{name:'Personal',exact:true})});
+ await expect(personal.locator('.history-limit')).toHaveCount(2);await expect(personal.locator('.history-current strong').first()).toHaveText('62 % used');await expect(personal.locator('.history-reset')).toHaveCount(1);
+ const chart=personal.getByRole('group',{name:'5-hour limit usage over time'});expect((await chart.locator('.history-axis').allTextContents()).slice(0,3)).toEqual(['0%','50%','100%']);
+ expect(await chart.locator('polyline').count()).toBeGreaterThanOrEqual(3);
+ const dot=chart.getByRole('button',{name:/62 % used$/});await dot.hover();await expect(personal.getByRole('tooltip')).toContainText('62 % used');await expect(personal.getByRole('tooltip').locator('time')).not.toBeEmpty();await dot.focus();await expect(personal.getByRole('tooltip')).toBeVisible();await dot.press('Escape');await expect(personal.getByRole('tooltip')).toHaveCount(0);
+ await page.getByText('Show all readings',{exact:true}).click();await expect(page.locator('.history-table th')).toHaveText(['Time','Account','Limit','Used']);await expect(page.locator('.history-table')).not.toContainText('88 % used');
+ await page.getByRole('button',{name:'7 days',exact:true}).click();await expect(page.getByRole('button',{name:'Load older readings'})).toBeVisible();await page.getByRole('button',{name:'Load older readings'}).click();await expect(page.locator('.history-table')).toContainText('88 % used');await expect(page.locator('.history-table')).not.toContainText('95 % used');
+ await page.getByRole('button',{name:'30 days',exact:true}).click();await expect(page.getByRole('button',{name:'Load older readings'})).toBeVisible();await page.getByRole('button',{name:'Load older readings'}).click();await expect(page.locator('.history-table')).toContainText('95 % used');
+ await page.getByLabel('History account').selectOption(fixture.accounts[1]!.id);await expect(page.locator('.history-account')).toHaveCount(1);await expect(page.locator('.history-account h3')).toHaveText('Work');
+ const text=await page.locator('.history-panel').innerText();for(const hidden of ['connectionId','scope','evidence','sample counts','observed segments','PRIVATE_CONNECTION_ID','PRIVATE_SOURCE','PRIVATE_WORKSPACE','WORK_CONNECTION','work-codex','subscription'])expect(text).not.toContain(hidden);
+ await expect(page.getByLabel('History from')).toHaveCount(0);await expect(page.getByLabel('Compare history account')).toHaveCount(0);await expect(page.getByLabel('History window')).toHaveCount(0);
+});
+test('History downloads the selected range through existing commands and manages clearing separately',async({context,worker,extensionId})=>{
+ const {fixture}=await seedHistoryDesign(worker),page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html#history`);await page.getByRole('button',{name:'24 h',exact:true}).click();await expect(page.locator('.history-account')).toHaveCount(2);
+ await page.getByRole('button',{name:'Download',exact:true}).click();await expect(page.getByRole('menuitem',{name:'CSV (Excel)',exact:true})).toBeVisible();const downloading=page.waitForEvent('download');await page.getByRole('menuitem',{name:'JSON',exact:true}).click();const file=await downloading;const json=JSON.parse(await readFile((await file.path())!,'utf8'));
+ expect(new Set(json.readings.map((r:{accountId:string})=>r.accountId)).size).toBe(2);expect(json.readings.every((r:{time:number})=>Date.now()-r.time<=86405000)).toBe(true);
+ await page.getByLabel('History account').selectOption(fixture.accounts[1]!.id);await expect(page.locator('.history-account')).toHaveCount(1);await page.getByRole('button',{name:'Manage',exact:true}).click();await page.getByRole('menuitem',{name:'Clear history',exact:true}).click();await page.getByRole('button',{name:'Cancel',exact:true}).click();await expect(page.locator('.history-account')).toHaveCount(1);
+ await page.getByRole('button',{name:'Manage',exact:true}).click();await page.getByRole('menuitem',{name:'Clear history',exact:true}).click();await page.getByRole('button',{name:'Confirm clear history',exact:true}).click();await expect(page.getByText('No readings yet. They appear after the first refresh.')).toBeVisible();await page.getByLabel('History account').selectOption(fixture.accounts[0]!.id);await expect(page.locator('.history-account')).toHaveCount(1);
+});
+test('History is readable in both themes at 360px, supports tap and records after screenshots',async({context,worker,extensionId})=>{
+ await seedHistoryDesign(worker);const page=await context.newPage();await page.setViewportSize({width:1280,height:1000});await page.goto(`chrome-extension://${extensionId}/dashboard.html#history`);await page.getByRole('button',{name:'24 h',exact:true}).click();await expect(page.locator('.history-account')).toHaveCount(2);
+ await page.evaluate(()=>document.documentElement.dataset.theme='light');await page.screenshot({path:'artifacts/history-after-light.png',fullPage:true});await page.evaluate(()=>document.documentElement.dataset.theme='dark');await page.screenshot({path:'artifacts/history-after-dark.png',fullPage:true});
+ await page.setViewportSize({width:360,height:900});await expect.poll(async()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await expect(page.getByRole('button',{name:'Download',exact:true})).toBeVisible();
+ const dot=page.locator('.history-hit').first();await dot.dispatchEvent('click');await expect(page.getByRole('tooltip')).toBeVisible();await page.screenshot({path:'artifacts/history-after-360px.png',fullPage:true});
+ await page.getByText('Show all readings',{exact:true}).click();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+
+test('History keeps unknown percentages unknown and masks account names when privacy is enabled',async({context,worker,extensionId})=>{
+ const fixture=emptyStore('unknown-history'),now=Date.now();fixture.accounts=demoState(now).accounts.slice(0,1);fixture.accounts[0]!.alias='Sensitive account';
+ await worker.evaluate(async({fixture,now})=>{
+  await chrome.storage.local.set({'mylimits:state:v2':fixture});await new Promise<void>((resolve,reject)=>{const r=indexedDB.open('mylimits-history',2);r.onsuccess=()=>{const db=r.result,tx=db.transaction('readings','readwrite');tx.objectStore('readings').add({accountId:fixture.accounts[0]!.id,time:now,meters:[{id:'premium',label:'Premium requests',usedPercent:null,used:20,total:null,unit:'requests',scope:'subscription',evidence:'reported',resetsAt:null}]});tx.oncomplete=()=>{db.close();resolve()};tx.onerror=()=>reject(tx.error)};r.onerror=()=>reject(r.error)});
+ },{fixture,now});
+ const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html#history`);await expect(page.locator('.history-current strong')).toHaveText('20 used');await expect(page.getByText('Usage percentage unavailable',{exact:true})).toBeVisible();await expect(page.locator('.history-hit')).toHaveCount(0);await expect(page.locator('.history-current')).toContainText('Reset not reported');
+ await worker.evaluate(async()=>{const s=(await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store;s.settings.privacyMode=true;await chrome.storage.local.set({'mylimits:state:v2':s})});
+ await expect(page.getByRole('button',{name:'Download',exact:true})).toBeDisabled();await expect(page.getByLabel('History account')).not.toContainText('Sensitive account');await expect(page.locator('.history-account')).toHaveCount(0);await expect(page.getByText('Turn privacy mode off to view or export history.')).toBeVisible();
 });
