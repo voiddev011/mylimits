@@ -1,6 +1,6 @@
 import { createTokenVault } from './token-vault';
 import { createIndexedDBVaultKeys } from './vault-key-store';
-import { createCopilotAccounts } from './copilot-accounts';
+import { createCopilotAccounts,CopilotAccountError } from './copilot-accounts';
 import { readCopilot } from './copilot';
 import { projectAccounts } from '../core/connections';
 import { browser } from 'wxt/browser';
@@ -157,7 +157,7 @@ async function handle(command: Command, sender: { id?: string; url?: string; tab
   switch (command.type) {
     case 'copilot-connect':
       if(!privateSenderAllowed(sender,browser.runtime.id,browser.runtime.getURL('/')))throw new Error('Connect from the normal MyLimits dashboard.');
-      try{await copilotAccounts.connect(command.token,command.connectionId);}catch(e){if(e instanceof AdapterError)throw e;throw new Error('Copilot connection could not be saved. Verify the token belongs to this account and try again.');}break;
+      try{await copilotAccounts.connect(command.token,command.connectionId);}catch(e){if(e instanceof AdapterError||e instanceof CopilotAccountError)throw e;throw new Error('Copilot connection could not be saved. Verify the token belongs to this account and try again.');}break;
     case 'copilot-allowance':
       coordinator.cancel(command.connectionId);
       await updateStore(store=>{

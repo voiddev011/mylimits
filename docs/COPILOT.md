@@ -9,7 +9,18 @@
 3. Paste it into MyLimits and click Connect. Approve access to `api.github.com`.
 4. Expand the connected account's settings and choose Free, Pro, Pro+ or Custom
    monthly allowance. Until chosen, usage is displayed but remaining quota is unknown.
-5. Repeat with another account's token to monitor both. Website logins are untouched.
+5. After the first connection, click **Add another GitHub account** in the popup,
+   overview or account details. Services also has a visible Copilot **Add account**
+   button. Each opens a new-token flow; it does not replace the existing connection.
+6. Create the token while signed into the **other** GitHub account. Use a private
+   window for token creation to keep your usual GitHub login unchanged. Paste that
+   account's token to add its separate card and independently scheduled connection.
+
+A second token for the same GitHub identity is rejected as already connected;
+use **Replace token** to renew that account instead. Simultaneous duplicate adds
+keep one connection and remove the unused token. Existing aliases and readings
+stay intact. Token setup runs in the normal full dashboard; popup/sidebar actions
+open it automatically, without changing the browser's GitHub session.
 
 Rename, replace a token, disconnect or forget from account details. A replacement
 must verify the same immutable GitHub user ID. Another user's token belongs in a

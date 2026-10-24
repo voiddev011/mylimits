@@ -45,6 +45,7 @@ export function Popup() {
           <span className="quick-meters">{meters.map(m => <Reading key={`${m.scope}/${m.id}`} account={account} meter={m} settings={store.settings} now={now} compact/>)}{!meters.length && <span className="no-quota">{account.kind === 'browser' ? 'Local activity only' : 'Quota not reported'}</span>}</span>
         </button>;
       })}</div>
+      {store.accounts.some(a=>a.provider==='copilot')&&<div className="quick-provider-add"><button className="text-button" disabled={busy||demo} onClick={()=>dashboard('add-copilot')}><Plus size={14}/>Add another GitHub account</button></div>}
       {!store.accounts.length && <div className="quick-empty"><Gauge size={29}/><h2>Your limits at a glance.</h2><p>Connect a service using your existing login.</p><button className="button button--primary" onClick={() => dashboard('add')}><Plus size={14}/>Add your first account</button><button className="text-button" onClick={() => setDemo(true)}>Preview with sample data</button></div>}
       {!!store.accounts.length && !accounts.length && <div className="empty-small">{lowOnly ? 'No accounts with fresh low limits.' : 'No accounts match.'}</div>}
     </>}</main>

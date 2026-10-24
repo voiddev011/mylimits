@@ -22,9 +22,8 @@
 .app-header{padding-block:18px}.summary-strip{padding-top:20px}.overview-tools>.search-box{min-width:0}.overview-filters{flex-basis:100%;font-size:.875rem}.overview-filters>summary{cursor:pointer;display:flex;align-items:center;gap:8px;width:fit-content;min-height:32px;color:var(--muted)}.overview-filters>summary::before{content:'+';font-size:1rem}.overview-filters[open]>summary::before{content:'−'}.filter-count{display:inline-grid;place-items:center;background:var(--accent-bg);color:var(--accent);border-radius:6px;min-width:22px;padding:0 5px;font-variant-numeric:tabular-nums}.filter-options{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;padding-top:12px}.filter-options label{flex:1;min-width:140px}.filter-options select{max-width:none;width:100%}.accounts-page .website-card{padding:16px;margin-bottom:12px}.website-card .connection-help{margin:12px 0 0}.website-card .provider-message{margin-bottom:0}
 .sign-in-choices{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px}.sign-in-choices [aria-pressed=true]{border-color:var(--accent);background:var(--accent-bg)}.sign-in-methods{border:1px solid var(--line);border-radius:12px;padding:0 16px;min-width:0}.sign-in-methods legend{padding:0 6px}.saved-signin .check-label{align-items:flex-start;margin:0;line-height:1.6}.saved-signin .check-label input{flex-shrink:0;margin-top:5px}.saved-signin .sign-in-methods .check-label{margin:16px 0}.verified-account{display:grid;gap:8px;overflow-wrap:anywhere}.verified-account strong{font-size:1.25rem}.sign-in-disclosure{font-size:.875rem;color:var(--muted);line-height:1.6}.sign-in-disclosure summary{cursor:pointer;min-height:32px;color:var(--text)}.sign-in-disclosure p{margin-top:12px}
 
-/* Official Octicons are monochrome; keep the Copilot mark legible in both themes. */
-:root[data-theme=dark] .provider-mark img[src$='/copilot.svg']{filter:invert(1)}
-@media(prefers-color-scheme:dark){:root[data-theme=system] .provider-mark img[src$='/copilot.svg']{filter:invert(1)}}
+/* Every logo tile stays light, including dark mode: keep the official Copilot mark black. */
+.provider-mark img[src$='/copilot.svg']{filter:none}
 
 /* History: readable limits first, details and management second. */
 .history-panel{min-width:0}
