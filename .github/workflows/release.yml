@@ -24,7 +24,7 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:browser
+      - run: npm run test:browser -- --reporter=list,github
       - run: npm run zip
       - run: npm run zip:edge
       - run: npm run zip:firefox

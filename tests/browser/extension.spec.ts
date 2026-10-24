@@ -168,6 +168,21 @@ test.describe("bounded temporary-tab recovery (fictional provider)", () => {
       nextRetryAt: null,
     });
     await worker.evaluate(async (store) => {
+      // Attach Playwright before the first fictional-provider navigation. A tab
+      // created directly at an HTTPS URL can navigate before interception binds.
+      const create = chrome.tabs.create.bind(chrome.tabs);
+      chrome.tabs.create = async (options) => {
+        const tab = await create({ ...options, url: "about:blank" });
+        for (let attempt = 0; attempt < 400; attempt++) {
+          const current = await chrome.tabs.get(tab.id!);
+          if (
+            new URL(current.url ?? "about:blank").href === new URL(options.url!).href &&
+            current.status === "complete"
+          ) return current;
+          await new Promise((resolve) => setTimeout(resolve, 25));
+        }
+        throw new Error("Fictional provider navigation did not complete");
+      };
       globalThis.fetch = async () =>
         new Response(null, {
           status: 403,
@@ -175,12 +190,15 @@ test.describe("bounded temporary-tab recovery (fictional provider)", () => {
         });
       await chrome.storage.local.set({ "mylimits:state:v2": store });
     }, store);
+    const opened = context.waitForEvent("page");
     const refresh = page.evaluate(() =>
       chrome.runtime.sendMessage({ type: "refresh", provider: "claude" }),
     );
-    await expect(
+    const retrying = expect(
       page.getByText("Retrying in the background", { exact: false }),
     ).toBeVisible();
+    const recoveryPage = await opened;
+    await Promise.all([retrying, recoveryPage.goto("https://claude.ai/")]);
     expect((await refresh).ok).toBe(true);
     const saved = await worker.evaluate(
       async () =>

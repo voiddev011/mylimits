@@ -37,7 +37,7 @@ jobs:
       - name: Install Chromium for browser tests
         run: npx playwright install --with-deps chromium
       - name: Browser tests
-        run: npm run test:browser
+        run: npm run test:browser -- --reporter=list,github
       - name: Isolated spike build and redaction fixtures (no provider traffic)
         run: npm run test:spike
       - name: Package separate evidence spike
