@@ -12,7 +12,7 @@ Saved-sign-in code is disabled. Its prepared encryption protects accidental expo
 
 U1 removes retired provider/source accounts, snapshots and history on first load and erases obsolete feature storage keys. A metadata-only journal makes interrupted deletion retryable. Remaining account data and history are preserved. History exports contain dated readings only. Forget removes the selected account and history.
 
-Evidence-spike capture is explicit and temporary in a separate test profile. Captures disappear on disconnect/restart; copied reports exclude secrets. [Test instructions](INSTALL.md).
+Evidence-spike capture is explicit and temporary in a separate test profile. Captures disappear on disconnect/restart; copied reports exclude secrets. [Maintainer test instructions](ARCHITECTURE.md#maintainer-test-builds).
 
 
 ## GitHub Copilot REST tokens

@@ -1,20 +1,29 @@
 # MyLimits
 
-Track provider-reported usage for **Claude / Claude Code**, **ChatGPT / Codex**,
-**Cursor**, and **GitHub Copilot** in one extension.
+One place to check available AI usage limits, reset times and local history.
+No separate application or MyLimits account is required.
 
-- Website tracking uses the current browser login. Switching logins automatically
-  remembers earlier accounts with their last readings; it does not independently
-  refresh logged-out website accounts.
-- Copilot premium requests use official REST and a separately encrypted Plan: read
-  token per connection. Choose a plan allowance; checks run at most every 15 minutes.
-- History groups readings by account and limit, with range chips, charts and exports.
-- No local application or server is required. Website saved-sign-in policies stay off.
+| Connection | What updates |
+| --- | --- |
+| Claude / Claude Code | Website-reported subscription/workspace windows |
+| ChatGPT / Codex | Available Work/Codex buckets, not every ChatGPT limit |
+| Cursor | Reported coding-plan allowance and spend |
+| GitHub Copilot (beta) | Premium requests through official REST, with a token per connection |
 
-Unknown quotas remain unknown. Codex buckets do not cover every ChatGPT limit.
-Real provider/token acceptance remains pending; fixture tests do not prove it.
+Website login switches automatically remember earlier accounts. Only the current
+browser login refreshes; remembered cards keep dated readings. Projected resets
+are labelled assumptions, not provider-confirmed values. Independent saved GPT/
+Claude website sign-ins remain disabled. Copilot real-token acceptance is pending.
 
-[Install](INSTALL.md) · [Start here](START-HERE.md) · [Architecture](ARCHITECTURE.md) ·
-[Privacy](PRIVACY.md) · [Platforms](PLATFORMS.md) · [Capabilities](PROVIDER-CAPABILITIES.md) ·
-[Copilot setup](COPILOT.md) · [Remembered accounts](AUTO-REMEMBER.md) ·
-[Website operations](WEBSITE.md) · [Status](IMPLEMENTATION-STATUS.md)
+The popup shows daily essentials. The dashboard adds aliases, preferences, privacy,
+notifications and History with charts, filters and CSV/JSON downloads.
+
+- [Install or update](INSTALL.md)
+- [Launch: immediate beta or browser-store submission](LAUNCH.md)
+- [Privacy](PRIVACY.md)
+- [Copilot setup, API contract and pending tests](COPILOT.md)
+- [Architecture, platforms and maintenance](ARCHITECTURE.md)
+- [Provider artwork and licences](PROVIDER-ASSETS.md)
+
+This is the complete documentation index. Older plans and reports remain in Git
+history; `archive/pre-simplify` is an unchanged source-recovery branch.
