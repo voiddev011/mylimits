@@ -9,3 +9,11 @@ test('release guard rejects diagnostic files, bundled code and required diagnost
  for(const permission of ['cookies','declarativeNetRequestWithHostAccess','webRequest'])assert.throws(()=>assertReleaseHasNoSpike({...manifest,permissions:[permission]},[]));
  assert.throws(()=>assertReleaseHasNoSpike({...manifest,optional_permissions:['webRequest']},[]));
 });
+
+test('normal extension rejects native app installers, helper directories and native-messaging runtime',()=>{
+ const manifest={permissions:['storage'],optional_permissions:['cookies']};
+ for(const file of ['companion/host.mjs','desktop/setup.js','downloads/setup.EXE','mylimits.msi'])assert.throws(()=>assertReleaseHasNoSpike(manifest,[file]),/native app files/);
+ for(const call of ['runtime.connectNative','runtime.sendNativeMessage'])assert.throws(()=>assertReleaseHasNoSpike(manifest,['background.js'],call),/native messaging runtime/);
+ for(const field of ['permissions','optional_permissions'])assert.throws(()=>assertReleaseHasNoSpike({...manifest,[field]:['nativeMessaging']},[]));
+ assertReleaseHasNoSpike(manifest,['popup.html','providers/chatgpt.svg'],'legacy notification preference: desktopAlerts');
+});

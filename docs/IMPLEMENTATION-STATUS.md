@@ -1,3 +1,21 @@
+## Latest task: browser-only GPT request / native-app exclusion
+
+The current source already contains no native helper, installer or native-messaging
+permission. Additional package guards now reject helper directories, executable
+installers, native-messaging runtime names and grants in the actual archives.
+The internal notification helper is named notifications; the legacy desktopAlerts
+storage key remains solely for browser notification preference compatibility.
+
+Validation: npm run check PASS (222 tests/build), npm run test:browser PASS (69),
+Chrome/Edge/Firefox builds and package/archive checks PASS. No policy or credential
+capture behavior was changed. GPT saved sign-in is still OFF with empty allowlists.
+
+Independent browser-only GPT activation remains incomplete. Automatic approval
+review rejected activation because it would copy/store session cookies despite
+an earlier explicit user prohibition. An explicit override allowing encrypted local
+storage of the user's own GPT session credentials is required before that action.
+Real-provider isolation, expiry and logout checks remain pending regardless of consent.
+
 # Current main — combined updates
 
 Updated 24 October 2026. Main integrates all five feature PRs with merge ancestry
