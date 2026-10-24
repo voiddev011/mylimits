@@ -12,8 +12,9 @@ No separate application or MyLimits account is required.
 
 Website login switches automatically remember earlier accounts. Only the current
 browser login refreshes; remembered cards keep dated readings. Projected resets
-are labelled assumptions, not provider-confirmed values. Independent saved GPT/
-Claude website sign-ins remain disabled. Copilot real-token acceptance is pending.
+are labelled assumptions, not provider-confirmed values. Saved ChatGPT sign-in is experimental on Chrome, Brave and Edge; Firefox and
+other providers remain disabled. Session renewal is re-verified before saving;
+real-session acceptance and logout survival are not established by fixture tests. Copilot real-token acceptance is pending.
 
 The popup shows daily essentials. The dashboard adds aliases, preferences, privacy,
 notifications and History with charts, filters and CSV/JSON downloads. Choose one

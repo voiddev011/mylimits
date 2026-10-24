@@ -20,6 +20,9 @@ Everything runs locally; there is no server and no MyLimits account.
 - Inject browser APIs (tabs, cookies, windows, declarativeNetRequest) into new
   platform modules so they can be unit-tested. Tests never hit real provider sites.
 
+- ChatGPT saved sign-in remains explicitly experimental on Chromium. Keep other
+  saved-sign-in providers off and do not claim fixture tests verify live behavior.
+
 ## Before a PR
 - Register any new unit-test file in `scripts/run-tests.mjs`.
 - Run `npm run check`, then `npm run test:browser`. Both must pass.

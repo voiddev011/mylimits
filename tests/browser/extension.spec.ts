@@ -168,6 +168,23 @@ test.describe("bounded temporary-tab recovery (fictional provider)", () => {
       nextRetryAt: null,
     });
     await worker.evaluate(async (store) => {
+      // Attach Playwright before the first fictional-provider navigation. A tab
+      // created directly at an HTTPS URL can navigate before interception binds.
+      const create = chrome.tabs.create.bind(chrome.tabs);
+      chrome.tabs.create = async (options) => {
+        const tab = await create({ ...options, url: "about:blank" });
+        for (let attempt = 0; attempt < 400; attempt++) {
+          const current = await chrome.tabs.get(tab.id!);
+          if (
+            new URL(current.url ?? "about:blank").href ===
+              new URL(options.url!).href &&
+            current.status === "complete"
+          )
+            return current;
+          await new Promise((resolve) => setTimeout(resolve, 25));
+        }
+        throw new Error("Fictional provider navigation did not complete");
+      };
       globalThis.fetch = async () =>
         new Response(null, {
           status: 403,
@@ -175,12 +192,15 @@ test.describe("bounded temporary-tab recovery (fictional provider)", () => {
         });
       await chrome.storage.local.set({ "mylimits:state:v2": store });
     }, store);
+    const opened = context.waitForEvent("page");
     const refresh = page.evaluate(() =>
       chrome.runtime.sendMessage({ type: "refresh", provider: "claude" }),
     );
-    await expect(
+    const retrying = expect(
       page.getByText("Retrying in the background", { exact: false }),
     ).toBeVisible();
+    const recoveryPage = await opened;
+    await Promise.all([retrying, recoveryPage.goto("https://claude.ai/")]);
     expect((await refresh).ok).toBe(true);
     const saved = await worker.evaluate(
       async () =>
@@ -812,11 +832,11 @@ test("production-off expiry metadata shows honest labels but cannot arm warnings
   const fixture = emptyStore("production-expiry-off"),
     now = Date.now(),
     slot = "10000000-0000-4000-8000-000000000001",
-    id = `vault:chatgpt:${slot}`;
-  const account = { ...demoState(now).accounts[1]!, meters: [] };
+    id = `vault:claude:${slot}`;
+  const account = { ...demoState(now).accounts[0]!, meters: [] };
   fixture.accounts = [account];
   fixture.connections.push({
-    ...fixture.connections.find((c) => c.provider === "chatgpt")!,
+    ...fixture.connections.find((c) => c.provider === "claude")!,
     id,
     kind: "vault",
     profileId: slot,
@@ -848,7 +868,7 @@ test("production-off expiry metadata shows honest labels but cannot arm warnings
   const page = await context.newPage();
   await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
   await page
-    .getByRole("button", { name: "Details for GPT Work", exact: true })
+    .getByRole("button", { name: "Details for Claude Work", exact: true })
     .click();
   await expect(
     page.getByText("Sign-in expires in 1 day", { exact: true }),

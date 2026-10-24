@@ -2,10 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { offerSavedSignIn, signInExpiry, privateSignInHelp } from "./vault-ui";
 import { PROVIDER_IDS } from "./model";
-test("production saved-sign-in choices are hidden for all off providers including first-account setup", () => {
+test("saved sign-in is offered only for experimental ChatGPT on Chromium browsers", () => {
   for (const provider of PROVIDER_IDS)
-    for (const browser of ["chrome", "edge", "firefox"])
-      assert.equal(offerSavedSignIn(provider, browser), false);
+    for (const browser of ["chrome", "brave", "edge", "firefox"])
+      assert.equal(
+        offerSavedSignIn(provider, browser),
+        provider === "chatgpt" && browser !== "firefox",
+      );
 });
 test("expiry labels use only supplied timestamps and never invent an expiry", () => {
   const now = 1800000000000;

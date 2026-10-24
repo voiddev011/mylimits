@@ -23,8 +23,6 @@ import "../src/providers/response.test.ts";
 import "../src/platform/bootstrap-tab.test.ts";
 import "../src/platform/host-lock.test.ts";
 import "../src/platform/connection-refresh.test.ts";
-import "../src/core/spike.test.ts";
-import "../src/platform/spike.test.ts";
 import "./package-policy.test.mjs";
 import "../src/core/vault-contracts.test.ts";
 import "../src/platform/vault.test.ts";

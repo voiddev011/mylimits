@@ -12,11 +12,16 @@ import {
   VaultError,
 } from "./vault-contracts";
 import { PROVIDER_IDS } from "./model";
-test("deferred provider decisions leave every production vault off with no guessed cookies", () => {
+test("only ChatGPT saved sign-in is experimental with an explicit frozen cookie allowlist", () => {
+  assert.deepEqual(VAULT_COOKIE_ALLOWLIST.chatgpt, [
+    "__Secure-next-auth.session-token",
+    "__Secure-next-auth.session-token.0",
+    "__Secure-next-auth.session-token.1",
+  ]);
   for (const p of PROVIDER_IDS) {
-    assert.equal(VAULT_POLICY[p], "off");
-    assert.deepEqual(VAULT_COOKIE_ALLOWLIST[p], []);
-    assert.equal(vaultEnabled(p), false);
+    assert.equal(VAULT_POLICY[p], p === "chatgpt" ? "experimental" : "off");
+    if (p !== "chatgpt") assert.deepEqual(VAULT_COOKIE_ALLOWLIST[p], []);
+    assert.equal(vaultEnabled(p), p === "chatgpt");
     assert.ok(Object.isFrozen(VAULT_COOKIE_ALLOWLIST[p]));
   }
 });
