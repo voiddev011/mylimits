@@ -97,6 +97,9 @@ export const SettingsSchema: z.ZodType<Settings> = z
       })
       .optional(),
     resetAlerts: z.boolean().optional(),
+    dailyReminder: z
+      .object({ enabled: z.boolean(), time: clock })
+      .optional(),
     autoRecoverTab: z.boolean().default(true),
     quietHours: z
       .object({ enabled: z.boolean(), start: clock, end: clock })

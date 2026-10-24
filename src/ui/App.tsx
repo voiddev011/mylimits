@@ -548,6 +548,27 @@ function Preferences({
         await browser.permissions.remove({ permissions: ["notifications"] });
     }
   }
+  async function toggleDailyReminder(enabled: boolean) {
+    if (demo) {
+      notify("Sample mode never requests permissions.");
+      return;
+    }
+    if (
+      enabled &&
+      !(await browser.permissions.request({ permissions: ["notifications"] }))
+    ) {
+      notify("Notification permission was not granted.");
+      return;
+    }
+    setDraft({
+      ...draft,
+      dailyReminder: { ...dailyReminder, enabled },
+    });
+  }
+  const dailyReminder = draft.dailyReminder ?? {
+    enabled: false,
+    time: "09:00",
+  };
   const quiet = draft.quietHours ?? {
     enabled: false,
     start: "22:00",
@@ -765,6 +786,42 @@ function Preferences({
           />
           Notify when a reset is confirmed by a fresh reading
         </label>
+        <label className="check-label">
+          <input
+            type="checkbox"
+            aria-label="Daily usage reminder"
+            checked={dailyReminder.enabled}
+            onChange={(e) =>
+              void toggleDailyReminder(e.target.checked).catch(() =>
+                notify("Could not request notification access."),
+              )
+            }
+          />
+          Daily reminder to check your AI usage
+        </label>
+        <small className="reminder-help">
+          Runs each day at your chosen local time. MyLimits asks for notification
+          permission before turning it on.
+        </small>
+        {dailyReminder.enabled && (
+          <label className="daily-reminder-time">
+            Reminder time (local)
+            <input
+              type="time"
+              aria-label="Daily reminder time"
+              value={dailyReminder.time}
+              onChange={(e) =>
+                setDraft({
+                  ...draft,
+                  dailyReminder: {
+                    ...dailyReminder,
+                    time: e.target.value,
+                  },
+                })
+              }
+            />
+          </label>
+        )}
         <label className="check-label">
           <input
             type="checkbox"

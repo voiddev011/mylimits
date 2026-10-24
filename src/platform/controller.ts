@@ -14,7 +14,7 @@ import {
 import { createSavedSessions } from "./saved-sessions";
 import { PRIVATE_ALARM, privateSenderAllowed } from "../core/private-signin";
 import { VaultError } from "../core/vault-contracts";
-import { PROVIDER_IDS, type ProviderId } from "../core/model";
+import { PROVIDER_IDS, type ProviderId, type Settings } from "../core/model";
 import { SettingsSchema } from "../core/schema";
 import { badge, collectAlerts } from "../core/engine";
 import { providers, providerForUrl } from "../providers/catalog";
@@ -107,6 +107,43 @@ const sessionCookies = createSessionCookies({
   },
 });
 const REFRESH_ALARM = "mylimits:refresh";
+const DAILY_REMINDER_ALARM = "mylimits:daily-reminder";
+async function scheduleDailyReminder(settings?: Settings): Promise<void> {
+  const current = settings ?? (await readStore()).settings,
+    reminder = current.dailyReminder;
+  if (
+    !reminder?.enabled ||
+    !(await browser.permissions.contains({ permissions: ["notifications"] }))
+  ) {
+    await browser.alarms.clear(DAILY_REMINDER_ALARM);
+    return;
+  }
+  const [hour, minute] = reminder.time.split(":").map(Number),
+    next = new Date();
+  next.setHours(hour!, minute!, 0, 0);
+  if (next.getTime() <= Date.now()) next.setDate(next.getDate() + 1);
+  await browser.alarms.create(DAILY_REMINDER_ALARM, { when: next.getTime() });
+}
+async function deliverDailyReminder(): Promise<void> {
+  const settings = (await readStore()).settings;
+  if (
+    !settings.dailyReminder?.enabled ||
+    !(await browser.permissions.contains({ permissions: ["notifications"] }))
+  ) {
+    await browser.alarms.clear(DAILY_REMINDER_ALARM);
+    return;
+  }
+  try {
+    await browser.notifications.create(DAILY_REMINDER_ALARM, {
+      type: "basic",
+      iconUrl: browser.runtime.getURL("/icon/128.png"),
+      title: "Your MyLimits reminder",
+      message: "Take a moment to check your AI usage and reset times.",
+    });
+  } finally {
+    await scheduleDailyReminder(settings);
+  }
+}
 const expiryWatchdog = createExpiryWatchdog({
   readStore,
   updateStore,
@@ -719,6 +756,13 @@ async function handle(
         }))
       )
         throw new Error("Approve desktop notifications first.");
+      if (
+        settings.dailyReminder?.enabled &&
+        !(await browser.permissions.contains({
+          permissions: ["notifications"],
+        }))
+      )
+        throw new Error("Approve notification access to enable daily reminders.");
       if (settings.criticalRemaining > settings.warningRemaining)
         throw new Error(
           "Critical alert must be at or below the warning threshold.",
@@ -732,6 +776,7 @@ async function handle(
       await browser.alarms.create(REFRESH_ALARM, {
         periodInMinutes: settings.refreshMinutes,
       });
+      await scheduleDailyReminder(settings);
       await renderBadge();
       break;
     }
@@ -871,6 +916,8 @@ export function startController(): void {
     if (alarm.name === PRIVATE_ALARM)
       void savedSessions.expire().catch(() => {});
     if (alarm.name === REFRESH_ALARM) void refreshAll().catch(() => {});
+    if (alarm.name === DAILY_REMINDER_ALARM)
+      void deliverDailyReminder().catch(() => {});
   });
   browser.permissions.onRemoved.addListener((permissions) => {
     listenSessionCookies();
@@ -880,10 +927,18 @@ export function startController(): void {
         await updateStore((store) => ({
           store: {
             ...store,
-            settings: { ...store.settings, desktopAlerts: false },
+            settings: {
+              ...store.settings,
+              desktopAlerts: false,
+              dailyReminder: store.settings.dailyReminder
+                ? { ...store.settings.dailyReminder, enabled: false }
+                : undefined,
+            },
           },
           value: undefined,
         }));
+      if (permissions.permissions?.includes("notifications"))
+        await scheduleDailyReminder();
       await expiryWatchdog.check().catch(() => {});
       for (const provider of PROVIDER_IDS) {
         const store = await readStore();
@@ -937,6 +992,7 @@ export function startController(): void {
     await browser.alarms.create(REFRESH_ALARM, {
       periodInMinutes: store.settings.refreshMinutes,
     });
+    await scheduleDailyReminder(store.settings);
     await renderBadge();
     await refreshAll();
   })().catch(() => undefined);
