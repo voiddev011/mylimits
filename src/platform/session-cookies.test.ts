@@ -54,15 +54,6 @@ test('partitioned or wrong-store results stay unknown even when ordinary cookie 
  f.state.cookies=[{...cookie,storeId:'private-jar'}];assert.equal(await f.manager.sessionCookieState('claude'),'unknown');f.stop();
 });
 
-test('denied permission, API failures, unsupported providers and ambiguous stores never imply sign-out',async()=>{
- const f=fixture(['claude']);f.state.allowed=false;
- assert.equal(await f.manager.sessionCookieState('claude'),'unknown');assert.equal(f.state.reads.length,0);
- f.state.allowed=true;f.state.fail=true;assert.equal(await f.manager.sessionCookieState('claude'),'unknown');
- f.state.fail=false;assert.equal(await f.manager.sessionCookieState('gemini'),'unknown');
- f.state.tabs.push({id:3,incognito:false,cookieStoreId:undefined});f.state.stores.push({id:'ambiguous',tabIds:[3]});
- assert.equal(await f.manager.sessionCookieState('claude'),'unknown');assert.equal(f.state.reads.length,0);f.stop();
-});
-
 test('Firefox container and incognito tabs cannot establish the ordinary default cookie store',async()=>{
  const f=fixture();f.state.tabs[0]!.cookieStoreId='firefox-container-1';
  assert.equal(await f.manager.sessionCookieState('claude'),'unknown');

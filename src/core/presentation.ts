@@ -26,7 +26,7 @@ export function accountStatusText(account:Account,store:PublicState,now:number):
   return recovering?'Retrying in the background':accountStatus(account,now,store.settings.refreshMinutes);
 }
 export function connectionSource(kind:ConnectionKind):string{
- return kind==='website'?'Browser login':kind==='vault'?'Saved sign-in':kind==='companion'?'Companion':kind==='independent-local'?'Desktop':kind==='cloud'?'Hosted':'Saved reading';
+ return kind==='website'?'Browser login':'Saved sign-in';
 }
 export function accountSource(account:Account,store:PublicState):string{
  const sources=store.connections.filter(c=>c.accountId===account.id);

@@ -124,21 +124,3 @@ test('a private window created after cancellation is closed without touching any
  const stopped=f.session.dispose();finish({id:77,tabs:[{id:78,incognito:true}]});await rejected;await stopped;
  assert.deepEqual(f.state.closed,[77]);assert.deepEqual(f.state.tabs,[{id:1,incognito:false}]);
 });
-test('Grok comparison preserves the fixed quota POST and JSON body across all three transports',async()=>{
- const f=fixture();f.state.normalCookies=[{...cookie(),domain:'.grok.com',name:'x-user-session'}];
- f.port.request=async(url,options)=>{
-  f.state.requests.push({url,options});return new Response(JSON.stringify(new URL(url).pathname==='/rest/subscriptions'
-   ?{subscriptions:[{xaiUserId:'PRIVATE_GROK_ID',tier:'SUBSCRIPTION_TIER_GROK_PRO',status:'SUBSCRIPTION_STATUS_ACTIVE'}]}
-   :{remainingQueries:20,totalQueries:80}),{headers:{'content-type':'application/json'}});
- };
- f.port.ambient=(provider,signal,trace)=>async(path,headers={},request)=>{
-  const response=await readJsonResponse(await f.port.request('https://grok.com'+path,{credentials:'include',signal,headers,method:request?.method??'GET',body:request?JSON.stringify(request.body):undefined}));
-  await trace.record({provider,path,transport:'background',...response});return response.body;
- };
- await f.session.execute({type:'capture',provider:'grok',storeId:'normal',names:['x-user-session'],consent:true});
- const output=await f.session.execute({type:'compare',provider:'grok'}) as {summaries:{result:string}[]};
- assert.ok(output.summaries.every(s=>s.result==='reader-validated'));
- const posts=f.state.requests.filter(r=>r.options.method==='POST');assert.equal(posts.length,3);
- for(const post of posts){assert.equal(post.url,'https://grok.com/rest/rate-limits');assert.deepEqual(JSON.parse(String(post.options.body)),{requestKind:'DEFAULT',modelName:'grok-4'});}
- assert.deepEqual(posts.map(r=>r.options.credentials),['include','include','omit']);assert.ok(!JSON.stringify(output).includes('PRIVATE_GROK_ID'));
-});

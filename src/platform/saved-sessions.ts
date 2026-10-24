@@ -44,7 +44,7 @@ export function createSavedSessions(port:SavedPort){
   async wait(provider){if((await waits())[provider]!>port.now())throw new VaultError('cooldown');},rememberWait:remember});
  async function read(provider:ProviderId,slot:string,options:ReaderOptions,signal:AbortSignal,trace:RequestTrace){
   const request=transport.read(provider,slot,signal,trace);
-  try{return await readAccountProvider(provider,{...options,readingMode:'quota'},async(...args)=>{
+  try{return await readAccountProvider(provider,options,async(...args)=>{
    try{return await request(...args);}catch(e){
     // Count actual HTTP authentication rejections, not a malformed/missing identity response.
     if(e instanceof AdapterError&&e.status==='signed-out'&&e.code==='signed-out')throw new AdapterError('signed-out','Saved sign-in was rejected.',e.retryAt,'saved-http-401');throw e;

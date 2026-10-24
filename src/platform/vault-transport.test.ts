@@ -12,7 +12,7 @@ function fixture(){
  const lock=createHostLock(undefined,host=>blocked.has(host));
  const port:VaultTransportPort={extensionId:'a'.repeat(32),dnr:{async getSessionRules(){return rules},async updateSessionRules(o){
   if(failRemove&&!o.addRules)throw Error('RULE_SECRET');rules=rules.filter(r=>!o.removeRuleIds.includes(r.id));rules.push(...o.addRules??[]);events.push(o.addRules?'add':'remove');}},
-  enabled:()=>true,permitted:async()=>true,getVault:async(slot,provider)=>({payload:{v:1,origin:provider==='chatgpt'?'https://chatgpt.com':provider==='claude'?'https://claude.ai':'https://grok.com',cookies:[{name:'fixture',value:slot===A?'COOKIE_A':'COOKIE_B'},{name:'old',value:'EXPIRED',expirationDate:1}]}}),
+  enabled:()=>true,permitted:async()=>true,getVault:async(slot,provider)=>({payload:{v:1,origin:provider==='chatgpt'?'https://chatgpt.com':provider==='claude'?'https://claude.ai':'https://cursor.com',cookies:[{name:'fixture',value:slot===A?'COOKIE_A':'COOKIE_B'},{name:'old',value:'EXPIRED',expirationDate:1}]}}),
   async request(url,init){calls.push({url,init});return new Response(JSON.stringify({value:'BODY_SECRET'}),{status:nextStatus,headers:{'content-type':'application/json',...(nextRetry?{'retry-after':nextRetry}:{})}});},
   lock,now:()=>1800000000000,async wait(){if(waitUntil>port.now())throw new VaultError('cooldown');},async rememberWait(_p,time){waitUntil=time},blockHost:h=>{blocked.add(h);},ready:async()=>{}};
  let startup:Promise<void>|undefined;port.ready=()=>startup??=cleanupVaultRules({dnr:port.dnr,permitted:async()=>true});
@@ -61,14 +61,6 @@ test('disabled policy, wrong endpoints, methods and injected headers never issue
  await assert.rejects(f.transport.read('chatgpt',A)('/api/auth/session',{Authorization:'Bearer x\r\nBAD'}),{code:'invalid-request'});
  await assert.rejects(f.transport.read('chatgpt',A)('/api/auth/session',{}, {method:'POST',body:{}}),{code:'invalid-request'});
  assert.equal(f.calls.length,0);
-});
-test('Retry-After persists before release, blocks repeated reads, and Grok preserves its POST',async()=>{
- const f=fixture();f.status(429,'120');await assert.rejects(f.transport.read('chatgpt',A)('/api/auth/session'),{code:'rate-limit'});
- assert.equal(f.wait(),f.port.now()+120000);assert.deepEqual(f.rules(),[]);
- await assert.rejects(f.transport.read('chatgpt',A)('/api/auth/session'),{code:'cooldown'});assert.equal(f.calls.length,1);
- const g=fixture();await g.transport.read('grok',A)('/rest/rate-limits',{}, {method:'POST',body:{requestKind:'DEFAULT',modelName:'grok-4'}});
- assert.equal(g.calls[0]!.init.method,'POST');assert.equal(g.calls[0]!.init.body,JSON.stringify({requestKind:'DEFAULT',modelName:'grok-4'}));
- assert.equal(g.calls[0]!.init.credentials,'omit');
 });
 test('diagnostics sanitize org paths and cleanup permission failures never leak raw API errors',async()=>{
  const f=fixture();await f.transport.read('claude',A,undefined,{lastSuccessAt:null,record:async v=>{f.diagnostics.push(sanitizeDiagnostic(v,1)!);}})('/api/organizations/WORKSPACE_SECRET/usage');

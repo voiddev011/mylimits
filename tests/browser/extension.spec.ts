@@ -144,21 +144,6 @@ test.describe('connection-scoped refresh (fictional providers only)',()=>{
   expect(final.accounts.find(a=>a.id==='fictional-saved-B')).toMatchObject({alias:'Personal B',connection:'inactive',updatedAt:old});
   expect(final.accounts).toHaveLength(2);
  });
- test('a stalled optional helper does not delay eligible website refresh on opening MyLimits',async({context,worker,extensionId})=>{
-  const observed=Date.now()-3600000;
-  const state=applySnapshot(emptyStore('fictional-stalled-helper'),'claude','old-browser-account',{kind:'account',displayName:'Old browser reading',plan:null,meters:[]},observed);
-  await worker.evaluate(async state=>{
-   const contains=chrome.permissions.contains.bind(chrome.permissions);chrome.permissions.contains=async p=>p.permissions?.includes('nativeMessaging')?true:contains(p);
-   Object.defineProperty(chrome.runtime,'connectNative',{configurable:true,value:()=>({onMessage:{addListener:()=>{}},onDisconnect:{addListener:()=>{}},disconnect:()=>{},postMessage:()=>{}})});
-   globalThis.fetch=async input=>{const p=new URL(String(input)).pathname;const body=p==='/api/account'?{uuid:'unblocked-user'}:p==='/api/organizations'?[{uuid:'unblocked-org',name:'Personal',capabilities:['chat']}]:{five_hour:{utilization:15,resets_at:'2030-01-01T00:00:00Z'}};return new Response(JSON.stringify(body),{headers:{'content-type':'application/json'}});};
-   await chrome.storage.local.set({'mylimits:state:v2':state,'mylimits:companion-enabled':true});
-  },state);
-  const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
-  await expect.poll(async()=>{
-   const state=await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);
-   return state.accounts.find(a=>a.updatedAt>observed)?.meters[0]?.usedPercent;
-  },{timeout:8000}).toBe(15);
- });
  test('disconnecting website A retains access for saved B and requests optional-grant release only for the last source',async({context,worker,extensionId})=>{
   const {vaultId}=await import('../../src/core/connection-id'),slot='10000000-0000-4000-8000-000000000003',sourceId=vaultId('claude',slot),old=Date.now()-3600000;
   let state=applySnapshot(emptyStore('shared-access-fixture'),'claude','website-A',{kind:'account',displayName:'A',plan:null,meters:[]},old);
@@ -182,38 +167,6 @@ test.describe('connection-scoped refresh (fictional providers only)',()=>{
 });
 
 // Protocol-2 fixture: first-party processes are fictional; no provider is contacted.
-function nativeProfile(id: string, alias = '', authState = 'connected', meters = demoState().accounts[1]!.meters, provider: 'openai'|'claude' = 'openai') {
- return {id,provider,alias,authorizationGeneration:1,status:authState==='connected'?'active':'unavailable',authState,plan:'plus',updatedAt:authState==='connected'?Date.now():0,meters,
-  displayIdentity:authState==='connected'?`${id}@example.test`:null,identityConfidence:authState==='connected'?'email-only':'unverified',providerSubject:null,workspaceIdentity:null,capability:provider==='claude'?'subscription':'work-codex',lastAttemptAt:null,providerObservedAt:null,nextRetryAt:null,failures:0,errorCode:null as string|null,possibleDuplicate:false};
-}
-async function installNativeFixture(worker: Worker, profiles: ReturnType<typeof nativeProfile>[], addedProfile?: string, claudeAvailable = false) {
- await worker.evaluate(({profiles,addedProfile,claudeAvailable})=>{
-  const contains=chrome.permissions.contains.bind(chrome.permissions);chrome.permissions.contains=async p=>p.permissions?.includes('nativeMessaging')?true:contains(p);
-  const capabilities={protocol:2,version:'fixture',identityConfirmation:true,providers:[{provider:'openai',available:true,scope:'work-codex',isolatedLogin:true,activeRefresh:true,liveVerified:false,reason:null},{provider:'claude',available:claudeAvailable,scope:'subscription',isolatedLogin:claudeAvailable,activeRefresh:claudeAvailable,liveVerified:false,reason:'Install official Claude Code and update the helper.'}]};
-  const quota=structuredClone(profiles[0]?.meters??[]);
-  let deliver:(v:unknown)=>void=()=>{};
-  const scope=globalThis as typeof globalThis & {completeFixtureLogin:()=>void;fixtureProfiles:typeof profiles};
-  scope.fixtureProfiles=profiles;
-  scope.completeFixtureLogin=()=>{const p=profiles.find(p=>p.id===addedProfile)!;Object.assign(p,{authState:'awaiting-confirmation',status:'unavailable',updatedAt:0,displayIdentity:'work@example.test',identityConfidence:'email-only'});deliver({type:'snapshot',protocol:2,profiles});};
-  Object.defineProperty(chrome.runtime,'connectNative',{configurable:true,value:()=>({
-   onMessage:{addListener:(f:(value:unknown)=>void)=>{deliver=f}},onDisconnect:{addListener:()=>{}},disconnect:()=>{},
-   postMessage:(request:{id:string;method:string;profile?:string;alias?:string;provider?:'openai'|'claude'})=>{
-    let data:unknown={type:'snapshot',protocol:2,profiles};
-    if(request.method==='capabilities')data=capabilities;
-    if(request.method==='start'){
-     const p={...profiles[0]!,id:addedProfile!,provider:request.provider??'openai',capability:request.provider==='claude'?'subscription':'work-codex',alias:request.alias??'',authState:'signing-in',status:'unavailable',updatedAt:0,displayIdentity:null,identityConfidence:'unverified',meters:[]};profiles.push(p);data={profile:addedProfile,started:true};
-    }
-    if(request.method==='confirm'){const p=profiles.find(p=>p.id===request.profile)!;Object.assign(p,{authState:'connected',status:'active',updatedAt:Date.now(),alias:request.alias??'',meters:quota.map(m=>({...m,scope:p.provider==='claude'?'subscription':'work-codex'}))});data={};}
-    if(request.method==='rename'){profiles.find(p=>p.id===request.profile)!.alias=request.alias!;data={};}
-    if(request.method==='disconnect'){const p=profiles.find(p=>p.id===request.profile)!;p.authState='disconnected';p.status='signed-out';data={};}
-    if(request.method==='remove'){profiles=profiles.filter(p=>p.id!==request.profile);data={};}
-    if(request.method==='cancel'){const p=profiles.find(p=>p.id===request.profile)!;p.authState='needs-sign-in';p.errorCode='cancelled';data={};}
-    setTimeout(()=>deliver({id:request.id,ok:true,data}),0);
-   }
-  })});
- },{profiles,addedProfile,claudeAvailable});
-}
-
 test('new install starts empty and sample preview does not write fake accounts to storage', async ({ context, worker, extensionId }) => {
   const page = await context.newPage();
   await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
@@ -295,9 +248,9 @@ test('denying website permission creates no account and popup fits its viewport'
   const page = await context.newPage();
   await page.setViewportSize({ width: 440, height: 560 });
   await page.goto(`chrome-extension://${extensionId}/dashboard.html#add`);
-  await page.getByRole('button', { name: /Claude · Claude Code/ }).click();
+  await page.getByRole('button', { name: /Claude \/ Claude Code/ }).click();
   await page.evaluate(() => { chrome.permissions.request = async () => false; });
-  await page.getByRole('button', { name: 'Use current browser account', exact: true }).click();
+  await page.getByRole('button', { name: 'Use current browser login', exact: true }).click();
   await expect(page.getByText('Site access was not granted.')).toBeVisible();
   const store = await worker.evaluate(async () => ((await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store));
   expect(store.accounts).toHaveLength(0);
@@ -334,73 +287,6 @@ test('quick popup shows six accounts without dashboard clutter or scrolling', as
   await expect(page.locator('.quick-account')).toHaveCount(5);
   await mkdir('artifacts', {recursive:true});
   await page.screenshot({path:'artifacts/compact-popup-preview.png'});
-});
-
-test('denied companion permission creates no account', async ({ context, worker, extensionId }) => {
-  const page = await context.newPage();
-  await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
-  await page.getByRole('button', { name: 'Settings', exact: true }).click();
-  await page.getByText('Desktop connections · advanced',{exact:true}).click();
-  await page.evaluate(() => { chrome.permissions.request = async () => false; });
-  await page.getByRole('button', { name: 'Connect Desktop', exact: true }).first().click();
-  await expect(page.getByText('Desktop access was not granted.')).toBeVisible();
-  const saved = await worker.evaluate(async () => ((await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store));
-  expect(saved.accounts).toHaveLength(0);
-});
-
-test('native snapshots update independent accounts and disconnect without exposing credentials', async ({ context, worker, extensionId }) => {
-  const profiles = [nativeProfile('1f30feba-2b2a-4c19-8ebc-cd35bc96ff71'),nativeProfile('6c7b581a-333d-4016-955e-98e84dcf22aa')];
-  await installNativeFixture(worker,profiles);
-  const page = await context.newPage();
-  await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
-  await page.evaluate(() => chrome.runtime.sendMessage({ type: 'companion-enable', enabled: true }));
-  await expect(page.getByRole('button', { name: 'Details for OpenAI 1f30', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Details for OpenAI 6c7b', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Details for OpenAI 1f30', exact: true }).click();
-  await page.getByRole('button', { name: 'Rename OpenAI 1f30', exact: true }).click();
-  await page.getByLabel('Account nickname').fill('Independent work');
-  await page.getByRole('button', { name: 'Save nickname', exact: true }).click();
-  await page.getByRole('button', { name: 'Refresh all limits' }).click();
-  await expect(page.getByRole('button', { name: 'Details for Independent work', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Details for Independent work', exact: true })).toBeVisible();
-  await expect(page.locator('.account-row').filter({ has: page.getByRole('button', { name: 'Details for Independent work', exact: true }) })).toContainText('Remembered');
-  const saved = await worker.evaluate(async () => ((await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store));
-  expect(saved.accounts.filter(account => account.companionProfile)).toHaveLength(2);
-  expect(saved.accounts.filter(account => account.companionProfile && account.connection === 'active')).toHaveLength(1);
-  expect(saved.accounts.find(account => account.companionProfile === profiles[1]!.id)?.connection).toBe('active');
-  expect(JSON.stringify(saved)).not.toContain('DO-NOT-PERSIST');
-});
-
- test('popup establishes its own width even when first laid out in a tiny viewport', async ({ context, extensionId }) => {
-  const page = await context.newPage();
-  await page.setViewportSize({ width: 40, height: 600 });
-  await page.goto(`chrome-extension://${extensionId}/popup.html`);
-  await expect(page.getByText('Your limits at a glance.')).toBeVisible();
-  const widths = await page.evaluate(() => ({
-    document: document.documentElement.getBoundingClientRect().width,
-    body: document.body.getBoundingClientRect().width,
-    app: document.querySelector('.app')!.getBoundingClientRect().width,
-  }));
-  expect(widths).toEqual({ document: 440, body: 440, app: 440 });
-  await page.getByRole('button', { name: 'Add account', exact: true }).click();
-  expect(await page.locator('.app').evaluate(element => element.getBoundingClientRect().width)).toBe(440);
-});
-
-test('unavailable native API shows reload guidance without a TypeError', async ({ context, worker, extensionId }) => {
-  await worker.evaluate(() => {
-    const original = chrome.permissions.contains.bind(chrome.permissions);
-    chrome.permissions.contains = async options => options.permissions?.includes('nativeMessaging') ? true : original(options);
-    Object.defineProperty(chrome.runtime, 'connectNative', { configurable: true, value: undefined });
-  });
-  const page = await context.newPage();
-  await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
-  await page.getByRole('button', { name: 'Settings', exact: true }).click();
-  await page.getByText('Desktop connections · advanced',{exact:true}).click();
-  await page.evaluate(() => { chrome.permissions.request = async () => true; });
-  await page.getByRole('button', { name: 'Connect Desktop', exact: true }).first().click();
-  await expect(page.getByRole('alert')).toContainText('Reload MyLimits');
-  await expect(page.getByRole('alert')).not.toContainText('is not a function');
 });
 
 test('popup honors dashboard pins without changing account nicknames', async ({context,worker,extensionId})=>{
@@ -444,7 +330,7 @@ test('real IndexedDB pagination, safe export and history deletion preserve accou
 
 test('V1 state and IndexedDB history migrate on extension restart without losing nicknames',async({context,worker,extensionId,profilePath})=>{
  const {cursor:_newProvider,...legacyProviders}=emptyStore('legacy-keep-salt').providers;
- const legacy={...emptyStore('legacy-keep-salt'),providers:legacyProviders,version:1,accounts:demoState().accounts};legacy.accounts[0]!.alias='Old work nickname';
+ const legacy={...emptyStore('legacy-keep-salt'),providers:{...legacyProviders,gemini:legacyProviders.claude,grok:legacyProviders.claude,perplexity:legacyProviders.claude},version:1,observationLedger:[],accounts:demoState().accounts};legacy.accounts[0]!.alias='Old work nickname';
  await worker.evaluate(async legacy=>{
   await new Promise<void>((resolve,reject)=>{const r=indexedDB.deleteDatabase('mylimits-history');r.onsuccess=()=>resolve();r.onerror=()=>reject(r.error);r.onblocked=()=>reject(new Error('History database still open'));});
   await new Promise<void>((resolve,reject)=>{const r=indexedDB.open('mylimits-history',1);r.onupgradeneeded=()=>{const s=r.result.createObjectStore('readings',{keyPath:'id',autoIncrement:true});s.createIndex('account','accountId');s.createIndex('time','time')};r.onsuccess=()=>{const db=r.result,tx=db.transaction('readings','readwrite');tx.objectStore('readings').add({accountId:legacy.accounts[0]!.id,time:Date.now()-3600000,meters:[{id:'legacy-meter',usedPercent:42}]});tx.oncomplete=()=>{db.close();resolve()};tx.onerror=()=>reject(tx.error)};r.onerror=()=>reject(r.error)});
@@ -516,25 +402,8 @@ test('shared views preserve dark theme, long names and keyboard focus at narrow 
   await page.evaluate(()=>{document.querySelector<HTMLElement>('.app')!.style.zoom='1.25'});
   await expect(page.getByRole('button',{name:'Accounts',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Accounts',exact:true}).click();
-  await expect(page.getByRole('button',{name:'Add Claude account',exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Add Claude / Claude Code account',exact:true})).toBeVisible();
  }
-});
-
-test('Perplexity count-only quotas and activity mode preserve names without guessed percentages',async({context,worker,extensionId})=>{
- await worker.evaluate(()=>{
-  const original=chrome.permissions.contains.bind(chrome.permissions);chrome.permissions.contains=async p=>p.origins?.includes('https://www.perplexity.ai/*')?true:original(p);
-  globalThis.fetch=async input=>new Response(JSON.stringify(new URL(String(input)).pathname==='/api/auth/session'?{user:{id:'fictional-search-user',email:'PRIVATE-SEARCH-EMAIL'}}:{remaining_pro:0,remaining_research:12}),{status:200,headers:{'content-type':'application/json'}});
- });
- const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
- const result=await page.evaluate(async()=>chrome.runtime.sendMessage({type:'enable',provider:'perplexity',enabled:true}));expect(result.ok).toBe(true);expect(JSON.stringify(result.data)).not.toContain('PRIVATE-SEARCH-EMAIL');
- await expect(page.locator('.meter-chip strong').filter({hasText:'0 left'})).toBeVisible();await expect(page.locator('.meter-chip strong').filter({hasText:'12 left'})).toBeVisible();
- expect((await worker.evaluate(()=>chrome.scripting.getRegisteredContentScripts())).some(s=>s.id==='mylimits-observer-perplexity')).toBe(false);
- const account=result.data.accounts.find((a:Account)=>a.provider==='perplexity');expect(account.meters[0].usedPercent).toBeNull();expect(account.meters[0].total).toBeNull();
- await page.getByRole('button',{name:'Details for Perplexity',exact:true}).click();await page.getByRole('button',{name:'Rename Perplexity',exact:true}).click();await page.getByLabel('Account nickname').fill('Personal search');await page.getByRole('button',{name:'Save nickname',exact:true}).click();
- await page.getByRole('button',{name:'Accounts',exact:true}).click();await page.locator('.website-card').filter({has:page.getByRole('heading',{name:'Perplexity',exact:true})}).locator('summary').click();await page.getByLabel('Reading source for Perplexity').selectOption('activity');
- await expect.poll(async()=>worker.evaluate(async()=>{const s=(await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store;return s.accounts.find(a=>a.kind==='browser'&&a.provider==='perplexity')?.connection})).toBe('active');
- const saved=await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);expect(saved.accounts.find(a=>a.id===account.id)!.alias).toBe('Personal search');expect(saved.accounts.find(a=>a.id===account.id)!.connection).toBe('inactive');expect(saved.providers.perplexity.readingMode).toBe('activity');
- expect((await worker.evaluate(()=>chrome.scripting.getRegisteredContentScripts())).some(s=>s.id==='mylimits-observer-perplexity')).toBe(true);await page.getByLabel('Reading source for Perplexity').selectOption('quota');await expect.poll(async()=>worker.evaluate(async()=>(await chrome.scripting.getRegisteredContentScripts()).some(s=>s.id==='mylimits-observer-perplexity'))).toBe(false);
 });
 
 test('history insights separate windows, show cautious pacing and persist 90-day retention',async({context,worker,extensionId})=>{
@@ -553,37 +422,6 @@ test('Guide is removed and its legacy link lands on Overview without prompt tool
  await expect(page.getByLabel('Prompt to review')).toHaveCount(0);
 });
 
-test.describe('Website widget fixture',()=>{
-test.use({grantedProviderOrigin:'https://claude.ai/*'});
-test('widget opt-in isolates page CSS, rejects page actions and removes on disable',async({context,worker,extensionId})=>{
- const fixture=emptyStore('widget-private-salt');await worker.evaluate(async s=>chrome.storage.local.set({'mylimits:state:v2':s}),fixture);
- const dashboard=await context.newPage();await dashboard.goto(`chrome-extension://${extensionId}/dashboard.html`);
- // Isolated fixture build grants only this synthetic website; headless Chrome cannot approve permission UI.
- expect(await worker.evaluate(()=>chrome.permissions.contains({origins:['https://claude.ai/*']}))).toBe(true);
- await context.route('https://claude.ai/**',r=>r.fulfill({contentType:'text/html',body:'<html><head><style>section,button,strong,p{display:none!important}body{background:white;color:black}</style></head><body><textarea id="composer">DO NOT READ</textarea></body></html>'}));
- const website=await context.newPage();await website.goto('https://claude.ai/new');await expect(website.locator('#mylimits-usage-widget')).toHaveCount(0);
- await dashboard.getByRole('button',{name:'Settings',exact:true}).click();await dashboard.getByLabel('Preview on Claude',{exact:true}).check();
- const launcher=website.getByRole('button',{name:'MyLimits preview',exact:true});await expect(launcher).toBeVisible();
- await launcher.evaluate(b=>b.dispatchEvent(new MouseEvent('click',{bubbles:true})));await expect(website.getByText('Coming soon',{exact:true})).toHaveCount(0);
- await launcher.click();await expect(website.getByText('Coming soon',{exact:true})).toBeVisible();
- expect(await website.locator('#composer').inputValue()).toBe('DO NOT READ');
- await website.screenshot({path:'artifacts/v3-floating-preview.png'});
- await website.keyboard.press('Escape');await expect(launcher).toHaveAttribute('aria-expanded','false');await expect(launcher).toBeFocused();
- await launcher.click();await website.locator('#composer').click();await expect(launcher).toHaveAttribute('aria-expanded','false');
- await launcher.click();await website.getByLabel('Preview position').focus();await website.keyboard.press('End');await website.keyboard.press('Tab');
- await expect.poll(()=>website.locator('#mylimits-usage-widget').evaluate(e=>getComputedStyle(e).left)).toBe('16px');
- const second=await context.newPage();await second.goto('https://claude.ai/new');await expect(second.locator('#mylimits-usage-widget')).toBeVisible();
- await website.evaluate(()=>{history.pushState({},'', '/chat/fixture');document.getElementById('mylimits-usage-widget')?.remove()});await expect(website.locator('#mylimits-usage-widget')).toHaveCount(1);
- const tabId=await worker.evaluate(async()=> (await chrome.tabs.query({url:'https://claude.ai/*'}))[0]!.id!);const message=await worker.evaluate(async tabId=>(await chrome.scripting.executeScript({target:{tabId},func:async()=>{const denied=await chrome.runtime.sendMessage({type:'state'}),reading=await chrome.runtime.sendMessage({type:'widget-state',provider:'claude'});return {denied,reading}}}))[0]!.result,tabId);expect(message!.denied.ok).toBe(false);expect(message!.reading.ok).toBe(true);expect(JSON.stringify(message!.reading)).not.toContain('widget-private-salt');expect(message!.reading.data).toEqual({enabled:true,position:'top-left'});
- const scripts=await worker.evaluate(()=>chrome.scripting.getRegisteredContentScripts());expect(scripts.find(s=>s.id==='mylimits-widget-claude')!.matches).toEqual(['https://claude.ai/*']);
- await dashboard.getByLabel('Preview on Claude',{exact:true}).uncheck();await expect(website.locator('#mylimits-usage-widget')).toHaveCount(0);await expect(second.locator('#mylimits-usage-widget')).toHaveCount(0);
- const failed=await dashboard.evaluate(()=>chrome.runtime.sendMessage({type:'widget-state',provider:'claude'}));expect(failed.ok).toBe(false);
- await dashboard.getByLabel('Preview on Claude',{exact:true}).check();await expect(launcher).toBeVisible();await launcher.click();await website.getByRole('button',{name:'Hide on this site',exact:true}).click();await expect(website.locator('#mylimits-usage-widget')).toHaveCount(0);await expect(second.locator('#mylimits-usage-widget')).toHaveCount(0);await expect(dashboard.getByLabel('Preview on Claude',{exact:true})).not.toBeChecked();
- await website.reload();await expect(website.locator('#mylimits-usage-widget')).toHaveCount(0);
-});
-
-});
-
 // Account setup is deliberately exercised through real extension messages and storage.
 test('legacy website setup resumes without becoming an independent connection', async ({context, worker, extensionId}) => {
   await worker.evaluate(() => {
@@ -598,15 +436,15 @@ test('legacy website setup resumes without becoming an independent connection', 
   });
   const page=await context.newPage(); await page.goto(`chrome-extension://${extensionId}/dashboard.html#add`);
   await page.evaluate(()=>{chrome.permissions.request=async()=>true});
-   await page.getByRole('button',{name:/Claude · Claude Code/}).click();
+   await page.getByRole('button',{name:/Claude \/ Claude Code/}).click();
   await page.evaluate(()=>chrome.runtime.sendMessage({type:'account-setup-start',provider:'claude',mode:'detect',nickname:'Personal'}));
   await expect(page.getByRole('button',{name:'Save detected account',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Save detected account',exact:true}).click();
   await expect(page.getByRole('button',{name:'Details for Personal',exact:true})).toBeVisible();
   await page.locator('.app-footer').getByRole('button',{name:'Add account',exact:true}).click();
-  await page.getByRole('button',{name:/Claude · Claude Code/}).click();
+  await page.getByRole('button',{name:/Claude \/ Claude Code/}).click();
   await page.evaluate(()=>chrome.runtime.sendMessage({type:'account-setup-start',provider:'claude',mode:'another',nickname:'Work'}));
-  await expect(page.getByText('It does not connect a second independent account.',{exact:false})).toBeVisible();
+  await expect(page.getByText('Uses the account signed into this browser.',{exact:false})).toBeVisible();
   await expect(page.getByRole('button',{name:'Save detected account'})).toHaveCount(0);
   await page.reload();
   await page.getByRole('button',{name:'Continue setup',exact:true}).click();
@@ -671,100 +509,23 @@ test('minimal dashboard keeps limits first and advanced controls discoverable wi
  await page.getByRole('button',{name:'Accounts',exact:true}).click();
  await expect(page.getByText('Reconnect to refresh this browser account.',{exact:true})).toBeVisible();
  await expect(page.getByRole('link',{name:'Open website',exact:true})).toHaveCount(0);
- await expect(page.locator('.website-top button')).toHaveCount(6);
- await expect(page.getByLabel('Reading source for Perplexity')).toBeHidden();
- await page.screenshot({path:'artifacts/minimal-services.png',fullPage:true});
- await page.locator('.website-card').filter({has:page.getByRole('heading',{name:'Perplexity',exact:true})}).locator('summary').click();
- await expect(page.getByLabel('Reading source for Perplexity')).toBeVisible();
- await expect(page.getByRole('link',{name:'Open website',exact:true})).toBeVisible();
+ await expect(page.locator('.website-top button')).toHaveCount(3);
  const saved=await worker.evaluate(async()=>(await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);
  expect(saved.accounts).toEqual(fixture.accounts);expect(saved.connections).toEqual(fixture.connections);
 });
 
-test('provider picker lists the supported services and labels Gemini as activity only',async({context,worker,extensionId})=>{
+test('provider picker lists only the retained services',async({context,worker,extensionId})=>{
   const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html#add`);
-  for(const name of ['OpenAI · ChatGPT / Codex','Claude · Claude Code','Cursor','Gemini','Grok','Perplexity'])await expect(page.getByRole('button',{name:new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))})).toBeVisible();
+  for(const name of ['ChatGPT / Codex','Claude / Claude Code','Cursor'])await expect(page.getByRole('button',{name:new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))})).toBeVisible();
   expect(await page.locator('.connect-provider img').evaluateAll(images=>images.every(img=>(img as HTMLImageElement).complete&&(img as HTMLImageElement).naturalWidth>0))).toBe(true);
   await page.emulateMedia({colorScheme:'dark'});
   expect(await page.locator('.provider-mark').first().evaluate(e=>getComputedStyle(e).colorScheme)).toBe('light');
   const darkPixels=await page.locator('img[src="/providers/chatgpt.svg"]').evaluate(image=>{const canvas=document.createElement('canvas');canvas.width=32;canvas.height=32;const context=canvas.getContext('2d')!;context.drawImage(image as HTMLImageElement,0,0,32,32);const pixels=context.getImageData(0,0,32,32).data;let count=0;for(let i=0;i<pixels.length;i+=4)if(pixels[i]!<100&&pixels[i+1]!<100&&pixels[i+2]!<100&&pixels[i+3]!>128)count++;return count});
   expect(darkPixels).toBeGreaterThan(20); // The adaptive official logo must not turn white on its light tile.
-  await page.getByRole('button',{name:/Gemini/}).click();
-  await expect(page.getByRole('button',{name:'Use current browser account',exact:true})).toBeVisible();
-  await expect(page.getByRole('button',{name:'Save another website account',exact:true})).toHaveCount(0);
+  await page.getByRole('button',{name:/Cursor/}).click();
+  await expect(page.getByRole('button',{name:'Use current browser login',exact:true})).toBeVisible();
   const saved=await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);
   expect(saved.accounts).toHaveLength(0);
-});
-
-test('independent setup verifies the new account, keeps the old identity and opens no normal tab',async({context,worker,extensionId})=>{
- const originalProfile='1f30feba-2b2a-4c19-8ebc-cd35bc96ff71',addedProfile='6c7b581a-333d-4016-955e-98e84dcf22aa';
- await installNativeFixture(worker,[nativeProfile(originalProfile)],addedProfile);
- const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html#accounts`);
- await page.evaluate(()=>{chrome.permissions.request=async()=>true});
- await page.getByRole('button',{name:'Add ChatGPT account',exact:true}).click();
- await page.getByRole('button',{name:'Connect another account',exact:true}).click();
- await page.getByRole('button',{name:'Connect Desktop',exact:true}).click();
- const before=context.pages().length;
- await page.getByRole('button',{name:'Sign in to OpenAI',exact:true}).click();
- await expect(page.getByText('Finish sign-in in the separate browser window')).toBeVisible();
- await expect(page.getByRole('button',{name:'Cancel sign-in',exact:true})).toBeVisible();
- expect(context.pages().length).toBe(before);
- let saved=await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);
- expect(saved.accounts.find(a=>a.companionProfile===addedProfile)!.connection).toBe('unavailable');
- await worker.evaluate(()=>{(globalThis as typeof globalThis & {completeFixtureLogin:()=>void}).completeFixtureLogin()});
- await expect(page.getByText('work@example.test',{exact:true})).toBeVisible();
- await expect(page.getByRole('button',{name:'Confirm account',exact:true})).toBeVisible();
- await page.getByRole('button',{name:'Close account setup',exact:true}).click();
- await page.getByRole('button',{name:'Continue sign-in',exact:true}).click();
- await expect(page.getByText('work@example.test',{exact:true})).toBeVisible();
- await page.getByLabel('Independent account nickname').fill('Work');
- await page.getByRole('button',{name:'Confirm account',exact:true}).click();
- await expect(page.getByText('Connected',{exact:true})).toHaveCount(2);
- await page.screenshot({path:'artifacts/independent-account-preview.png',fullPage:true});
- saved=await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);
- expect(saved.accounts.find(a=>a.companionProfile===originalProfile)!.alias).toBe('');
- expect(saved.accounts.find(a=>a.companionProfile===addedProfile)!.alias).toBe('Work');
- expect(JSON.stringify(saved)).not.toContain('work@example.test');
- expect(JSON.stringify(saved)).not.toContain('auth.openai.com');
- // Setup progress survives view closure; privacy hides transient identity as well.
- await worker.evaluate(async()=>{const data=(await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store;data.settings.privacyMode=true;await chrome.storage.local.set({'mylimits:state:v2':data});});
- await page.reload();await page.getByRole('contentinfo').getByRole('button',{name:'Add account',exact:true}).click();
- await page.getByRole('button',{name:/OpenAI · ChatGPT/}).click();
- await page.getByRole('button',{name:'Connect another account',exact:true}).click();
- await expect(page.getByText('work@example.test',{exact:true})).toHaveCount(0);
-});
-
-test('Claude dependency readiness is explicit and starts no misleading website tab',async({context,worker,extensionId})=>{
- await installNativeFixture(worker,[]);
- const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html#settings`);
- await page.evaluate(()=>{chrome.permissions.request=async()=>true});
- await page.getByText('Desktop connections · advanced',{exact:true}).click();
- await page.getByRole('button',{name:'Connect Desktop',exact:true}).first().click();
- await expect(page.getByText('Install official Claude Code and update the helper.',{exact:true})).toBeVisible();
- await expect(page.getByRole('button',{name:'Sign in to Claude',exact:true})).toBeDisabled();
- expect((await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store)).accounts).toHaveLength(0);
-});
-
-test('Claude independent setup adds a distinct provider account beside OpenAI and Claude',async({context,worker,extensionId})=>{
- const gpt='1f30feba-2b2a-4c19-8ebc-cd35bc96ff71',a='6c7b581a-333d-4016-955e-98e84dcf22aa',b='f30c0fba-2b2a-4c19-8ebc-cd35bc96ff72';
- await installNativeFixture(worker,[nativeProfile(gpt,'GPT Personal'),nativeProfile(a,'Claude Personal','connected',demoState().accounts[0]!.meters,'claude')],b,true);
- const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html#settings`);
- await page.evaluate(()=>{chrome.permissions.request=async()=>true});
- await page.getByText('Desktop connections · advanced',{exact:true}).click();
- await page.getByRole('button',{name:'Connect Desktop',exact:true}).first().click();
- await page.getByRole('button',{name:'Sign in to Claude',exact:true}).click();
- await expect(page.getByRole('button',{name:'Cancel sign-in',exact:true})).toBeVisible();
- await worker.evaluate(()=>{(globalThis as typeof globalThis & {completeFixtureLogin:()=>void}).completeFixtureLogin()});
- await expect(page.getByText('work@example.test',{exact:true})).toBeVisible();
- await page.getByRole('button',{name:'Confirm account',exact:true}).click();
- await expect(page.getByText('Connected',{exact:true})).toHaveCount(3);
- const saved=await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store);
- expect(saved.accounts.find(a=>a.companionProfile===gpt)!.provider).toBe('chatgpt');
- expect(saved.accounts.find(a=>a.companionProfile===b)!.provider).toBe('claude');
- expect(saved.accounts.find(item=>item.companionProfile===a)!.alias).toBe('Claude Personal');
- expect(saved.accounts.find(item=>item.companionProfile===b)!.alias).toBe('');
- expect(JSON.stringify(saved)).not.toContain('work@example.test');
- await page.screenshot({path:'artifacts/claude-account-preview.png',fullPage:true});
 });
 
 test('larger account collections scroll inside the popup and search stays available',async({context,worker,extensionId})=>{
@@ -810,40 +571,6 @@ test('large text persists, privacy masks every surface, and 200 percent enlargem
 });
 
 
-test('an old helper cannot start sign-in or open an ordinary website tab',async({context,worker,extensionId})=>{
- await worker.evaluate(()=>{
-  const contains=chrome.permissions.contains.bind(chrome.permissions);chrome.permissions.contains=async p=>p.permissions?.includes('nativeMessaging')?true:contains(p);
-  Object.defineProperty(chrome.runtime,'connectNative',{configurable:true,value:()=>{
-   let deliver:(v:unknown)=>void=()=>{};
-   return {onMessage:{addListener:(f:(v:unknown)=>void)=>{deliver=f}},onDisconnect:{addListener:()=>{}},disconnect:()=>{},postMessage:(r:{id:string;method:string})=>{
-    setTimeout(()=>deliver(r.method==='status'?{id:r.id,ok:true,data:{type:'snapshot',profiles:[]}}:{id:r.id,ok:false,error:'unsupported'}),0);
-   }};
-  }});
- });
- const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html#settings`);
- await page.evaluate(()=>{chrome.permissions.request=async()=>true});
- await page.getByText('Desktop connections · advanced',{exact:true}).click();
- const pages=context.pages().length;await page.getByRole('button',{name:'Connect Desktop',exact:true}).first().click();
- await expect(page.getByText('Update or restart the helper, then retry.')).toBeVisible();
- await expect(page.getByRole('button',{name:'Sign in to OpenAI',exact:true})).toHaveCount(0);
- expect(context.pages().length).toBe(pages);
-});
-
-test('provider plus selects Desktop without opening the current website session',async({context,worker,extensionId})=>{
- const page=await context.newPage();await page.setViewportSize({width:560,height:760});await page.goto(`chrome-extension://${extensionId}/dashboard.html#accounts`);
- await expect(page.getByRole('switch')).toHaveCount(0);
- await page.getByRole('button',{name:'Add ChatGPT account',exact:true}).click();
- await expect(page.getByRole('button',{name:'Use current browser account',exact:true})).toBeVisible();
- const before=context.pages().length;
- await page.getByRole('button',{name:'Connect another account',exact:true}).click();
- await expect(page.getByText('Connect MyLimits Desktop once for separate account logins.',{exact:true})).toBeVisible();
- expect(context.pages().length).toBe(before);
- await expect(page.getByRole('button',{name:'Connect Desktop',exact:true})).toBeVisible();
- expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
- await page.screenshot({path:'artifacts/hosted-unavailable.png',fullPage:true});
- expect((await worker.evaluate(async()=> (await chrome.storage.local.get('mylimits:state:v2'))['mylimits:state:v2'] as Store)).accounts).toHaveLength(0);
-});
-
 test.describe('current website account',()=>{
  test.use({grantedProviderOrigin:'https://claude.ai/*'});
  test('automatically retries persisted due authentication backoff when MyLimits opens, without a provider tab',async({context,worker,extensionId})=>{
@@ -877,8 +604,8 @@ test.describe('current website account',()=>{
   await context.route('https://claude.ai/**',r=>r.fulfill({status:200,contentType:'text/html',body:'<p>Fictional signed-in website</p>'}));
   const existing=await context.newPage();await existing.goto('https://claude.ai/');
   const page=await context.newPage();await page.goto(`chrome-extension://${extensionId}/dashboard.html#add`);
-  await page.getByRole('button',{name:/Claude · Claude Code/}).click();await page.evaluate(()=>{chrome.permissions.request=async()=>true;});
-  const before=context.pages().length;await page.getByRole('button',{name:'Use current browser account',exact:true}).click();
+  await page.getByRole('button',{name:/Claude \/ Claude Code/}).click();await page.evaluate(()=>{chrome.permissions.request=async()=>true;});
+  const before=context.pages().length;await page.getByRole('button',{name:'Use current browser login',exact:true}).click();
   await expect(page.getByText('Detecting this browser’s account',{exact:true})).toBeVisible();
   expect(context.pages().length).toBe(before);expect(existing.url()).toBe('https://claude.ai/');
  });
@@ -911,15 +638,15 @@ test.describe('request diagnostics (fictional providers only)', () => {
    chrome.permissions.request=async request=>{scope.permissionRequests.push(request);return !request.permissions?.includes('cookies');};
    chrome.permissions.contains=async()=>false;
   });
-  await page.getByRole('button',{name:/Claude · Claude Code/}).click();
-  await page.getByRole('button',{name:'Use current browser account',exact:true}).click();
+  await page.getByRole('button',{name:/Claude \/ Claude Code/}).click();
+  await page.getByRole('button',{name:'Use current browser login',exact:true}).click();
   await expect(page.getByRole('button',{name:'Continue without sign-in detection',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Choose a different service',exact:true}).click();
-  await page.getByRole('button',{name:/^Gemini/}).click();
+  await page.getByRole('button',{name:/^Cursor/}).click();
   await expect(page.getByRole('button',{name:'Continue without sign-in detection',exact:true})).toHaveCount(0);
   await page.getByRole('button',{name:'Choose a different service',exact:true}).click();
-  await page.getByRole('button',{name:/Claude · Claude Code/}).click();
-  await page.getByRole('button',{name:'Use current browser account',exact:true}).click();
+  await page.getByRole('button',{name:/Claude \/ Claude Code/}).click();
+  await page.getByRole('button',{name:'Use current browser login',exact:true}).click();
   await page.getByRole('button',{name:'Continue without sign-in detection',exact:true}).click();
   await expect(page.getByRole('button',{name:'Save detected account',exact:true})).toBeVisible();
   expect(await page.evaluate(()=>(window as typeof window & {permissionRequests:unknown[]}).permissionRequests)).toEqual([
@@ -1017,4 +744,30 @@ test.describe('optional cookie signals (fictional cookies and provider)',()=>{
   await page.waitForTimeout(2300);
   expect(await worker.evaluate(()=>(globalThis as typeof globalThis & {fixtureRequestCount:number}).fixtureRequestCount)).toBe(before);
  });
+});
+
+test('U1 first load deletes retired provider/source history and keys while retaining the website account',async({context,worker,extensionId,profilePath})=>{
+ await expect.poll(()=>worker.evaluate(async()=>(await chrome.storage.local.get('mylimits:u1-completed:v1'))['mylimits:u1-completed:v1'])).toBe(true);
+ const fixture={...emptyStore('u1-real-storage'),accounts:[demoState().accounts[0]!]};
+ await worker.evaluate(async s=>{
+  const kept=s.accounts[0]!,retired={...kept,id:'retired-old',provider:'gemini'},remote={...kept,id:'retired-cloud'};
+  const raw={...s,accounts:[kept,retired,remote],connections:[...s.connections,{...s.connections[0],id:'cloud:old',kind:'cloud',accountId:remote.id}],providers:{...s.providers,gemini:s.providers.claude}};
+  await new Promise<void>((resolve,reject)=>{const r=indexedDB.open('mylimits-history',2);r.onsuccess=()=>{const db=r.result,tx=db.transaction('readings','readwrite');for(const id of [kept.id,retired.id,remote.id])tx.objectStore('readings').add({accountId:id,time:Date.now(),schemaVersion:2,observedAt:Date.now(),receivedAt:Date.now(),connectionId:id===remote.id?'cloud:old':'website:claude',meters:[]});tx.oncomplete=()=>{db.close();resolve()};tx.onerror=()=>reject(tx.error)}});
+  await chrome.storage.local.remove('mylimits:u1-completed:v1');
+  await chrome.storage.local.set({'mylimits:state:v2':raw,'mylimits:widget:v1':{},'mylimits:sync:private:v1':{},'mylimits:hosted:attempt:v1':{}});
+ },fixture);
+ await context.close();
+ const reopened=await chromium.launchPersistentContext(profilePath,{ignoreDefaultArgs:['--disable-extensions'],channel:'chromium',headless:true,args:[`--disable-extensions-except=${extensionPath}`,`--load-extension=${extensionPath}`,'--no-sandbox','--disable-background-networking']});
+ await reopened.route(/^https?:\/\//,route=>route.abort());
+ try{
+  const w=reopened.serviceWorkers()[0]??await reopened.waitForEvent('serviceworker');
+  await expect.poll(()=>w.evaluate(async()=>(await chrome.storage.local.get('mylimits:u1-completed:v1'))['mylimits:u1-completed:v1'])).toBe(true);
+  const result=await w.evaluate(async()=>{
+   const storage=await chrome.storage.local.get(null),s=storage['mylimits:state:v2'] as Store;
+   const rows=await new Promise<{accountId:string}[]>((resolve,reject)=>{const r=indexedDB.open('mylimits-history',2);r.onsuccess=()=>{const db=r.result,tx=db.transaction('readings'),get=tx.objectStore('readings').getAll();get.onsuccess=()=>resolve(get.result);tx.oncomplete=()=>db.close();tx.onerror=()=>reject(tx.error)}});
+   return {accounts:s.accounts,rows,keys:Object.keys(storage),version:s.version};
+  });
+  expect(result.version).toBe(2);expect(result.accounts).toEqual(fixture.accounts);expect(result.rows.map(r=>r.accountId)).toEqual([fixture.accounts[0]!.id]);
+  for(const key of ['mylimits:widget:v1','mylimits:sync:private:v1','mylimits:hosted:attempt:v1'])expect(result.keys).not.toContain(key);
+ }finally{await reopened.close()}
 });

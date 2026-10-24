@@ -7,24 +7,6 @@ function count(value:unknown):number|null{if(value===undefined||value===null)ret
 const label=(value:unknown)=>typeof value==='string'&&value.trim()?value.slice(0,80):null;
 function timestamp(value:unknown){if(typeof value!=='string')return null;const at=Date.parse(value);return Number.isFinite(at)&&at>0?at:null}
 function wrap(identity:string,displayName:string,plan:string|null,meters:Meter[]):Snapshot{return {identity,displayName,plan,kind:'account',meters:meters.map(m=>MeterSchema.parse(m))}}
-export function grokIdentity(raw:unknown){
- const values=object(raw).subscriptions;if(!Array.isArray(values)||!values.length)throw new Error('No verified Grok subscription identity.');
- const rows=values.map(object),ids=new Set(rows.map(r=>identity(r.xaiUserId)));if(ids.size!==1)throw new Error('Ambiguous Grok account identities.');
- return {id:[...ids][0]!,plan:label((rows.find(r=>r.status==='SUBSCRIPTION_STATUS_ACTIVE')??rows[0]!).tier)};
-}
-export function parseGrok(account:unknown,raw:unknown):Snapshot{
- const who=grokIdentity(account),data=object(raw),left=count(data.remainingQueries),total=count(data.totalQueries),duration=count(data.windowSizeSeconds),meters:Meter[]=[];
- if(left!==null&&total!==null){if(left>total)throw new Error('Remaining requests exceed the returned total.');meters.push({id:'grok:grok-4:default',label:`Grok 4 · default${duration?` · ${Math.round(duration/3600*10)/10}h rolling`:''}`,scope:'chat',evidence:'reported',unit:'requests',remaining:left,used:total-left,total:total>0?total:null,usedPercent:total>0?(total-left)/total*100:null,resetsAt:null,windowId:null,source:'Grok reported default-mode request allowance; reset time not supplied'})}
- return wrap(`account:${who.id}`,'Grok',who.plan,meters);
-}
-export function perplexityIdentity(raw:unknown){return identity(object(object(raw).user).id)}
-export function parsePerplexity(session:unknown,raw:unknown):Snapshot{
- const data=object(raw),meters:Meter[]=[];
- for(const [key,name]of [['remaining_pro','Pro searches'],['remaining_research','Research'],['remaining_labs','Labs'],['remaining_agentic_research','Agentic research']] as const){
-  const remaining=count(data[key]);if(remaining===null)continue;meters.push({id:`perplexity:${key}`,label:name,scope:'subscription',evidence:'reported',unit:'searches',remaining,used:null,total:null,usedPercent:null,resetsAt:null,windowId:null,source:'Perplexity reported remaining count; total and reset not supplied'});
- }
- return wrap(`account:${perplexityIdentity(session)}`,'Perplexity',label(object(object(session).user).subscription_tier),meters);
-}
 export function cursorIdentity(raw:unknown){return identity(object(raw).sub)}
 export function parseCursor(account:unknown,raw:unknown):Snapshot{
  const data=object(raw),individual=object(data.individualUsage),plan=object(individual.plan),onDemand=object(individual.onDemand),meters:Meter[]=[],reset=timestamp(data.billingCycleEnd),window=typeof data.billingCycleStart==='string'?`${data.billingCycleStart}/${data.billingCycleEnd??'unknown'}`:null;

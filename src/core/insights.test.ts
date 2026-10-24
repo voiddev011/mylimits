@@ -10,13 +10,6 @@ test('pacing requires fresh active reported evidence and returns a conservative 
  for(const changed of [{reported:false},{active:false},{now:now+3600000},{resetsAt:null},{resetsAt:now}])assert.equal(pacing(points,{...options,...changed}).kind,'insufficient');
  assert.equal(pacing(points.slice(-3),options).kind,'insufficient');assert.equal(pacing(points.map(p=>({...p,percent:10})),options).kind,'insufficient');
 });
-test('history separates windows, sources, currency and renewal drops; preserves gaps',()=>{
- const row=(i:number,extra:Record<string,unknown>={}):HistoryPoint=>({accountId:'a',time:points[i]!.time,connectionId:'website:claude',meters:[{id:'m',usedPercent:points[i]!.percent,label:'Session',scope:'subscription',evidence:'reported',unit:'percent',resetsAt:reset,...extra}]});
- const normal=points.map((_,i)=>row(i));const result=analyzeHistory([...normal,row(4,{windowId:'other'}),row(4,{connectionId:'companion:a'}),row(4,{currency:'USD'})],{...options,activeConnectionIds:['website:claude']});
- assert.equal(result.series.length,4);assert.equal(result.series.find(s=>s.samples===5)?.pacing.kind,'range');
- const renewal=analyzeHistory([...normal,{...row(4),time:now+60000,meters:[{...row(4).meters[0]!,usedPercent:2}]}],{...options,now:now+60000,activeConnectionIds:['website:claude']});assert.equal(renewal.gaps,1);assert.equal(renewal.series[0]!.pacing.kind,'insufficient');
- const gap=analyzeHistory([row(0),row(4)],{...options,activeConnectionIds:[]});assert.equal(gap.series[0]!.segments.length,2);
-});
 test('duplicate observations do not inflate confidence; downsampling preserves segment boundaries',()=>{
  const row:HistoryPoint={accountId:'a',time:now,meters:[{id:'x',usedPercent:30}]};const result=analyzeHistory(Array(100).fill(row),{...options,activeConnectionIds:[]});assert.equal(result.series[0]!.samples,1);
  const segments=[Array.from({length:500},(_,i)=>({...points[0]!,time:i,percent:i%100})),Array.from({length:500},(_,i)=>({...points[0]!,time:10000+i}))];const sampled=downsampleSegments(segments,80);assert.equal(sampled.length,2);assert.ok(sampled.flat().length<=80);assert.ok(sampled[0]!.every(p=>p.time<10000));

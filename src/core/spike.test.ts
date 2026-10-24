@@ -26,12 +26,3 @@ test('token inspection returns only an unverified numeric expiry and rejects mal
  assert.equal(tokenExpiry(jwt({exp:1800000000,secret:'BODY_SECRET'})),1800000000000);
  for(const token of ['bad',jwt({exp:'1800'}),jwt({exp:-1}),jwt({exp:1e20})])assert.equal(tokenExpiry(token),null);
 });
-test('spike commands and sender validation reject arbitrary paths, secrets and non-spike pages',()=>{
- assert.equal(SpikeCommandSchema.safeParse({type:'capture',provider:'claude',storeId:'normal',names:['sessionKey'],consent:true}).success,true);
- for(const input of [{type:'compare',provider:'claude',url:'https://evil.test'},{type:'capture',provider:'claude',storeId:'normal',names:['sessionKey'],consent:false},{type:'token',source:'ambient',token:'SECRET'}])assert.equal(SpikeCommandSchema.safeParse(input).success,false);
- const id='a'.repeat(32),url=`chrome-extension://${id}/spike.html`;
- assert.equal(spikeSenderAllowed({id,url},id,url),true);
- for(const sender of [{id,url:'https://claude.ai'},{id:'other',url},{id,url:url+'?extra'},{id,url,tab:{incognito:true}}])assert.equal(spikeSenderAllowed(sender,id,url),false);
- assert.equal(endpointAllowed('grok','/rest/rate-limits'),true);assert.equal(endpointAllowed('claude','/api/organizations/uuid/usage'),true);
- for(const path of ['//evil.test/','/logout','/api/account?secret=x','/api/organizations/../../usage'])assert.equal(endpointAllowed('claude',path),false);
-});

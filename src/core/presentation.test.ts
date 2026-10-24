@@ -39,15 +39,6 @@ test('privacy mode masks desktop notification titles and meter labels', () => {
   store.settings={...store.settings,desktopAlerts:true,privacyMode:true};
   const {alerts}=collectAlerts(store,now); assert.ok(alerts.length); assert.ok(!JSON.stringify(alerts.map(a=>[a.title,a.message])).includes('SECRET'));
 });
-test('source labels follow the live bound reading, not the provider or an account nickname',()=>{
- const state=demoState(),account=state.accounts[0]!;
- state.connections=[{...emptyStore('fixture').connections[0]!,id:'old',kind:'website',accountId:account.id,status:'needs-auth',enabled:true},
-  {...emptyStore('fixture').connections[0]!,id:'current',kind:'vault',accountId:account.id,status:'active',enabled:true}];
- account.meters=account.meters.map(m=>({...m,connectionId:'current'}));
- assert.equal(accountSource(account,state),'Saved sign-in');
- assert.equal(connectionSource('companion'),'Companion');assert.equal(connectionSource('cloud'),'Hosted');
- assert.equal(accountSource({...account,id:'unbound'},state),'Saved reading');
-});
 test('privacy projection hides a pending private identity and plan before consent',()=>{
  const state=demoState();state.accountSetup={id:'10000000-0000-4000-8000-000000000001',provider:'chatgpt',method:'private',slotId:'10000000-0000-4000-8000-000000000002',mode:'detect',nickname:'PRIVATE_ALIAS',previousAccountId:null,startedAt:1,phase:'awaiting-confirmation',candidate:{accountId:'verified-hash',name:'PRIVATE_NAME',plan:'PRIVATE_PLAN',verifiedAt:2}};
  const shown=JSON.stringify(privatePresentation(state));for(const value of ['PRIVATE_ALIAS','PRIVATE_NAME','PRIVATE_PLAN'])assert.ok(!shown.includes(value));assert.equal(state.accountSetup.candidate!.name,'PRIVATE_NAME');

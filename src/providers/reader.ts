@@ -3,19 +3,18 @@ import type { Snapshot } from '../core/engine';
 import { providers } from './catalog';
 import { object, parseClaude, parseChatGPT } from './parsers';
 import { AdapterError } from './errors';
-import { parseGrok,grokIdentity,parsePerplexity,perplexityIdentity,parseCursor,cursorIdentity } from './additional';
-export interface ReaderOptions { workspaceRemoteId?: string | null;readingMode?:'quota'|'activity'; }
+import { parseCursor,cursorIdentity } from './additional';
+export interface ReaderOptions { workspaceRemoteId?: string | null; }
 export interface QuotaRequest {method:'POST';body:Record<string,unknown>;}
 export type ReadJSON=(path:string,headers?:Record<string,string>,request?:QuotaRequest)=>Promise<unknown>;
 export async function readAccountProvider(provider:ProviderId,options:ReaderOptions,read:ReadJSON):Promise<Snapshot>{
- if(provider==='grok'||provider==='perplexity'||provider==='cursor'){
-  if(options.readingMode==='activity'&&provider!=='cursor')return {identity:'local-browser-activity',kind:'browser',displayName:`${providers[provider].name} · This browser`,plan:null,meters:[]};
-  const path=provider==='grok'?'/rest/subscriptions':provider==='perplexity'?'/api/auth/session':'/api/auth/me';
-  const verify=provider==='grok'?(v:unknown)=>grokIdentity(v).id:provider==='perplexity'?perplexityIdentity:cursorIdentity;
+ if(provider==='cursor'){
+  const path='/api/auth/me';
+  const verify=cursorIdentity;
   const account=await read(path);let id:string;try{id=verify(account)}catch{throw new AdapterError('unavailable',`${providers[provider].name} account identity could not be verified.`,null,'identity')}
-  const usage=provider==='grok'?await read('/rest/rate-limits',undefined,{method:'POST',body:{requestKind:'DEFAULT',modelName:'grok-4'}}):await read(provider==='perplexity'?'/rest/rate-limit/all':'/api/usage-summary');
+  const usage=await read('/api/usage-summary');
   const checked=await read(path);
-  try{if(verify(checked)!==id)throw new Error('Account changed.');return provider==='grok'?parseGrok(account,usage):provider==='perplexity'?parsePerplexity(account,usage):parseCursor(account,usage)}
+  try{if(verify(checked)!==id)throw new Error('Account changed.');return parseCursor(account,usage)}
   catch{throw new AdapterError('unavailable',`${providers[provider].name} identity or quota response could not be verified. No allowance was inferred.`,null,'shape')}
  }
  if(provider==='claude'){
@@ -40,6 +39,6 @@ export async function readAccountProvider(provider:ProviderId,options:ReaderOpti
   catch { throw new AdapterError('unavailable','ChatGPT account changed during the check. Refresh again.',null,'identity'); }
   try{return parseChatGPT(session,usage)}catch{throw new AdapterError('unavailable','ChatGPT account identity or usage format could not be verified.',null,'shape')}
  }
- return {identity:'local-browser-activity',kind:'browser',displayName:`${providers[provider].name} · This browser`,plan:null,meters:[]};
+ throw new AdapterError('unavailable','Unsupported provider.');
 }
 function workspaceName(value:unknown,index:number){return typeof value==='string'&&value.trim()&&!value.includes('@')?value.trim().slice(0,120):`Workspace ${index}`;}

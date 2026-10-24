@@ -35,7 +35,6 @@ export function Popup() {
     <main className="quick-main">{!store ? <div className="empty-small">{error ? 'Unable to load saved limits.' : 'Loading your limits…'}</div> : <>
       {!!store.accounts.length && <div className="quick-summary"><button className={`quick-low ${lowOnly ? 'selected' : ''}`} aria-label="Low only" aria-pressed={lowOnly} onClick={() => setLowOnly(!lowOnly)}><Bell size={12}/>{low ? `${low} running low` : 'No low limits'}{lowOnly && <X size={10}/>}</button><span>{Number.isFinite(nextReset) ? <>Next reset <strong>{countdown(nextReset, now)}</strong></> : 'Remaining allowance'}</span></div>}
       {store.accountSetup && <div className="pending-setup"><span>Account setup in progress</span><button className="text-button" onClick={() => dashboard('add')}>Continue setup</button></div>}
-      {store.connections.some(c=>c.kind==='companion'&&['signing-in','verifying','awaiting-confirmation'].includes(c.independent?.authState??''))&&<div className="pending-setup"><span>Account sign-in in progress</span><button className="text-button" onClick={()=>dashboard('add')}>Continue sign-in</button></div>}
       {store.accounts.length > 6 && <label className="search-box quick-search"><Search size={13}/><input aria-label="Search accounts" placeholder="Find an account" disabled={store.settings.privacyMode} value={store.settings.privacyMode ? '' : query} onChange={e => setQuery(e.target.value)}/></label>}
       <div className="quick-accounts">{accounts.map(account => {
         const meters = visibleMeters(account);
