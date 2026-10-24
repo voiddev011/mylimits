@@ -1,0 +1,74 @@
+name: Release browser extensions
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run zip
+      - run: npm run zip:firefox
+      - name: Validate release asset allowlist
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(node -p "require('./package.json').version")
+          test "$GITHUB_REF_NAME" = "v$version"
+          for browser in chrome firefox; do
+            archive=".output/mylimits-$version-$browser.zip"
+            test -s "$archive"
+            if unzip -Z1 "$archive" | grep -E '(^|/)spike([/.]|$)'; then
+              echo 'Evidence spike must never be released.' >&2
+              exit 1
+            fi
+          done
+          mkdir release-assets
+          cp ".output/mylimits-$version-chrome.zip" release-assets/
+          cp ".output/mylimits-$version-firefox.zip" release-assets/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-zips
+          path: release-assets/*.zip
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-zips
+          path: release-assets
+      - name: Attach ZIPs to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" release-assets/*.zip --clobber
+          else
+            gh release create "$RELEASE_TAG" release-assets/*.zip --verify-tag --generate-notes
+          fi
